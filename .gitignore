@@ -1,0 +1,24 @@
+# .NET
+**/bin/
+**/obj/
+*.user
+.vs/
+TestResults/
+*.trx
+
+# Node
+**/node_modules/
+**/dist/
+
+# Entornos y secretos
+.env
+.env.*
+!.env.example
+*.pfx
+firebase-service-account*.json
+
+# Herramientas y sistema
+.idea/
+.vscode/
+.DS_Store
+Thumbs.db

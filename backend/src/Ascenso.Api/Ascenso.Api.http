@@ -1,0 +1,10 @@
+@Ascenso.Api_HostAddress = http://localhost:5122
+
+GET {{Ascenso.Api_HostAddress}}/
+Accept: application/json
+
+###
+
+GET {{Ascenso.Api_HostAddress}}/health
+
+###
