@@ -20,5 +20,6 @@ firebase-service-account*.json
 # Herramientas y sistema
 .idea/
 .vscode/
+.opencode/
 .DS_Store
 Thumbs.db
