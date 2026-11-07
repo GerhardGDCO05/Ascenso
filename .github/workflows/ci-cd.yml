@@ -25,11 +25,18 @@ jobs:
       with:
         dotnet-version: '10.0.x'
 
+    - name: Buscar archivo de solución (.sln)
+      id: find_sln
+      run: |
+        SLN_PATH=$(find . -name "*.sln" | head -n 1)
+        echo "Found solution at: $SLN_PATH"
+        echo "sln_path=$SLN_PATH" >> $GITHUB_OUTPUT
+
     - name: Restaurar dependencias
-      run: dotnet restore Ascenso.Becas.sln
+      run: dotnet restore "${{ steps.find_sln.outputs.sln_path }}"
 
     - name: Compilar solución
-      run: dotnet build Ascenso.Becas.sln --no-restore --configuration Release
+      run: dotnet build "${{ steps.find_sln.outputs.sln_path }}" --no-restore --configuration Release
 
     - name: Ejecutar Pruebas Unitarias y de Arquitectura
-      run: dotnet test Ascenso.Becas.sln --no-build --configuration Release --verbosity normal
+      run: dotnet test "${{ steps.find_sln.outputs.sln_path }}" --no-build --configuration Release --verbosity normal
