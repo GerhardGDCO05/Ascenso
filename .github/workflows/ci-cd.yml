@@ -1,0 +1,35 @@
+name: CI - Ms-Becas Build & Test
+
+on:
+  push:
+    branches:
+      - main
+      - Gerhard
+      - feature-core
+      - 'feature/**'
+  pull_request:
+    branches:
+      - main
+      - Gerhard
+
+jobs:
+  build-and-test:
+    runs-on: ubuntu-latest
+
+    steps:
+    - name: Checkout del código
+      uses: actions/checkout@v4
+
+    - name: Configurar .NET SDK
+      uses: actions/setup-dotnet@v4
+      with:
+        dotnet-version: '10.0.x'
+
+    - name: Restaurar dependencias
+      run: dotnet restore Ascenso.Becas.sln
+
+    - name: Compilar solución
+      run: dotnet build Ascenso.Becas.sln --no-restore --configuration Release
+
+    - name: Ejecutar Pruebas Unitarias y de Arquitectura
+      run: dotnet test Ascenso.Becas.sln --no-build --configuration Release --verbosity normal
