@@ -9,9 +9,14 @@ out/
 *.suo
 *.userprefs
 *.sln.docstates
+*.trx
+TestResults/
+
+
 
 # Archivos de caché e IDE (Visual Studio / JetBrains Rider / VS Code)
 .vs/
+.vscode/
 .idea/
 *.rsuser
 *.cache
@@ -31,6 +36,7 @@ node_modules/
 npm-debug.log*
 yarn-debug.log*
 yarn-error.log*
+**/dist/
 
 # ==========================================
 # 4. Variables de Entorno y Secretos
@@ -43,6 +49,7 @@ yarn-error.log*
 appsettings.Development.json
 appsettings.Local.json
 secrets.json
+firebase-service-account*.json
 
 # ==========================================
 # 5. Sistema Operativo
