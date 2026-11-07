@@ -1,7 +1,7 @@
 ## 1. Preparación del entorno y de la solución
 
-- [ ] 1.1 Instalar el SDK de .NET 10 LTS y Docker/Compose; verificar con `dotnet --version`, `docker --version` y `docker compose version`.
-- [ ] 1.2 Crear `Ascenso.Becas.sln` con `Ascenso.Becas.Domain`, `Ascenso.Becas.Application`, `Ascenso.Becas.Infrastructure` y `Ascenso.Becas.API`; agregar las referencias permitidas entre capas y verificar que `dotnet build` compila.
+- [x] 1.1 Instalar el SDK de .NET 10 LTS y Docker/Compose; verificar con `dotnet --version`, `docker --version` y `docker compose version`.
+- [x] 1.2 Crear `Ascenso.Becas.sln` con `Ascenso.Becas.Domain`, `Ascenso.Becas.Application`, `Ascenso.Becas.Infrastructure` y `Ascenso.Becas.Api`; agregar las referencias permitidas entre capas y verificar que `dotnet build` compila.
 - [ ] 1.3 Crear `Ascenso.Becas.Domain.Tests`, `Ascenso.Becas.Application.Tests`, `Ascenso.Becas.ArchitectureTests` y `Ascenso.Becas.IntegrationTests`; verificar que `dotnet test` descubre los proyectos.
 - [ ] 1.4 Agregar `global.json`, `Directory.Build.props`, `Directory.Packages.props`, `.editorconfig` y `.gitignore`, con `net10.0`, nullable, warnings-as-errors y versiones centralizadas; verificar `dotnet restore` y `dotnet build -warnaserror`.
 - [ ] 1.5 Configurar lock files de NuGet y `RestoreLockedMode` para CI; verificar que un segundo restore con `--locked-mode` no modifica dependencias.

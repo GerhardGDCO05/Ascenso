@@ -19,10 +19,11 @@ El SDK de .NET y `dotnet-ef` se cargan automáticamente en terminales nuevas med
 
 ```text
 backend/
-  Ascenso.slnx              Solución .NET
+  Ascenso.slnx              Solución .NET base
   src/Ascenso.Api/          API mínima con OpenAPI y health checks
   tests/Ascenso.Api.Tests/  Pruebas de la API
 frontend/                   Aplicación React + Vite
+src/services/ms-becas/      Solución del microservicio de becas
 ```
 
 ## Backend
@@ -42,7 +43,16 @@ La API se ejecuta en `http://localhost:5122`. Endpoints disponibles:
 | GET | `/health` | Estado del servicio |
 | GET | `/openapi/v1.json` | Documento OpenAPI (solo en Development) |
 
-El backend no contiene lógica de negocio. Los microservicios se agregarán como proyectos independientes dentro de `backend/src` cuando inicie su implementación.
+El backend base no contiene lógica de negocio. El microservicio `ms-becas` se inicializa de forma independiente en `src/services/ms-becas` con arquitectura hexagonal.
+
+### Microservicio ms-becas
+
+```bash
+dotnet build src/services/ms-becas/Ascenso.Becas.sln
+dotnet run --project src/services/ms-becas/src/Ascenso.Becas.Api
+```
+
+La API del microservicio se ejecuta en `http://localhost:5120`.
 
 ## Frontend
 
