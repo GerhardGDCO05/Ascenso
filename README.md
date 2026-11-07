@@ -1,6 +1,6 @@
 # Ascenso
 
-Base del proyecto Ascenso. Incluye el entorno de desarrollo, una API en .NET y una aplicación web en React, preparados para incorporar nuevas funcionalidades y microservicios.
+Base del proyecto Ascenso. Incluye el entorno de desarrollo, el frontend en React y los microservicios en .NET organizados bajo `Apps/services`.
 
 ## Entorno de desarrollo
 
@@ -18,41 +18,39 @@ El SDK de .NET y `dotnet-ef` se cargan automáticamente en terminales nuevas med
 ## Estructura
 
 ```text
-backend/
-  Ascenso.slnx              Solución .NET base
-  src/Ascenso.Api/          API mínima con OpenAPI y health checks
-  tests/Ascenso.Api.Tests/  Pruebas de la API
+Apps/
+  services/
+    ms-becas/
+      Ascenso.Becas.sln
+      Ascenso.Becas.Domain/
+      Ascenso.Becas.Application/
+      Ascenso.Becas.Infrastructure/
+      Ascenso.Becas.Api/
 frontend/                   Aplicación React + Vite
-src/services/ms-becas/      Solución del microservicio de becas
+openspec/                   Especificaciones y cambios
 ```
 
-## Backend
+Los microservicios se ubican en `Apps/services/<nombre-del-servicio>/`. Cada uno mantiene su propia solución .NET y la separación de capas de la arquitectura hexagonal.
+
+## Microservicio ms-becas
 
 ```bash
-dotnet restore backend/Ascenso.slnx
-dotnet build backend/Ascenso.slnx
-dotnet test backend/Ascenso.slnx
-dotnet run --project backend/src/Ascenso.Api
+dotnet build Apps/services/ms-becas/Ascenso.Becas.sln
+dotnet run --project Apps/services/ms-becas/Ascenso.Becas.Api
 ```
 
-La API se ejecuta en `http://localhost:5122`. Endpoints disponibles:
+La API se ejecuta en `http://localhost:5120`.
 
-| Método | Ruta | Descripción |
-| :--- | :--- | :--- |
-| GET | `/` | Información básica de la API |
-| GET | `/health` | Estado del servicio |
-| GET | `/openapi/v1.json` | Documento OpenAPI (solo en Development) |
+Capas:
 
-El backend base no contiene lógica de negocio. El microservicio `ms-becas` se inicializa de forma independiente en `src/services/ms-becas` con arquitectura hexagonal.
-
-### Microservicio ms-becas
-
-```bash
-dotnet build src/services/ms-becas/Ascenso.Becas.sln
-dotnet run --project src/services/ms-becas/src/Ascenso.Becas.Api
+```text
+Ascenso.Becas.Domain/          Entidades, objetos de valor, excepciones y repositorios
+Ascenso.Becas.Application/     Casos de uso, DTOs, puertos y código común
+Ascenso.Becas.Infrastructure/  Persistencia, adaptadores y configuraciones
+Ascenso.Becas.Api/             Controladores, Program.cs y configuración
 ```
 
-La API del microservicio se ejecuta en `http://localhost:5120`.
+El microservicio contiene únicamente el esqueleto de capas; todavía no tiene entidades ni endpoints de negocio.
 
 ## Frontend
 
@@ -74,5 +72,5 @@ La aplicación de desarrollo se publica en `http://localhost:5173`.
 ## Uso
 
 1. Instala las dependencias del frontend con `npm install` dentro de `frontend/`.
-2. Ejecuta el backend y el frontend en terminales separadas.
-3. Consulta la API en `http://localhost:5122` y la aplicación web en `http://localhost:5173`.
+2. Ejecuta el microservicio y el frontend en terminales separadas.
+3. Consulta la API en `http://localhost:5120` y la aplicación web en `http://localhost:5173`.

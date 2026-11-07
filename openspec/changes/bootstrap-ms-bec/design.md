@@ -36,16 +36,17 @@ Restricciones que condicionan el diseño:
 Se crea `Ascenso.Becas.sln` con esta estructura:
 
 ```text
-src/
+Apps/services/ms-becas/
+  Ascenso.Becas.sln
   Ascenso.Becas.Domain/
   Ascenso.Becas.Application/
   Ascenso.Becas.Infrastructure/
-  Ascenso.Becas.API/
-tests/
-  Ascenso.Becas.Domain.Tests/
-  Ascenso.Becas.Application.Tests/
-  Ascenso.Becas.ArchitectureTests/
-  Ascenso.Becas.IntegrationTests/
+  Ascenso.Becas.Api/
+  tests/
+    Ascenso.Becas.Domain.Tests/
+    Ascenso.Becas.Application.Tests/
+    Ascenso.Becas.ArchitectureTests/
+    Ascenso.Becas.IntegrationTests/
 ```
 
 `Domain` contiene agregados, entidades, objetos de valor, enumeraciones, eventos de dominio, excepciones y puertos de repositorio. No referencia ningún framework. `Application` contiene comandos, consultas, handlers, DTOs, validadores, puertos de servicios de aplicación y la traducción de eventos de dominio a eventos de integración. `Infrastructure` implementa persistencia, mensajería, clientes HTTP, almacenamiento, seguridad y jobs. `API` compone el contenedor, configura autenticación, middleware y controladores.

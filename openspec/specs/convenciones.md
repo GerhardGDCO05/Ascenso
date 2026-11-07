@@ -7,11 +7,11 @@ Este documento define el estándar estricto de codificación, nombrado y diseño
 La solución debe mantener cuatro proyectos con inversión de dependencias estricta:
 
 ```
-src/
+Apps/services/ms-becas/
 ├── Ascenso.Becas.Domain/            # C# Puro (Sin dependencias externas)
 ├── Ascenso.Becas.Application/       # Casos de Uso, DTOs, Puertos de Aplicación
 ├── Ascenso.Becas.Infrastructure/    # Adaptadores EF Core, MassTransit, Keycloak, etc.
-└── Ascenso.Becas.API/               # Controllers, Middlewares, Dependency Injection Setup
+└── Ascenso.Becas.Api/               # Controllers, Middlewares, Dependency Injection Setup
 ```
 
 ### 1.1 Estructura de Carpetas y Namespaces

@@ -30,7 +30,7 @@
 
 ## Impact
 
-- **Código nuevo:** solución `Ascenso.Becas.sln` en `src/` y `tests/`; no se modifica código existente porque el repositorio no contiene implementación.
+- **Código nuevo:** solución `Ascenso.Becas.sln` en `Apps/services/ms-becas/` y proyectos de pruebas en `Apps/services/ms-becas/tests/`; no se modifica código existente porque el repositorio no contiene implementación.
 - **Base de datos:** nueva base `ascenso_becas` con esquema `becas`, tablas de MassTransit Outbox/Inbox y Hangfire.
 - **Infraestructura:** RabbitMQ (exchange/colas de `MS-BEC`), PostgreSQL, Keycloak (cliente `ms-bec`, roles y *service accounts*), Firebase Storage para cartas y compromisos, SMTP no requerido en este corte.
 - **Integraciones salientes:** `GET /internal/v1/postulaciones/{id}/adjudicable` (`MS-POS`), `POST /internal/v1/programas/{id}/reservas` (`MS-PRG`), `POST /internal/v1/otp/consumir` (`MS-PLT`, solo se deja el puerto y el adaptador listos; se activa en el cambio de revocación).
