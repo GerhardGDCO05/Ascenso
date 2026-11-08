@@ -12,13 +12,13 @@
 
 ## 2. Shared kernel de dominio
 
-- [ ] 2.1 Implementar `EntidadAuditable`, `EntidadInmutable`, `AggregateRoot`, `ValueObject` y `DomainEvent` en `Domain/Comun`; verificar con pruebas que la igualdad por identificador y la auditoría funcionan.
-- [ ] 2.2 Implementar un generador de `UUIDv7` y la abstracción `IClock` (`DateTimeOffset UtcNow`); verificar con pruebas que los identificadores son version 7 y ordenables por tiempo.
-- [ ] 2.3 Crear el catálogo de excepciones y códigos de error de dominio (`TransicionEstadoInvalidaException`, `OfertaVencidaException`, `DobleBeneficioException`, `JustificacionRequeridaException`, `PostulacionNoAdjudicableException`, `CompromisoNoFirmadoException`); verificar que cada excepción expone su código y estatus HTTP.
-- [ ] 2.4 Implementar los objetos de valor `PoliticaCobertura` y `CondicionesPermanencia` con validación de porcentajes, montos no negativos y moneda; verificar con pruebas de valores válidos e inválidos.
-- [ ] 2.5 Implementar las enumeraciones exactas `EstadoBeca` (6 valores), `EstadoOferta` (5), `EstadoCompromiso` (4), `TipoCierreBeca`, `TipoCobertura`, `TipoCuentaBancaria` y `TipoOperacionOTP`; verificar con pruebas que los valores y nombres coinciden literalmente con la especificación.
-- [ ] 2.6 Crear las tablas de transición de `Beca`, `OfertaBeca` y `CompromisoBecario` como estructuras de dominio testeables; verificar que cada dupla permitida y prohibida de la Tabla 3.2 está cubierta.
-- [ ] 2.7 Definir los puertos `IBecaRepository`, `IOfertaBecaRepository`, `ICompromisoBecarioRepository`, `IUnitOfWork`, `IClock`, `IAlmacenamientoArchivos`, `ICartaOfertaPdfGenerator`, `IPostulacionesClient`, `IProgramasClient` e `IOtpClient`; verificar que `Domain` y `Application` compilan sin referencias a `Infrastructure`.
+- [x] 2.1 Implementar `EntidadAuditable`, `EntidadInmutable`, `AggregateRoot`, `ValueObject` y `DomainEvent` en `Domain/Comun`; verificar con pruebas que la igualdad por identificador y la auditoría funcionan.
+- [x] 2.2 Implementar un generador de `UUIDv7` y la abstracción `IClock` (`DateTimeOffset UtcNow`); verificar con pruebas que los identificadores son version 7 y ordenables por tiempo.
+- [x] 2.3 Crear el catálogo de excepciones y códigos de error de dominio (`TransicionEstadoInvalidaException`, `OfertaVencidaException`, `DobleBeneficioException`, `JustificacionRequeridaException`, `PostulacionNoAdjudicableException`, `CompromisoNoFirmadoException`); verificar que cada excepción expone su código y estatus HTTP.
+- [x] 2.4 Implementar los objetos de valor `PoliticaCobertura` y `CondicionesPermanencia` con validación de porcentajes, montos no negativos y moneda; verificar con pruebas de valores válidos e inválidos.
+- [x] 2.5 Implementar las enumeraciones exactas `EstadoBeca` (6 valores), `EstadoOferta` (5), `EstadoCompromiso` (4), `TipoCierreBeca`, `TipoCobertura`, `TipoCuentaBancaria` y `TipoOperacionOTP`; verificar con pruebas que los valores y nombres coinciden literalmente con la especificación.
+- [x] 2.6 Crear las tablas de transición de `Beca`, `OfertaBeca` y `CompromisoBecario` como estructuras de dominio testeables; verificar que cada dupla permitida y prohibida de la Tabla 3.2 está cubierta.
+- [x] 2.7 Definir los puertos `IBecaRepository`, `IOfertaBecaRepository`, `ICompromisoBecarioRepository`, `IUnitOfWork`, `IClock`, `IAlmacenamientoArchivos`, `ICartaOfertaPdfGenerator`, `IPostulacionesClient`, `IProgramasClient` e `IOtpClient`; verificar que `Domain` y `Application` compilan sin referencias a `Infrastructure`.
 
 ## 3. Modelo de dominio de otorgamiento
 
