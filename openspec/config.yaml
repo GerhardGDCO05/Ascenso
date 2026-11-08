@@ -1,32 +1,76 @@
 schema: spec-driven
 
-# Project context (optional)
-# This is shown to AI when creating artifacts.
-# Add your tech stack, conventions, style guides, domain knowledge, etc.
-# Example:
-#   context: |
-#     Tech stack: TypeScript, React, Node.js
-#     We use conventional commits
-#     Domain: e-commerce platform
+# Project context (Tech stack, conventions, domain knowledge, etc.)
+context:
+  # 1. Inclusión del Contexto General de Negocio y Glosario DDD
+  - include: ../docs/Explicacion_del_DDD_V7.md
 
-# Per-artifact rules (optional)
-# Add custom rules for specific artifacts.
-# Example:
-#   rules:
-#     proposal:
-#       - Keep proposals under 500 words
-#       - Always include a "Non-goals" section
-#     tasks:
-#       - Break tasks into chunks of max 2 hours
+  # 2. Convenciones Técnicas e Instrucciones de Código en línea
+  - inline: |
+      Idioma del Proyecto: Español. Escribir todos los artefactos, propuestas, diseños y tareas en Español.
+      Tecnología Principal: C# (.NET 10).
+      Arquitectura: Hexagonal con inversión de dependencias estricta y Domain-Driven Design (DDD).
 
-# Per-operation guidance (optional)
-# Add advisory guidance for how apply and archive work should be conducted.
-# This is separate from artifact rules above.
-# Example:
-#   operations:
-#     apply:
-#       guidance:
-#         - Keep test summaries concise
-#     archive:
-#       guidance:
-#         - Summarize the archive outcome before finishing
+      ## Requisitos Arquitectónicos No Funcionales (Atributos de Calidad)
+      - **Escalabilidad:** Diseñar cada microservicio pensando en un modelo sin estado (*stateless*). Las consultas pesadas o listados del lado de API/Infraestructura deben soportar paginación estricta desde el inicio. Evitar acoplamientos en memoria para permitir el escalado horizontal.
+      - **Rendimiento:** Separar claramente las operaciones de lectura y escritura aplicando principios CQRS-Lite para evitar bloqueos innecesarios en la base de datos de transacciones.
+      - **Mantenibilidad:** Respetar estrictamente el aislamiento de la capa de `Domain`. El dominio debe permanecer puro y agnóstico a bases de datos, proveedores de nube o transporte de mensajería.
+
+
+      ## 1. Estructura de Proyectos (Arquitectura Hexagonal)
+      La solución mantiene cuatro proyectos obligatorios:
+      - src/Ascenso.Becas.Domain/ (C# Puro, sin dependencias externas)
+      - src/Ascenso.Becas.Application/ (Casos de Uso, DTOs, Puertos)
+      - src/Ascenso.Becas.Infrastructure/ (Adaptadores EF Core, MassTransit, Keycloak)
+      - src/Ascenso.Becas.API/ (Controllers, Middlewares, DI Setup)
+      
+      Carpetas y Namespaces usan PascalCase. Forzar 'File-Scoped Namespaces' (C# 10+).
+
+      ## 2. Convenciones Generales de Código C#
+      - Clases / Structs / Records: PascalCase (ej. Beca, OfertaBeca)
+      - Interfaces: IPascalCase (ej. IBecaRepository)
+      - Métodos y Propiedades: PascalCase (ej. Transicionar(), MontoComprometido)
+      - Campos Privados: _camelCase (ej. _dbContext, _becaRepository)
+      - Parámetros y Variables locales: camelCase (ej. postulanteId, becaExistente)
+      - Constantes / Enums: PascalCase (ej. EstadoBeca.Activa)
+      - Tipos Genéricos: T o TPascalCase (ej. TResult)
+
+      ## 3. Convenciones Domain-Driven Design (DDD)
+      - Nomenclatura del Dominio en Español: Conceptos de negocio (Agregados, Entidades, Objetos de Valor, Enums, Eventos de Dominio y Excepciones) DEBEN escribirse literalmente en español según la Especificación Maestra. Abstracciones técnicas o de infraestructura se escriben en inglés.
+      - Agregados y Entidades: Ubicados en Domain/{Modulo}/Agregados/ o Domain/{Modulo}/Entidades/. Heredan de EntidadAuditable o EntidadInmutable. Identificador UUIDv7 (tipo Guid) inicializado mediante `Guid.CreateVersion7()`.
+      - Encapsulamiento Estricto: Ninguna propiedad mutable tiene setter público. Las modificaciones ocurren mediante métodos de dominio expresivos.
+      - Objetos de Valor: Implementados como readonly record struct o sealed record class inmutables con validación en la instanciación.
+      - Enumeraciones: PascalCase en singular. Los valores se mapean en la Base de Datos como cadenas VARCHAR exactas en MAYÚSCULAS.
+      - Puertos e Interfaces: Prefijo 'I' obligatorio. Sufijo 'Async' en métodos asíncronos que retornen Task con CancellationToken por defecto.
+
+      ## 4. Capa de Aplicación (Application/)
+      - Arquitectura CQRS-Lite: Comandos (Sufijo Command), Consultas (Sufijo Query), Manejadores (Sufijo CommandHandler o QueryHandler), DTOs (Sufijo Dto o Response).
+
+      ## 5. Infraestructura y API
+      - Repositorios: Sufijo Repository (ej. BecaRepository). DbContext llamado BecasDbContext.
+      - Clientes HTTP: Sufijo Client (ej. PostulacionesClient).
+      - Controladores: Ubicados en API/Controllers/v1/ o API/Controllers/Internal/v1/. Rutas REST en kebab-case en plural (ej. /api/v1/becas/ofertas).
+
+      ## Reglas de Validación de OpenSpec para el Agente (DeepSeek / OpenCode):
+      1. RECHAZA cualquier propuesta de cambio si una propiedad mutable en `Domain/` contiene un setter público.
+      2. Detén la generación si detectas nombres de entidades o agregados en inglés en la capa de Dominio.
+      3. Asegúrate de que toda tarea de persistencia asíncrona incluya y pase el `CancellationToken`.
+
+# Per-artifact rules
+rules:
+  proposal:
+    - "Verificar que la propuesta respete los límites de proyectos de la Arquitectura Hexagonal de Ascenso."
+    - "El agente debe leer 'openspec/roadmaps/por-integrante.md' y 'openspec/roadmaps/por-microservicio.md' ANTES de aceptar el cambio."
+    - "RECHAZAR la propuesta si el RF solicitado no corresponde al microservicio mapeado o si pertenece a otro Integrante del equipo."
+  specs:
+    - "Garantizar que las reglas del negocio descritas utilicen la terminología de dominio estrictamente en español."
+    - "Organizar siempre las especificaciones dentro de una subcarpeta que corresponda al microservicio afectado (ej: ms-aud/ o ms-post/ )."
+
+# Per-operation guidance
+operations:
+  apply:
+    guidance:
+      - "Identificar al Integrante actual del equipo antes de escribir código."
+      - "Solo trabajar en los RFs asignados a dicho integrante que estén en estado [ ] (PENDIENTE)."
+      - "Está estrictamente PROHIBIDO modificar o asumir código de RFs asignados a otros miembros."
+      - "Al completar con éxito la tarea, marcar con un check [x] el RF correspondiente tanto en 'roadmap-integrantes.md' como en 'roadmap-microservicios.md'."

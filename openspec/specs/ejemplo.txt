@@ -1,0 +1,24 @@
+De acuerdo con la especificación y documentación oficial vigente de OpenSpec, un archivo de especificación duradera (spec.md) debe estar estrictamente enfocado en el comportamiento del sistema (behavior) y no en los detalles técnicos de implementación.
+
+
+# Specification: [Nombre del Microservicio]
+
+## Context
+<!-- Breve descripción del propósito de este Bounded Context en el negocio -->
+[Escribe aquí qué hace el microservicio en una o dos líneas. Ej: Gestión del ciclo de vida de la beca, ofertas, firmas y suspensiones.]
+
+## Invariants
+<!-- Reglas de negocio globales que NUNCA pueden violarse en este microservicio -->
+- [Invariante 1: Ej. El MontoFijoPeriodo de una PoliticaCobertura jamás puede ser negativo.]
+- [Invariante 2: Ej. Ninguna propiedad mutable de una entidad de dominio puede exponer setters públicos.]
+
+## Scenarios
+<!-- OpenCode inyectará los escenarios GIVEN/WHEN/THEN detallados al archivar cada HU -->
+
+
+🚨 Reglas de Oro oficiales para tus archivos spec.md
+
+Para que OpenCode o DeepSeek procesen estos archivos de forma óptima, la documentación exige cumplir con tres principios:
+1. Sin Detalles de Infraestructura: No debes mencionar bases de datos, controladores API, tablas, ni rutas HTTP en este archivo. El spec.md define qué hace el negocio, no cómo se guarda. (El cómo irá en el archivo design.md de cada cambio).
+2. Uso de Vocabulario Ubicuo: Todos los términos conceptuales utilizados en los escenarios (como Beca, EstadoBeca, PoliticaCobertura) deben coincidir exactamente con tu glosario en español y con las clases del dominio en C#.
+3. Mantenerlos Atómicos (Menores a 50KB): Si un microservicio empieza a tener demasiados escenarios y el archivo se vuelve muy largo, la documentación oficial estipula que debes crear subarchivos dentro de la carpeta del microservicio (Ej: specs/ms-bec/otorgamiento.md, specs/ms-bec/desembolsos.md) para evitar que la IA pierda contexto.
