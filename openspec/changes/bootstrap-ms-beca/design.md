@@ -1,6 +1,6 @@
 ## Context
 
-`MS-BEC` parte de cero: el repositorio solo contiene `openspec/specs/domain-spec.md`. El diseño debe hacer convivir la máquina de estados cerrada del PRD, las invariantes monetarias y de no doble beneficio, y la integración con `MS-POS`, `MS-PRG`, `MS-PLT` y `MS-AUD`, sin introducir transacciones distribuidas. El alcance de este cambio es la fundación del servicio y la primera rebanada vertical de otorgamiento; los desembolsos, el seguimiento académico, la renovación y la revocación definitiva se construirán sobre esta base en cambios posteriores.
+`MS-BEC` parte de cero: el repositorio solo contiene la especificación maestra `docs/Explicacion_del_DDD_V7.md`. El diseño debe hacer convivir la máquina de estados cerrada del PRD, las invariantes monetarias y de no doble beneficio, y la integración con `MS-POS`, `MS-PRG`, `MS-PLT` y `MS-AUD`, sin introducir transacciones distribuidas. El alcance de este cambio es la fundación del servicio y la primera rebanada vertical de otorgamiento; los desembolsos, el seguimiento académico, la renovación y la revocación definitiva se construirán sobre esta base en cambios posteriores.
 
 Restricciones que condicionan el diseño:
 

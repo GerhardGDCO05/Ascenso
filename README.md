@@ -2,6 +2,17 @@
 
 Base del proyecto Ascenso. Incluye el entorno de desarrollo, el frontend en React y los microservicios en .NET organizados bajo `Apps/services`.
 
+## Organización del repositorio
+
+- `Apps/services/<microservicio>/`: código y pruebas de cada microservicio.
+- `openspec/specs/<microservicio>/`: especificaciones duraderas por microservicio.
+- `openspec/changes/`: cambios activos; históricos en `openspec/changes/archive/<fecha-hora>/`.
+- `docs/`: contexto general (PRD, DDD, convenciones y organización).
+- `openspec/roadmaps/`: planificación general por integrante y microservicio.
+- `.github/workflows/ci-cd.yml`: descubre automáticamente las soluciones de `Apps/services/` y ejecuta build + pruebas de cada microservicio.
+
+La estructura completa y las reglas para incorporar nuevos microservicios están en [`docs/organizacion_repositorio.md`](docs/organizacion_repositorio.md). El trabajo activo se desarrolla en `ms-beca`; `ms-pos` y `ms-plt` son contexto de otros equipos.
+
 ## Entorno de desarrollo
 
 | Herramienta | Versión |

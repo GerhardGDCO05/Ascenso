@@ -1,5 +1,7 @@
 # Registro de Auditoría — Feature 2: Shared Kernel del Dominio
 
+> **Nota de reorganización (2026-11-08):** el cambio se renombró de `bootstrap-ms-bec` a `bootstrap-ms-beca` y su carpeta de especificaciones de `specs/ms-bec/` a `specs/ms-beca/`. Este registro se conserva como evidencia de la sesión del 2026-11-07.
+
 - **Fecha y hora de ejecución:** 7 de noviembre de 2026, 13:48 (UTC-4)
 - **Cambio OpenSpec:** `bootstrap-ms-bec`
 - **Feature:** 2 — Shared Kernel del Dominio

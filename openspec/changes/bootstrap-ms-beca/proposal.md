@@ -21,12 +21,12 @@
 
 ### New Capabilities
 
-- `ms-bec/fundacion-servicio`: arranque del microservicio con arquitectura hexagonal, persistencia PostgreSQL, seguridad Keycloak, mensajería Outbox/Inbox, trabajos Hangfire, observabilidad, entorno local y CI.
-- `ms-bec/otorgamiento-beca`: ciclo de otorgamiento de la beca (emisión, aceptación, rechazo, anulación y expiración de `OfertaBeca`), compuerta de `CompromisoBecario`, consulta de becas activas y eventos de integración asociados.
+- `ms-beca/fundacion-servicio`: arranque del microservicio con arquitectura hexagonal, persistencia PostgreSQL, seguridad Keycloak, mensajería Outbox/Inbox, trabajos Hangfire, observabilidad, entorno local y CI.
+- `ms-beca/otorgamiento-beca`: ciclo de otorgamiento de la beca (emisión, aceptación, rechazo, anulación y expiración de `OfertaBeca`), compuerta de `CompromisoBecario`, consulta de becas activas y eventos de integración asociados.
 
 ### Modified Capabilities
 
-- Ninguna. La especificación maestra `openspec/specs/domain-spec.md` se mantiene como fuente de verdad del dominio.
+- Ninguna. La especificación maestra `docs/Explicacion_del_DDD_V7.md` se mantiene como fuente de verdad del dominio.
 
 ## Impact
 

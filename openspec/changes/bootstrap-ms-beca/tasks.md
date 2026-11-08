@@ -151,14 +151,14 @@
 - [ ] 14.1 Publicar la especificación OpenAPI de los endpoints públicos e internos y los contratos de eventos (AsyncAPI o Markdown) en `docs/`; verificar que coinciden con las rutas y DTOs implementados.
 - [ ] 14.2 Documentar el contrato de claims de Keycloak (`roles`, `postulante_id`, `programa_ids`, `acr`/`amr`) y las responsabilidades de `MS-PLT`; verificar que el equipo de plataforma lo revisa.
 - [ ] 14.3 Documentar los contratos de `adjudicable` y `reservas` con `MS-POS` y `MS-PRG`, incluyendo ejemplos y códigos de error; verificar que los equipos consumidores los validan.
-- [ ] 14.4 Ejecutar `openspec validate bootstrap-ms-bec --strict` y corregir cualquier observación; verificar que el cambio queda listo para aplicar.
+- [ ] 14.4 Ejecutar `openspec validate bootstrap-ms-beca --strict` y corregir cualquier observación; verificar que el cambio queda listo para aplicar.
 - [ ] 14.5 Revisar que el alcance no incluya desembolsos, seguimiento, renovación ni revocación definitiva; registrar los cambios posteriores necesarios en el roadmap.
 
 ---
 
 **Siguientes cambios planificados (fuera de este cambio):**
 
-- `implementar-desembolsos-ms-bec`: `CalendarioDesembolso`, `Desembolso`, `DatosPagoBecario` con AES-GCM, OTP, incidencias, suspensión y revocación definitiva.
-- `implementar-seguimiento-academico-ms-bec`: `ReporteAcademico`, `EvaluacionPermanencia`, alertas de entrega tardía y consecuencias de permanencia.
-- `implementar-renovacion-y-pausa-ms-bec`: `SolicitudRenovacion`, creación de la beca sucesora y `PausaAplazamiento`.
-- `integrar-auditoria-ms-bec`: publicación de eventos de historial y proyecciones para `MS-AUD`.
+- `implementar-desembolsos-ms-beca`: `CalendarioDesembolso`, `Desembolso`, `DatosPagoBecario` con AES-GCM, OTP, incidencias, suspensión y revocación definitiva.
+- `implementar-seguimiento-academico-ms-beca`: `ReporteAcademico`, `EvaluacionPermanencia`, alertas de entrega tardía y consecuencias de permanencia.
+- `implementar-renovacion-y-pausa-ms-beca`: `SolicitudRenovacion`, creación de la beca sucesora y `PausaAplazamiento`.
+- `integrar-auditoria-ms-beca`: publicación de eventos de historial y proyecciones para `MS-AUD`.
