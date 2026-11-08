@@ -1,18 +1,22 @@
 # Guía Estándar de Convenciones C#, DDD y Arquitectura Hexagonal — Plataforma Ascenso
 
-Este documento define el estándar estricto de codificación, nombrado y diseño técnico que debe seguir todo agente (OpenCode / DeepSeek) y desarrollador al escribir código C# (.NET 10) en la solución `Ascenso.Becas` y demás microservicios.
+Este documento define el estándar estricto de codificación, nombrado y diseño técnico que debe seguir todo agente (OpenCode / DeepSeek) y desarrollador al escribir código C# (.NET 10) en cualquiera de las soluciones de microservicios de la plataforma Ascenso.
 
 ## 1. Convenciones Estructurales y de Proyectos (Arquitectura Hexagonal)
 
-La solución debe mantener cuatro proyectos con inversión de dependencias estricta:
+Cada microservicio vive en su propia carpeta bajo `Apps/services/` y mantiene cuatro proyectos con inversión de dependencias estricta. `ms-becas` es el ejemplo implementado actualmente; los demás equipos replican la misma estructura con el nombre de su contexto:
 
 ```
-src/
-├── Ascenso.Becas.Domain/            # C# Puro (Sin dependencias externas)
-├── Ascenso.Becas.Application/       # Casos de Uso, DTOs, Puertos de Aplicación
-├── Ascenso.Becas.Infrastructure/    # Adaptadores EF Core, MassTransit, Keycloak, etc.
-└── Ascenso.Becas.API/               # Controllers, Middlewares, Dependency Injection Setup
+Apps/services/
+├── ms-becas/                        # MS-BECA — solución Ascenso.Becas
+│   ├── Ascenso.Becas.Domain/        # C# Puro (Sin dependencias externas)
+│   ├── Ascenso.Becas.Application/   # Casos de Uso, DTOs, Puertos de Aplicación
+│   ├── Ascenso.Becas.Infrastructure/ # Adaptadores EF Core, MassTransit, Keycloak, etc.
+│   └── Ascenso.Becas.Api/           # Controllers, Middlewares, Dependency Injection Setup
+└── ms-<otro>/                       # Cada microservicio replica esta misma estructura
 ```
+
+> Las convenciones de este documento son generales. Los nombres `Ascenso.Becas.*` corresponden a `ms-becas`; cada equipo reemplaza `Becas` por el contexto de su microservicio.
 
 ### 1.1 Estructura de Carpetas y Namespaces
 

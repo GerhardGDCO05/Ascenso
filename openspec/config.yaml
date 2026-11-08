@@ -5,7 +5,13 @@ context:
   # 1. Inclusión del Contexto General de Negocio y Glosario DDD
   - include: ../docs/Explicacion_del_DDD_V7.md
 
-  # 2. Convenciones Técnicas e Instrucciones de Código en línea
+  # 2. Convenciones Técnicas y DDD (fuente única en docs/)
+  - include: ../docs/convenciones_c_y_ddd.md
+
+  # 3. Organización general del repositorio por microservicio
+  - include: ../docs/organizacion_repositorio.md
+
+  # 4. Instrucciones de Código en línea
   - inline: |
       Idioma del Proyecto: Español. Escribir todos los artefactos, propuestas, diseños y tareas en Español.
       Tecnología Principal: C# (.NET 10).
@@ -18,11 +24,11 @@ context:
 
 
       ## 1. Estructura de Proyectos (Arquitectura Hexagonal)
-      La solución mantiene cuatro proyectos obligatorios:
-      - src/Ascenso.Becas.Domain/ (C# Puro, sin dependencias externas)
-      - src/Ascenso.Becas.Application/ (Casos de Uso, DTOs, Puertos)
-      - src/Ascenso.Becas.Infrastructure/ (Adaptadores EF Core, MassTransit, Keycloak)
-      - src/Ascenso.Becas.API/ (Controllers, Middlewares, DI Setup)
+      Cada microservicio mantiene cuatro proyectos obligatorios dentro de su carpeta en Apps/services/<microservicio>/ (por ejemplo, Apps/services/ms-becas/ para MS-BECA):
+      - Ascenso.<Contexto>.Domain/ (C# Puro, sin dependencias externas)
+      - Ascenso.<Contexto>.Application/ (Casos de Uso, DTOs, Puertos)
+      - Ascenso.<Contexto>.Infrastructure/ (Adaptadores EF Core, MassTransit, Keycloak)
+      - Ascenso.<Contexto>.Api/ (Controllers, Middlewares, DI Setup)
       
       Carpetas y Namespaces usan PascalCase. Forzar 'File-Scoped Namespaces' (C# 10+).
 
@@ -51,6 +57,13 @@ context:
       - Clientes HTTP: Sufijo Client (ej. PostulacionesClient).
       - Controladores: Ubicados en API/Controllers/v1/ o API/Controllers/Internal/v1/. Rutas REST en kebab-case en plural (ej. /api/v1/becas/ofertas).
 
+      ## 6. Organización por Microservicio
+      - La organización del repositorio es general: cada microservicio tiene su carpeta en Apps/services/, su especificación en openspec/specs/<microservicio>/ y sus cambios en openspec/changes/.
+      - El trabajo activo del equipo se concentra en ms-beca. ms-pos y ms-plt son contexto de otros equipos y no se modifican.
+      - Los cambios se nombran <accion>-<microservicio> y los históricos se archivan en openspec/changes/archive/<fecha-hora>/.
+      - El workflow .github/workflows/ci-cd.yml descubre automáticamente todas las soluciones .sln/.slnx de Apps/services/ y ejecuta build + pruebas por microservicio.
+      - Antes de crear un microservicio nuevo, seguir la guía de docs/organizacion_repositorio.md.
+
       ## Reglas de Validación de OpenSpec para el Agente (DeepSeek / OpenCode):
       1. RECHAZA cualquier propuesta de cambio si una propiedad mutable en `Domain/` contiene un setter público.
       2. Detén la generación si detectas nombres de entidades o agregados en inglés en la capa de Dominio.
@@ -60,11 +73,12 @@ context:
 rules:
   proposal:
     - "Verificar que la propuesta respete los límites de proyectos de la Arquitectura Hexagonal de Ascenso."
-    - "El agente debe leer 'openspec/roadmaps/por-integrante.md' y 'openspec/roadmaps/por-microservicio.md' ANTES de aceptar el cambio."
+    - "El agente debe leer 'openspec/roadmaps/por_integrante.md' y 'openspec/roadmaps/por_microservicio.md' ANTES de aceptar el cambio."
     - "RECHAZAR la propuesta si el RF solicitado no corresponde al microservicio mapeado o si pertenece a otro Integrante del equipo."
   specs:
     - "Garantizar que las reglas del negocio descritas utilicen la terminología de dominio estrictamente en español."
-    - "Organizar siempre las especificaciones dentro de una subcarpeta que corresponda al microservicio afectado (ej: ms-aud/ o ms-post/ )."
+    - "Organizar siempre las especificaciones dentro de una subcarpeta que corresponda al microservicio afectado (ej: ms-beca/, ms-pos/ o ms-plt/)."
+    - "Mantener una carpeta por microservicio en openspec/specs/; no mezclar escenarios de contextos distintos ni modificar las especificaciones de otros equipos."
 
 # Per-operation guidance
 operations:
@@ -73,4 +87,4 @@ operations:
       - "Identificar al Integrante actual del equipo antes de escribir código."
       - "Solo trabajar en los RFs asignados a dicho integrante que estén en estado [ ] (PENDIENTE)."
       - "Está estrictamente PROHIBIDO modificar o asumir código de RFs asignados a otros miembros."
-      - "Al completar con éxito la tarea, marcar con un check [x] el RF correspondiente tanto en 'roadmap-integrantes.md' como en 'roadmap-microservicios.md'."
+      - "Al completar con éxito la tarea, marcar con un check [x] el RF correspondiente tanto en 'openspec/roadmaps/por_integrante.md' como en 'openspec/roadmaps/por_microservicio.md'."

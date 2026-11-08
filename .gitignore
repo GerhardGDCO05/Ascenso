@@ -1,25 +1,61 @@
-# .NET
-**/bin/
-**/obj/
+# ==========================================
+# 1. Compilación y Entorno de .NET / C#
+# ==========================================
+bin/
+obj/
+out/
 *.user
-.vs/
-TestResults/
+*.userosv
+*.suo
+*.userprefs
+*.sln.docstates
 *.trx
+TestResults/
 
-# Node
-**/node_modules/
+
+
+# Archivos de caché e IDE (Visual Studio / JetBrains Rider / VS Code)
+.vs/
+.vscode/
+.idea/
+*.rsuser
+*.cache
+
+# ==========================================
+# 2. Herramientas y Caché de IA (OpenCode)
+# ==========================================
+.opencode/
+.opencode/logs/
+.opencode/cache/
+
+# ==========================================
+# 3. Node.js / Herramientas CLI (OpenSpec / nvm)
+# ==========================================
+node_modules/
+.nvm/
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
 **/dist/
 
-# Entornos y secretos
-.env
-.env.*
+# ==========================================
+# 4. Variables de Entorno y Secretos
+# ==========================================
+*.env
+*.env.*
 !.env.example
+*.pem
 *.pfx
+appsettings.Development.json
+appsettings.Local.json
+secrets.json
 firebase-service-account*.json
 
-# Herramientas y sistema
-.idea/
-.vscode/
-.opencode/
+# ==========================================
+# 5. Sistema Operativo
+# ==========================================
 .DS_Store
+.DS_Store?
+ehthumbs.db
+Icon?
 Thumbs.db
