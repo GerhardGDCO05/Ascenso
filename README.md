@@ -15,8 +15,3 @@ Base del proyecto Ascenso. Incluye el entorno de desarrollo, el frontend en Reac
 
 El SDK de .NET y `dotnet-ef` se cargan automáticamente en terminales nuevas mediante `~/.bashrc` y `~/.profile`. La versión del SDK está fijada en `global.json`.
 
-
-
-
-
-
