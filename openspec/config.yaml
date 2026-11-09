@@ -75,6 +75,9 @@ rules:
     - "Verificar que la propuesta respete los límites de proyectos de la Arquitectura Hexagonal de Ascenso."
     - "El agente debe leer 'openspec/roadmaps/por_integrante.md' y 'openspec/roadmaps/por_microservicio.md' ANTES de aceptar el cambio."
     - "RECHAZAR la propuesta si el RF solicitado no corresponde al microservicio mapeado o si pertenece a otro Integrante del equipo."
+    - "Nombrar la carpeta del cambio bajo el patrón estricto: [ID-Cambio]-[Integrante]-[Microservicio]."
+    - "Para el [ID-Cambio], utilizar el código de requerimiento (ej: rf15) si es una HU de negocio. Si es una tarea arbitraria o técnica, obligar al uso exclusivo de uno de estos cuatro identificadores: 'tech' (infraestructura/carpetas), 'test' (pruebas unitarias/integración), 'chore' (mantenimiento/NuGet) o 'fix' (corrección de fallos menores)."
+    
   specs:
     - "Garantizar que las reglas del negocio descritas utilicen la terminología de dominio estrictamente en español."
     - "Organizar siempre las especificaciones dentro de una subcarpeta que corresponda al microservicio afectado (ej: ms-beca/, ms-pos/ o ms-plt/)."
@@ -87,4 +90,4 @@ operations:
       - "Identificar al Integrante actual del equipo antes de escribir código."
       - "Solo trabajar en los RFs asignados a dicho integrante que estén en estado [ ] (PENDIENTE)."
       - "Está estrictamente PROHIBIDO modificar o asumir código de RFs asignados a otros miembros."
-      - "Al completar con éxito la tarea, marcar con un check [x] el RF correspondiente tanto en 'openspec/roadmaps/por_integrante.md' como en 'openspec/roadmaps/por_microservicio.md'."
+      - "Al completar con éxito una funcionalidad de negocio, marcar con un check [x] el RF correspondiente tanto en 'openspec/roadmaps/por_integrante.md' como en 'openspec/roadmaps/por_microservicio.md'."
