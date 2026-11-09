@@ -49,7 +49,7 @@ Se creó `openspec/specs/ms-beca/spec_beca.md`, al mismo nivel que `ms-pos` y `m
 - Se renombró su carpeta de especificaciones de `specs/ms-bec/` a `specs/ms-beca/`.
 - Se actualizaron las referencias en `proposal.md`, `design.md` y `tasks.md`.
 - Se actualizó `openspec/specs/ejemplo.txt` para usar la ruta de ejemplo `specs/ms-beca/`.
-- El registro histórico del 2026-11-07 se conserva en `openspec/changes/archive/2026-11-07-1348/` con una nota sobre el renombrado.
+- El registro histórico del 2026-11-07 se conserva en `openspec/changes/archive/2026-11-07-1348-feature-core-shared-kernel-ms-beca/` con una nota sobre el renombrado.
 
 ## 6. Validación ejecutada
 
