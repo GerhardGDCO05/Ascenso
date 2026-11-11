@@ -22,17 +22,17 @@
 
 ## 3. Modelo de dominio de otorgamiento
 
-- [ ] 3.1 Implementar la creación de `Beca` en estado `OTORGADA` con `cadenaBecaId = id`, `becaAnteriorId = null`, `periodosCursados = 0`, `montoDesembolsadoPeriodoActual = 0`, `tieneRenovacionEnCurso = false`, `costoMatriculaReferenciaSnapshotId`, `montoComprometidoPeriodoActual` y snapshot de `PoliticaCobertura`; verificar con pruebas de fábrica y de campos iniciales.
-- [ ] 3.2 Implementar `OfertaBeca` con `montoOfertaPorPeriodo`, `montoTotalEstimadoDuracion`, `duracionPeriodos`, `condicionesSnapshot`, `urlCartaPdfFirebase`, `hashCartaSha256`, `fechaVencimientoAceptacion`, `referenciaJobExpiracionHangfireId` y `version`; verificar con pruebas de creación y valores por defecto.
-- [ ] 3.3 Implementar las transiciones de `Beca` `OTORGADA → ACTIVA`, `OTORGADA → REVOCADA`, `ACTIVA → SUSPENDIDA`, `SUSPENDIDA → ACTIVA`, `ACTIVA → RENOVADA`, `ACTIVA → CONCLUIDA` y las revocaciones permitidas; verificar que las duplas no listadas lanzan `TransicionEstadoInvalidaException`.
-- [ ] 3.4 Implementar las transiciones de `OfertaBeca` desde `PENDIENTE_RESPUESTA` hacia `ACEPTADA`, `RECHAZADA_POR_POSTULANTE`, `EXPIRADA` y `ANULADA_POR_COORDINACION`; verificar que los estados terminales no admiten nuevas transiciones.
-- [ ] 3.5 Implementar `CompromisoBecario` con los estados `PENDIENTE_CARGA`, `EN_REVISION`, `APROBADO` y `RECHAZADO`, incremento de `numeroIntentoCarga`, hash, URL, IP y revisión; verificar el ciclo completo con pruebas.
-- [ ] 3.6 Implementar `HistorialEstadoBeca` como entidad inmutable y la generación automática de una fila por transición, incluyendo actor, justificación, OTP y marca de terminal; verificar que no existe API de modificación o borrado.
-- [ ] 3.7 Implementar la política de no doble beneficio como servicio de dominio: (a) ninguna otra beca `ACTIVA` con cobertura `TOTAL`, y (b) ninguna otra beca `ACTIVA` en el mismo periodo salvo acumulación en ambos programas; verificar con pruebas de todos los casos.
-- [ ] 3.8 Implementar el cálculo del monto de oferta por modalidad `TOTAL`, `PARCIAL` y `MONTO_FIJO`, con redondeo a 2 decimales y moneda USD; verificar con pruebas de borde (0%, 100%, montos fijos y matrícula 0).
-- [ ] 3.9 Implementar los eventos de dominio de emisión, activación, rechazo, anulación, expiración y compromiso; verificar con pruebas que cada transición emite exactamente el evento esperado y que no se emiten eventos en transiciones fallidas.
-- [ ] 3.10 Implementar la validación de justificación mínima (`Trim().Length >= 10`) para anulación y revocación; verificar que una justificación vacía o corta no cambia el estado.
-- [ ] 3.11 Agregar pruebas basadas en la tabla completa de estados de la especificación (todas las duplas origen/destino, incluidas las prohibidas); verificar cobertura del 100% de las transiciones de `Beca` y `OfertaBeca`.
+- [x] 3.1 Implementar la creación de `Beca` en estado `OTORGADA` con `cadenaBecaId = id`, `becaAnteriorId = null`, `periodosCursados = 0`, `montoDesembolsadoPeriodoActual = 0`, `tieneRenovacionEnCurso = false`, `costoMatriculaReferenciaSnapshotId`, `montoComprometidoPeriodoActual` y snapshot de `PoliticaCobertura`; verificar con pruebas de fábrica y de campos iniciales.
+- [x] 3.2 Implementar `OfertaBeca` con `montoOfertaPorPeriodo`, `montoTotalEstimadoDuracion`, `duracionPeriodos`, `condicionesSnapshot`, `urlCartaPdfFirebase`, `hashCartaSha256`, `fechaVencimientoAceptacion`, `referenciaJobExpiracionHangfireId` y `version`; verificar con pruebas de creación y valores por defecto.
+- [x] 3.3 Implementar las transiciones de `Beca` `OTORGADA → ACTIVA`, `OTORGADA → REVOCADA`, `ACTIVA → SUSPENDIDA`, `SUSPENDIDA → ACTIVA`, `ACTIVA → RENOVADA`, `ACTIVA → CONCLUIDA` y las revocaciones permitidas; verificar que las duplas no listadas lanzan `TransicionEstadoInvalidaException`.
+- [x] 3.4 Implementar las transiciones de `OfertaBeca` desde `PENDIENTE_RESPUESTA` hacia `ACEPTADA`, `RECHAZADA_POR_POSTULANTE`, `EXPIRADA` y `ANULADA_POR_COORDINACION`; verificar que los estados terminales no admiten nuevas transiciones.
+- [x] 3.5 Implementar `CompromisoBecario` con los estados `PENDIENTE_CARGA`, `EN_REVISION`, `APROBADO` y `RECHAZADO`, incremento de `numeroIntentoCarga`, hash, URL, IP y revisión; verificar el ciclo completo con pruebas.
+- [x] 3.6 Implementar `HistorialEstadoBeca` como entidad inmutable y la generación automática de una fila por transición, incluyendo actor, justificación, OTP y marca de terminal; verificar que no existe API de modificación o borrado.
+- [x] 3.7 Implementar la política de no doble beneficio como servicio de dominio: (a) ninguna otra beca `ACTIVA` con cobertura `TOTAL`, y (b) ninguna otra beca `ACTIVA` en el mismo periodo salvo acumulación en ambos programas; verificar con pruebas de todos los casos.
+- [x] 3.8 Implementar el cálculo del monto de oferta por modalidad `TOTAL`, `PARCIAL` y `MONTO_FIJO`, con redondeo a 2 decimales y moneda USD; verificar con pruebas de borde (0%, 100%, montos fijos y matrícula 0).
+- [x] 3.9 Implementar los eventos de dominio de emisión, activación, rechazo, anulación, expiración y compromiso; verificar con pruebas que cada transición emite exactamente el evento esperado y que no se emiten eventos en transiciones fallidas.
+- [x] 3.10 Implementar la validación de justificación mínima (`Trim().Length >= 10`) para anulación y revocación; verificar que una justificación vacía o corta no cambia el estado.
+- [x] 3.11 Agregar pruebas basadas en la tabla completa de estados de la especificación (todas las duplas origen/destino, incluidas las prohibidas); verificar cobertura del 100% de las transiciones de `Beca` y `OfertaBeca`.
 
 ## 4. Persistencia y migraciones
 
