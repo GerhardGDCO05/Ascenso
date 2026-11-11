@@ -1,7 +1,7 @@
 using Ascenso.Becas.Domain.Comun;
 using Ascenso.Becas.Domain.Ports;
 
-namespace Ascenso.Becas.Domain.Tests.Arquitectura;
+namespace Ascenso.Becas.ArchitectureTests.Arquitectura;
 
 public sealed class DomainIndependenceTests
 {

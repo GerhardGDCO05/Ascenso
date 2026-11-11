@@ -66,8 +66,10 @@ Estado actual:
 1. Crear `Apps/services/<microservicio>/` con su solución y los cuatro proyectos hexagonales.
 2. Crear `openspec/specs/<microservicio>/spec_<código>.md` con el contexto y las invariantes del dominio.
 3. Crear el cambio activo en `openspec/changes/<acción>-<microservicio>/`.
-4. Verificar que el workflow general de CI detecte la nueva solución. No hace falta editar `.github/workflows/ci-cd.yml`: descubre automáticamente los archivos `.sln` y `.slnx` bajo `Apps/services/`.
-5. Actualizar los roadmaps generales si el microservicio asume nuevos RF.
+4. Definir la configuración del microservicio dentro de su carpeta (`Directory.Build.props`, `Directory.Packages.props` y `.editorconfig`) para no acoplar versiones ni reglas con otros equipos.
+5. Generar los `packages.lock.json` y verificar que `dotnet restore --locked-mode` funciona.
+6. Verificar que el workflow general de CI detecte la nueva solución. No hace falta editar `.github/workflows/ci-cd.yml`: descubre automáticamente los archivos `.sln` y `.slnx` bajo `Apps/services/`.
+7. Actualizar los roadmaps generales si el microservicio asume nuevos RF.
 
 ## 6. Situación de MS-BECA
 
@@ -80,7 +82,10 @@ Apps/services/ms-becas/
 ├── Ascenso.Becas.Infrastructure/    # Adaptadores EF Core, mensajería, seguridad
 ├── Ascenso.Becas.Api/               # Controllers, middlewares y DI
 └── tests/
-    └── Ascenso.Becas.Domain.Tests/  # Pruebas de dominio y arquitectura
+    ├── Ascenso.Becas.Domain.Tests/        # Pruebas de dominio
+    ├── Ascenso.Becas.Application.Tests/   # Pruebas de casos de uso y handlers
+    ├── Ascenso.Becas.ArchitectureTests/   # Reglas de dependencia entre capas
+    └── Ascenso.Becas.IntegrationTests/    # Persistencia, mensajería y API
 ```
 
-El cambio activo es `bootstrap-ms-beca` y sus especificaciones de cambio viven en `openspec/changes/bootstrap-ms-beca/specs/ms-beca/`.
+El cambio activo es `bootstrap-ms-beca` y la especificación duradera vive en `openspec/specs/ms-beca/spec_beca.md`.

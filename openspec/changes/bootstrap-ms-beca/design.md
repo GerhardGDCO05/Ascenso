@@ -61,7 +61,7 @@ Se usa un despachador propio (`ICommandDispatcher`/`IQueryDispatcher`) en lugar 
 - `global.json` fija la banda del SDK y `Directory.Packages.props` centraliza versiones. Se usa `packages.lock.json` y `RestoreLockedMode` en CI para builds reproducibles.
 - EF Core 10 con `Npgsql.EntityFrameworkCore.PostgreSQL`; MassTransit con transporte RabbitMQ y Outbox/Inbox EF Core; Hangfire con `Hangfire.PostgreSql`; FluentValidation; OpenTelemetry + Serilog; `PdfSharpCore` (MIT) para la carta; `Google.Cloud.Storage.V1` para Firebase.
 - Antes de fijar versiones se verifica la licencia de MassTransit (la línea 8.x es Apache 2.0) y de PdfSharpCore (MIT); no se adopta una línea con licenciamiento comercial sin aprobación del equipo.
-- Pruebas: xUnit, FluentAssertions, NSubstitute, Testcontainers para PostgreSQL/RabbitMQ, WireMock.Net para clientes HTTP y `MassTransit.Testing` para consumidores.
+- Pruebas: xUnit, FluentAssertions, NSubstitute, Testcontainers para PostgreSQL/RabbitMQ, WireMock.Net para clientes HTTP y `MassTransit.TestFramework` (namespace `MassTransit.Testing`) para consumidores.
 
 **Alternativa descartada:** .NET 8 LTS. Se descarta porque su soporte termina en noviembre de 2026 y el proyecto inicia en esa fecha; .NET 10 LTS ofrece `Guid.CreateVersion7()` nativo y soporte extendido.
 
