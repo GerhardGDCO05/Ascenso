@@ -1,7 +1,16 @@
+using Ascenso.Becas.Infrastructure.Dependencias;
+using Hangfire;
+
 var builder = WebApplication.CreateBuilder(args);
 
 builder.Services.AddControllers();
 builder.Services.AddOpenApi();
+
+var cadenaConexionBecas = builder.Configuration.GetConnectionString("Becas")
+    ?? throw new InvalidOperationException("Falta la cadena de conexión 'Becas'.");
+
+builder.Services.AgregarHangfire(cadenaConexionBecas);
+builder.Services.AddHangfireServer(opciones => opciones.Queues = ["critical", "default"]);
 
 var allowedOrigins = builder.Configuration
     .GetSection("Cors:AllowedOrigins")

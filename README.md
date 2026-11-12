@@ -88,6 +88,36 @@ dotnet ef --version
 
 En las terminales nuevas, `~/.bashrc` y `~/.profile` cargan el SDK y `~/.dotnet/tools` automáticamente.
 
+### Base de datos local
+
+Las migraciones de EF Core viven en
+`Apps/services/ms-becas/Ascenso.Becas.Infrastructure/Persistence/Migraciones/`.
+Para crearlas o aplicarlas se usa `BecasDbContext` con la cadena local
+`Host=localhost;Port=5432;Database=ascenso_becas;Username=postgres;Password=postgres`:
+
+```bash
+# Crear la base si no existe
+PGPASSWORD=postgres psql -h localhost -p 5432 -U postgres \
+  -c "CREATE DATABASE ascenso_becas;"
+
+# Aplicar todas las migraciones
+dotnet ef database update \
+  --project Apps/services/ms-becas/Ascenso.Becas.Infrastructure \
+  --startup-project Apps/services/ms-becas/Ascenso.Becas.Infrastructure \
+  --context BecasDbContext
+
+# Generar el script SQL equivalente
+dotnet ef migrations script \
+  --project Apps/services/ms-becas/Ascenso.Becas.Infrastructure \
+  --startup-project Apps/services/ms-becas/Ascenso.Becas.Infrastructure \
+  --context BecasDbContext \
+  -o /tmp/migracion-becas.sql
+```
+
+La cadena puede sustituirse con la variable `ConnectionStrings__Becas`.
+La migración crea el esquema `becas`; Hangfire crea su propio esquema
+`hangfire` al arrancar la API.
+
 ## Licencias de terceros
 
 - **MassTransit 8.5.12**: Apache-2.0.

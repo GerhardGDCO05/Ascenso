@@ -36,14 +36,14 @@
 
 ## 4. Persistencia y migraciones
 
-- [ ] 4.1 Implementar `BecasDbContext` con DbSets de `Beca`, `OfertaBeca`, `CompromisoBecario`, `HistorialEstadoBeca`, proyecciones e idempotencia; verificar que el contexto se construye con la cadena de PostgreSQL.
-- [ ] 4.2 Configurar las entidades con nombres `snake_case`, `uuid`, `timestamptz`, `date`, `numeric(18,2)`, enums como `varchar`, conversiones de objetos de valor y `version` como token de concurrencia; verificar el SQL generado con `dotnet ef migrations script`.
-- [ ] 4.3 Crear los índices únicos parciales `ux_beca_estudiante_cobertura_total_activa`, `ux_beca_estudiante_periodo_no_acumulable_activa`, `ux_beca_cadena_periodo`, `ux_oferta_beca_beca` y `ux_beca_codigo`; verificar que existen en la migración y que rechazan duplicados en pruebas de base de datos.
-- [ ] 4.4 Agregar los `CHECK` constraints de estados permitidos, montos no negativos, porcentajes entre 0 y 100 y fechas coherentes; verificar que una inserción inválida es rechazada por PostgreSQL.
-- [ ] 4.5 Implementar el trigger que bloquea `UPDATE` y `DELETE` sobre `historial_estado_beca`; verificar con pruebas que ambas operaciones fallan y que `INSERT` funciona.
-- [ ] 4.6 Crear las tablas de proyección `programa_beca_ref`, `costo_matricula_ref` y `convenio_ref` con `ultimo_evento_id` y marcas de actualización; verificar que el upsert es idempotente.
-- [ ] 4.7 Crear la tabla `idempotency_request` con índice único por `(endpoint, clave)`, hash de payload, estado, respuesta y expiración; verificar que el índice impide duplicados.
-- [ ] 4.8 Configurar las entidades de Outbox/Inbox de MassTransit en la migración y el esquema `hangfire` en el arranque; verificar que las tablas de Outbox/Inbox y las tablas de Hangfire existen y son utilizables.
+- [x] 4.1 Implementar `BecasDbContext` con DbSets de `Beca`, `OfertaBeca`, `CompromisoBecario`, `HistorialEstadoBeca`, proyecciones e idempotencia; verificar que el contexto se construye con la cadena de PostgreSQL.
+- [x] 4.2 Configurar las entidades con nombres `snake_case`, `uuid`, `timestamptz`, `date`, `numeric(18,2)`, enums como `varchar`, conversiones de objetos de valor y `version` como token de concurrencia; verificar el SQL generado con `dotnet ef migrations script`.
+- [x] 4.3 Crear los índices únicos parciales `ux_beca_estudiante_cobertura_total_activa`, `ux_beca_estudiante_periodo_no_acumulable_activa`, `ux_beca_cadena_periodo`, `ux_oferta_beca_beca` y `ux_beca_codigo`; verificar que existen en la migración y que rechazan duplicados en pruebas de base de datos.
+- [x] 4.4 Agregar los `CHECK` constraints de estados permitidos, montos no negativos, porcentajes entre 0 y 100 y fechas coherentes; verificar que una inserción inválida es rechazada por PostgreSQL.
+- [x] 4.5 Implementar el trigger que bloquea `UPDATE` y `DELETE` sobre `historial_estado_beca`; verificar con pruebas que ambas operaciones fallan y que `INSERT` funciona.
+- [x] 4.6 Crear las tablas de proyección `programa_beca_ref`, `costo_matricula_ref` y `convenio_ref` con `ultimo_evento_id` y marcas de actualización; verificar que el upsert es idempotente.
+- [x] 4.7 Crear la tabla `idempotency_request` con índice único por `(endpoint, clave)`, hash de payload, estado, respuesta y expiración; verificar que el índice impide duplicados.
+- [x] 4.8 Configurar las entidades de Outbox/Inbox de MassTransit en la migración y el esquema `hangfire` en el arranque; verificar que las tablas de Outbox/Inbox y las tablas de Hangfire existen y son utilizables.
 - [ ] 4.9 Implementar `BecaRepository`, `OfertaBecaRepository`, `CompromisoBecarioRepository` e `IdempotencyRepository` con `Include` de owned types y entidades hijas; verificar con pruebas de integración que reconstruyen el agregado completo.
 - [ ] 4.10 Implementar los métodos de bloqueo pesimista `ObtenerBecaParaActualizarAsync` (`SELECT ... FOR UPDATE`) y `AdquirirBloqueoEstudianteAsync` (`pg_advisory_xact_lock`); verificar que dos transacciones concurrentes se serializan.
 - [ ] 4.11 Crear la migración `InitialCreate` y aplicarla sobre una base PostgreSQL limpia; verificar que `dotnet ef database update` termina sin errores y que una segunda ejecución es idempotente.
