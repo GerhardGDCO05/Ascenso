@@ -94,11 +94,14 @@ jobs:
       - name: Verificar SDK instalado
         run: dotnet --info
 
-      - name: Restaurar dependencias
-        run: dotnet restore "${{ matrix.solution }}"
+      - name: Restaurar dependencias con lock files
+        run: dotnet restore "${{ matrix.solution }}" --locked-mode
 
       - name: Compilar solución en Release
         run: dotnet build "${{ matrix.solution }}" --no-restore --configuration "$CONFIGURATION" --warnaserror
+
+      - name: Verificar formato
+        run: dotnet format "${{ matrix.solution }}" --verify-no-changes --no-restore --verbosity minimal
 
       - name: Ejecutar pruebas unitarias y de arquitectura
         run: >
