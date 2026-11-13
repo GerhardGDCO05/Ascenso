@@ -1,0 +1,28 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <IsPackable>false</IsPackable>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <PackageReference Include="coverlet.collector" />
+    <PackageReference Include="FluentAssertions" />
+    <PackageReference Include="Microsoft.NET.Test.Sdk" />
+    <PackageReference Include="NetArchTest.Rules" />
+    <PackageReference Include="xunit" />
+    <PackageReference Include="xunit.runner.visualstudio" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <Using Include="Xunit" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\..\Ascenso.Programas.Domain\Ascenso.Programas.Domain.csproj" />
+    <ProjectReference Include="..\..\Ascenso.Programas.Application\Ascenso.Programas.Application.csproj" />
+    <ProjectReference Include="..\..\Ascenso.Programas.Infrastructure\Ascenso.Programas.Infrastructure.csproj" />
+    <ProjectReference Include="..\..\Ascenso.Programas.Api\Ascenso.Programas.Api.csproj" />
+  </ItemGroup>
+
+</Project>
+
