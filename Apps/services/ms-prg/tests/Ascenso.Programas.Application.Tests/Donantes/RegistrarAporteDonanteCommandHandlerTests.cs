@@ -15,7 +15,7 @@ namespace Ascenso.Programas.Application.Tests.Donantes;
 
 public sealed class RegistrarAporteDonanteCommandHandlerTests
 {
-    private static readonly Guid UsuarioId = Guid.Parse("01966000-0000-7000-8000-000000000030");
+    private static readonly Guid _usuarioId = Guid.Parse("01966000-0000-7000-8000-000000000030");
     private readonly IDonanteRepository _donanteRepository = Substitute.For<IDonanteRepository>();
     private readonly IUnitOfWork _unitOfWork = Substitute.For<IUnitOfWork>();
     private readonly IIntegrationEventPublisher _eventPublisher = Substitute.For<IIntegrationEventPublisher>();
@@ -49,7 +49,7 @@ public sealed class RegistrarAporteDonanteCommandHandlerTests
             "bnc-2026-0001",
             rutaFirebase,
             "Aporte inicial 2026-1",
-            UsuarioId);
+            _usuarioId);
 
         var resultado = await _handler.HandleAsync(comando, CancellationToken.None);
 
@@ -88,7 +88,7 @@ public sealed class RegistrarAporteDonanteCommandHandlerTests
             "ref-repetida-1",
             rutaFirebase,
             null,
-            UsuarioId);
+            _usuarioId);
 
         var accion = () => _handler.HandleAsync(comando, CancellationToken.None);
 
@@ -118,7 +118,7 @@ public sealed class RegistrarAporteDonanteCommandHandlerTests
             "REF-VALID-01",
             urlInvalida,
             null,
-            UsuarioId);
+            _usuarioId);
 
         var accion = () => _handler.HandleAsync(comando, CancellationToken.None);
 
@@ -138,6 +138,6 @@ public sealed class RegistrarAporteDonanteCommandHandlerTests
             "+58 212 5556677",
             "Zona Industrial, Valencia",
             new ContactoDonante("Roberto Silva", "Tesorero", "rsilva@ascenso.org", "+58 414 5556677"),
-            UsuarioId);
+            _usuarioId);
 }
 

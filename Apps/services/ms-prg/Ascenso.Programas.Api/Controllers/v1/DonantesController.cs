@@ -16,7 +16,7 @@ namespace Ascenso.Programas.Api.Controllers.v1;
 [Route("api/v1/donantes")]
 public sealed class DonantesController : ControllerBase
 {
-    private static readonly Guid UsuarioSistemaPorDefecto = Guid.Parse("01966000-0000-7000-8000-000000000000");
+    private static readonly Guid _usuarioSistemaPorDefecto = Guid.Parse("01966000-0000-7000-8000-000000000000");
 
     private readonly RegistrarDonanteCommandHandler _registrarDonanteHandler;
     private readonly ActualizarContactoDonanteCommandHandler _actualizarContactoHandler;
@@ -215,7 +215,7 @@ public sealed class DonantesController : ControllerBase
             return actorOpcional.Value;
         }
 
-        return UsuarioSistemaPorDefecto;
+        return _usuarioSistemaPorDefecto;
     }
 
     public sealed record class RegistrarDonanteRequest(

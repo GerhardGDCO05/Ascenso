@@ -10,7 +10,7 @@ namespace Ascenso.Programas.Domain.Tests.Donantes;
 
 public sealed class DonanteTests
 {
-    private static readonly Guid UsuarioPruebaId = Guid.Parse("01966000-0000-7000-8000-000000000001");
+    private static readonly Guid _usuarioPruebaId = Guid.Parse("01966000-0000-7000-8000-000000000001");
 
     private static Donante CrearDonantePrueba(TipoDonante tipo = TipoDonante.Empresa)
         => Donante.Crear(
@@ -25,7 +25,7 @@ public sealed class DonanteTests
                 "Director Ejecutivo",
                 "cmendoza@horizonte.org",
                 "+58 414 1234567"),
-            UsuarioPruebaId,
+            _usuarioPruebaId,
             new DateTimeOffset(2026, 11, 13, 14, 0, 0, TimeSpan.Zero));
 
     [Fact]
@@ -53,7 +53,7 @@ public sealed class DonanteTests
             "lgomez@horizonte.org",
             "+58 412 7654321");
 
-        donante.Desactivar(tieneFondosComprometidosEnProgramaVigente: false, UsuarioPruebaId);
+        donante.Desactivar(tieneFondosComprometidosEnProgramaVigente: false, _usuarioPruebaId);
         donante.EstadoDonante.Should().Be(EstadoDonante.Inactivo);
 
         donante.ActualizarContacto(
@@ -61,8 +61,8 @@ public sealed class DonanteTests
             "+58 212 4009999",
             "Torre Empresarial, Piso 4, Caracas",
             nuevoContacto,
-            UsuarioPruebaId);
-        donante.Reactivar(UsuarioPruebaId);
+            _usuarioPruebaId);
+        donante.Reactivar(_usuarioPruebaId);
 
         donante.EstadoDonante.Should().Be(EstadoDonante.Activo);
         donante.Email.Should().Be("alianzas@horizonte.org");
@@ -75,7 +75,7 @@ public sealed class DonanteTests
     {
         var donante = CrearDonantePrueba();
 
-        var accion = () => donante.Desactivar(tieneFondosComprometidosEnProgramaVigente: true, UsuarioPruebaId);
+        var accion = () => donante.Desactivar(tieneFondosComprometidosEnProgramaVigente: true, _usuarioPruebaId);
 
         accion.Should()
             .Throw<DonanteConFondosComprometidosException>()
@@ -97,7 +97,7 @@ public sealed class DonanteTests
             "Banesco Banco Universal",
             " ref-00012345 ",
             rutaFirebase,
-            UsuarioPruebaId,
+            _usuarioPruebaId,
             "Transferencia institucional primer semestre");
 
         UuidV7.EsVersion7(aporte.Id).Should().BeTrue();
@@ -126,7 +126,7 @@ public sealed class DonanteTests
             "Banco Mercantil",
             "REF-999111",
             urlInvalida,
-            UsuarioPruebaId);
+            _usuarioPruebaId);
 
         accion.Should()
             .Throw<ComprobanteAporteRequeridoException>()
@@ -153,7 +153,7 @@ public sealed class DonanteTests
             "Banco Provincial",
             "REF-888222",
             rutaFirebase,
-            UsuarioPruebaId);
+            _usuarioPruebaId);
 
         accion.Should()
             .Throw<MontoAporteInvalidoException>()
@@ -176,7 +176,7 @@ public sealed class DonanteTests
             "Banesco",
             "REF-DUP-001",
             ruta1,
-            UsuarioPruebaId);
+            _usuarioPruebaId);
 
         var accion = () => donante.RegistrarAporte(
             2000.00m,
@@ -186,7 +186,7 @@ public sealed class DonanteTests
             "Banesco",
             "ref-dup-001",
             ruta2,
-            UsuarioPruebaId);
+            _usuarioPruebaId);
 
         accion.Should()
             .Throw<ReferenciaBancariaDuplicadaException>()
@@ -199,7 +199,7 @@ public sealed class DonanteTests
     public void Debe_RechazarAporte_Cuando_DonanteEstaInactivo_RNPRG02_HU13_2()
     {
         var donante = CrearDonantePrueba(TipoDonante.EgresadoPersona);
-        donante.Desactivar(tieneFondosComprometidosEnProgramaVigente: false, UsuarioPruebaId);
+        donante.Desactivar(tieneFondosComprometidosEnProgramaVigente: false, _usuarioPruebaId);
         var rutaFirebase = $"/donantes/{donante.Id:D}/aportes/{UuidV7.Nuevo():D}.pdf";
 
         var accion = () => donante.RegistrarAporte(
@@ -210,7 +210,7 @@ public sealed class DonanteTests
             "Banesco",
             "REF-INACTIVO-1",
             rutaFirebase,
-            UsuarioPruebaId);
+            _usuarioPruebaId);
 
         accion.Should()
             .Throw<DonanteInactivoException>()
@@ -243,7 +243,7 @@ public sealed class DonanteTests
             "Banesco",
             "REF-CONSEC-001",
             $"/donantes/{donante.Id:D}/aportes/{UuidV7.Nuevo():D}.pdf",
-            UsuarioPruebaId);
+            _usuarioPruebaId);
 
         var aporte2 = donante.RegistrarAporte(
             799.50m,
@@ -253,7 +253,7 @@ public sealed class DonanteTests
             "Mercantil",
             "REF-CONSEC-002",
             $"/donantes/{donante.Id:D}/aportes/{UuidV7.Nuevo():D}.pdf",
-            UsuarioPruebaId);
+            _usuarioPruebaId);
 
         aporte1.Id.Should().NotBe(Guid.Empty);
         aporte2.Id.Should().NotBe(Guid.Empty);

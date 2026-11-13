@@ -15,7 +15,7 @@ namespace Ascenso.Programas.Application.Tests.Donantes;
 
 public sealed class ConsultasDonantesQueryHandlerTests
 {
-    private static readonly Guid UsuarioId = Guid.Parse("01966000-0000-7000-8000-000000000040");
+    private static readonly Guid _usuarioId = Guid.Parse("01966000-0000-7000-8000-000000000040");
     private readonly IDonanteRepository _donanteRepository = Substitute.For<IDonanteRepository>();
 
     [Fact]
@@ -80,7 +80,7 @@ public sealed class ConsultasDonantesQueryHandlerTests
             "Banesco",
             "REF-HIST-001",
             rutaFirebase,
-            UsuarioId);
+            _usuarioId);
 
         _donanteRepository.ExisteAsync(donante.Id, Arg.Any<CancellationToken>()).Returns(true);
         _donanteRepository.ConsultarHistorialAportesAsync(donante.Id, "2026-1", Arg.Any<CancellationToken>())
@@ -105,6 +105,6 @@ public sealed class ConsultasDonantesQueryHandlerTests
             "+58 212 7008090",
             "Av. Libertador, Caracas",
             new ContactoDonante("Sofía Méndez", "Directora", "contacto@horizonte.org", "+58 414 7008090"),
-            UsuarioId);
+            _usuarioId);
 }
 

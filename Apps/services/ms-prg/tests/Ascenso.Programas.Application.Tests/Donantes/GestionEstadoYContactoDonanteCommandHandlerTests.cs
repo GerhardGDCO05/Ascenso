@@ -14,7 +14,7 @@ namespace Ascenso.Programas.Application.Tests.Donantes;
 
 public sealed class GestionEstadoYContactoDonanteCommandHandlerTests
 {
-    private static readonly Guid UsuarioId = Guid.Parse("01966000-0000-7000-8000-000000000020");
+    private static readonly Guid _usuarioId = Guid.Parse("01966000-0000-7000-8000-000000000020");
     private readonly IDonanteRepository _donanteRepository = Substitute.For<IDonanteRepository>();
     private readonly IUnitOfWork _unitOfWork = Substitute.For<IUnitOfWork>();
 
@@ -35,7 +35,7 @@ public sealed class GestionEstadoYContactoDonanteCommandHandlerTests
             "+58 212 8000000",
             "Nueva Dirección Fiscal, Chacao",
             new ContactoDonanteDto("Pedro Ruiz", "Presidente", "pruiz@organizacion.org", "+58 412 1112233"),
-            UsuarioId));
+            _usuarioId));
 
         resultado.Email.Should().Be("nuevo@organizacion.org");
         resultado.ContactoPrincipal.NombreRepresentante.Should().Be("Pedro Ruiz");
@@ -53,7 +53,7 @@ public sealed class GestionEstadoYContactoDonanteCommandHandlerTests
 
         var handler = new DesactivarDonanteCommandHandler(_donanteRepository, _unitOfWork);
 
-        var accion = () => handler.HandleAsync(new DesactivarDonanteCommand(donante.Id, UsuarioId));
+        var accion = () => handler.HandleAsync(new DesactivarDonanteCommand(donante.Id, _usuarioId));
 
         await accion.Should()
             .ThrowAsync<DonanteConFondosComprometidosException>()
@@ -73,10 +73,10 @@ public sealed class GestionEstadoYContactoDonanteCommandHandlerTests
         var desactivarHandler = new DesactivarDonanteCommandHandler(_donanteRepository, _unitOfWork);
         var reactivarHandler = new ReactivarDonanteCommandHandler(_donanteRepository, _unitOfWork);
 
-        var desactivado = await desactivarHandler.HandleAsync(new DesactivarDonanteCommand(donante.Id, UsuarioId));
+        var desactivado = await desactivarHandler.HandleAsync(new DesactivarDonanteCommand(donante.Id, _usuarioId));
         desactivado.EstadoDonante.Should().Be("INACTIVO");
 
-        var reactivado = await reactivarHandler.HandleAsync(new ReactivarDonanteCommand(donante.Id, UsuarioId));
+        var reactivado = await reactivarHandler.HandleAsync(new ReactivarDonanteCommand(donante.Id, _usuarioId));
         reactivado.EstadoDonante.Should().Be("ACTIVO");
 
         await _unitOfWork.Received(2).GuardarCambiosAsync(Arg.Any<CancellationToken>());
@@ -91,6 +91,6 @@ public sealed class GestionEstadoYContactoDonanteCommandHandlerTests
             "+58 212 3334455",
             "Av. Universidad, Caracas",
             new ContactoDonante("Elena Díaz", "Directora", "ediaz@futuro.org", "+58 416 9998877"),
-            UsuarioId);
+            _usuarioId);
 }
 
