@@ -29,7 +29,7 @@ Ascenso/
 | Microservicio | Carpeta de código | Solución .NET | Especificación duradera |
 | :--- | :--- | :--- | :--- |
 | **MS-PLT** | `Apps/services/ms-plt/` | `Ascenso.Plataforma.sln` | `openspec/specs/ms-plt/spec_plt.md` (contexto) |
-| **MS-PRG** | `Apps/services/ms-prg/` | `Ascenso.Programas.sln` | `openspec/specs/ms-prg/spec_prg.md` (pendiente) |
+| **MS-PRG** | `Apps/services/ms-prg/` | `Ascenso.Programas.sln` | `openspec/specs/ms-prg/spec_prg.md` |
 | **MS-POS** | `Apps/services/ms-postulaciones/` | `Ascenso.Postulaciones.sln` | `openspec/specs/ms-pos/spec_pos.md` |
 | **MS-BECA** | `Apps/services/ms-becas/` | `Ascenso.Becas.sln` | `openspec/specs/ms-beca/spec_beca.md` |
 | **MS-AUD** | `Apps/services/ms-aud/` | `Ascenso.Auditoria.sln` | `openspec/specs/ms-aud/spec_aud.md` (pendiente) |
