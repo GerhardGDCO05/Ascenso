@@ -41,8 +41,11 @@ public sealed class DomainIndependenceTests
     {
         var tiposDominio = typeof(EntidadAuditable).Assembly
             .GetTypes()
-            .Where(t => t.IsClass && (typeof(EntidadAuditable).IsAssignableFrom(t)
-                || typeof(EntidadInmutable).IsAssignableFrom(t)));
+            .Where(t => t.IsClass && (
+                typeof(EntidadAuditable).IsAssignableFrom(t)
+                || typeof(EntidadAuditable<Guid>).IsAssignableFrom(t)
+                || typeof(EntidadInmutable).IsAssignableFrom(t)
+                || typeof(ValueObject).IsAssignableFrom(t)));
 
         foreach (var tipo in tiposDominio)
         {
