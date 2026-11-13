@@ -42,6 +42,9 @@ dotnet_naming_style.pascal.capitalization = pascal_case
 
 dotnet_diagnostic.IDE0005.severity = warning
 dotnet_diagnostic.IDE0161.severity = warning
+dotnet_diagnostic.CA1054.severity = none
+dotnet_diagnostic.CA1056.severity = none
+dotnet_diagnostic.CA1711.severity = none
 
 [**/CodigoEnum.cs]
 dotnet_diagnostic.CA1711.severity = none

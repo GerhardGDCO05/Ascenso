@@ -33,7 +33,7 @@
 
 - [ ] **RF-11**: Registro y configuración de programas de becas
 - [ ] **RF-12**: Gestión de presupuesto y disponibilidad de cupos
-- [ ] **RF-13**: Alta y gestión de donantes / aportes
+- [x] **RF-13**: Alta y gestión de donantes / aportes
 - [ ] **RF-14**: Convenios con universidades aliadas y aranceles
 
 ## 🎓 MS-BEC (Becas y Seguimiento)
