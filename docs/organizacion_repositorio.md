@@ -46,7 +46,7 @@ Estado actual:
 | :--- | :--- | :--- |
 | Contexto general, PRD, DDD y convenciones | `docs/` | Fuente única compartida; no duplicar en `openspec/specs/`. |
 | Especificaciones duraderas | `openspec/specs/<microservicio>/` | Una carpeta por microservicio; archivo principal `spec_<código>.md`. |
-| Cambios activos | `openspec/changes/[ID-Cambio]-[Integrante]-[Microservicio]/` | Solo el microservicio afectado. El cambio `bootstrap-ms-beca` conserva su nombre mientras siga activo. |
+| Cambios activos | `openspec/changes/[ID-Cambio]-[Integrante]-[Microservicio]/` | Solo el microservicio afectado. |
 | Históricos de sesión | `openspec/changes/archive/YYYY-MM-DD-[ID-Cambio]-[Integrante]-[Microservicio]/` | Sin hora `HHMM`; incluye `.openspec.yaml`, `proposal.md`, `design.md`, `tasks.md` y `log-...md`. |
 | Planificación general | `openspec/roadmaps/` | Roadmaps por integrante y por microservicio. |
 | Código y pruebas | `Apps/services/<microservicio>/` | Cuatro proyectos hexagonales más los proyectos de prueba. |
@@ -59,7 +59,7 @@ Estado actual:
 - `[Microservicio]`: código compacto del microservicio (`msbeca`, `mspos`, `msplt`, `msprg`, `msaud`).
 - Ejemplo: `2026-11-08-tech-setup-int1-mspos`.
 - Ejemplo de histórico: `2026-11-07-tech-shared-kernel-int4-msbeca`.
-- Mientras `bootstrap-ms-beca` siga activo, se mantiene su nombre para no romper referencias; los cambios nuevos y los históricos usan la convención anterior.
+- Ejemplo de cambio activo: `tech-bootstrap-int4-msbeca`.
 
 ## 4. Reglas de Convivencia
 
@@ -98,4 +98,4 @@ Apps/services/ms-becas/
     └── Ascenso.Becas.IntegrationTests/    # Persistencia, mensajería y API
 ```
 
-El cambio activo es `bootstrap-ms-beca` y la especificación duradera vive en `openspec/specs/ms-beca/spec_beca.md`.
+El cambio activo es `tech-bootstrap-int4-msbeca` y la especificación duradera vive en `openspec/specs/ms-beca/spec_beca.md`.
