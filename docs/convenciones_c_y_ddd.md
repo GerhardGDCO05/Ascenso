@@ -4,9 +4,20 @@ Este documento define el estándar estricto de codificación, nombrado y diseño
 
 ## 1. Convenciones Estructurales y de Proyectos (Arquitectura Hexagonal)
 
-Cada microservicio vive en su propia carpeta bajo `Apps/services/` y mantiene cuatro proyectos con inversión de dependencias estricta. `ms-becas` es el ejemplo implementado actualmente; los demás equipos replican la misma estructura con el nombre de su contexto:
+Cada microservicio vive en su propia carpeta bajo `Apps/services/` y mantiene cuatro proyectos con inversión de dependencias estricta. La estructura genérica es:
 
+```text
+Apps/services/<microservicio>/
+├── Ascenso.<Contexto>.Domain/          # C# puro (sin dependencias externas)
+├── Ascenso.<Contexto>.Application/     # Casos de uso, DTOs y puertos de aplicación
+├── Ascenso.<Contexto>.Infrastructure/  # Adaptadores EF Core, MassTransit, Keycloak, etc.
+├── Ascenso.<Contexto>.Api/             # Controllers, middlewares y Dependency Injection
+└── tests/                              # Proyectos de prueba de la solución
 ```
+
+`ms-becas` es el ejemplo implementado actualmente; los demás equipos replican la misma estructura con el nombre de su contexto:
+
+```text
 Apps/services/
 ├── ms-becas/                        # MS-BECA — solución Ascenso.Becas
 │   ├── Ascenso.Becas.Domain/        # C# Puro (Sin dependencias externas)
@@ -16,7 +27,7 @@ Apps/services/
 └── ms-<otro>/                       # Cada microservicio replica esta misma estructura
 ```
 
-> Las convenciones de este documento son generales. Los nombres `Ascenso.Becas.*` corresponden a `ms-becas`; cada equipo reemplaza `Becas` por el contexto de su microservicio.
+> Las convenciones de este documento son generales. Los nombres `Ascenso.Becas.*` corresponden a `ms-becas`; cada equipo reemplaza `Becas` por el contexto de su microservicio (`Ascenso.Postulaciones.*` para `ms-postulaciones`, por ejemplo).
 
 ### 1.1 Estructura de Carpetas y Namespaces
 
@@ -107,10 +118,10 @@ namespace Ascenso.Becas.Domain.Otorgamiento.ObjetosValor;
 
 public sealed record class PoliticaCobertura
 {
-    public TipoCobertura Modalidad {; }
-    public decimal PorcentajeCobertura {; }
-    public decimal MontoFijoPeriodo {; }
-    public string Moneda {; }
+    public TipoCobertura Modalidad { get; }
+    public decimal PorcentajeCobertura { get; }
+    public decimal MontoFijoPeriodo { get; }
+    public string Moneda { get; }
 
     public PoliticaCobertura(TipoCobertura modalidad, decimal porcentaje, decimal montoFijo, string moneda)
     {
@@ -175,18 +186,18 @@ public sealed class AceptarOfertaBecaCommandHandler : ICommandHandler<AceptarOfe
 
 ---
 
-## 5. Convenciones para Infraestructura y API (`Infrastructure/` y `API/`)
+## 5. Convenciones para Infraestructura y API (`Infrastructure/` y `Api/`)
 
 ### 5.1 Adaptadores y Implementaciones de Repositorio
 
-* **Sufijo de Repositorio:** `BecaRepository`, `OfertaBecaRepository`.
-* **DbContext:** `BecasDbContext`.
-* **Clientes HTTP Internos:** Sufijo `Client` (`PostulacionesClient`, `ProgramasClient`).
+- **Sufijo de Repositorio:** `<Entidad>Repository`; por ejemplo, `BecaRepository` y `OfertaBecaRepository` en `ms-becas`.
+- **DbContext:** `<Contexto>DbContext`; por ejemplo, `BecasDbContext` en `ms-becas` y `PostulacionesDbContext` en `ms-postulaciones`.
+- **Clientes HTTP Internos:** sufijo `Client` (`<ServicioExterno>Client`); por ejemplo, `PostulacionesClient` y `ProgramasClient`.
 
 ### 5.2 Controladores API
 
-* **Ubicación:** `API/Controllers/v1/` o `API/Controllers/Internal/v1/`.
-* **Sufijo de Clase:** `Controller` (`OfertasBecaController`, `BecasController`).
-* **Rutas REST:** `kebab-case` en plural.
-  * `/api/v1/becas/ofertas`
-  * `/internal/v1/becas/activas`
+- **Ubicación:** `Api/Controllers/v1/` o `Api/Controllers/Internal/v1/`.
+- **Sufijo de Clase:** `<Entidad>Controller`; por ejemplo, `OfertasBecaController` y `BecasController` en `ms-becas`.
+- **Rutas REST:** `kebab-case` en plural.
+  - `/api/v1/becas/ofertas`
+  - `/internal/v1/becas/activas`

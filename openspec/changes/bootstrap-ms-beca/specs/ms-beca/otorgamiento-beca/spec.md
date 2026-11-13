@@ -6,13 +6,14 @@ Define el ciclo de otorgamiento de una beca en `MS-BEC`: la emisión y respuesta
 
 ### Requirement: Emisión de la oferta de beca
 
-Al emitir una oferta, el sistema SHALL verificar que la postulación sea adjudicable y que `MS-PRG` confirme una reserva de cupo y presupuesto. En una única transacción local SHALL crear la `Beca` en estado `OTORGADA` y la `OfertaBeca` en estado `PENDIENTE_RESPUESTA`, con `cadenaBecaId = Beca.id`, `becaAnteriorId = null`, `periodosCursados = 0`, `fechaVencimientoAceptacion = ahora + 15 días` y la referencia al job de expiración en Hangfire. La reserva SHALL solicitarse con la clave de idempotencia `oferta-{ofertaId}`.
+Al emitir una oferta, el sistema SHALL verificar que la postulación sea adjudicable y que `MS-PRG` confirme una reserva de cupo y presupuesto. En una única transacción local SHALL crear la `Beca` en estado `OTORGADA` y la `OfertaBeca` en estado `PENDIENTE_RESPUESTA`. La reserva SHALL solicitarse con la clave de idempotencia `oferta-{ofertaId}`.
 
 #### Scenario: Emisión exitosa
 
 - **WHEN** un coordinador emite una oferta para una postulación adjudicable con cupo y presupuesto reservados
 - **THEN** el sistema responde `201` con el identificador de la oferta, su estado `PENDIENTE_RESPUESTA` y la fecha de vencimiento
-- **AND** la `Beca` queda en `OTORGADA`, con `cadenaBecaId` propio y sin beca anterior
+- **AND** la `Beca` queda en `OTORGADA`, con `cadenaBecaId = Beca.id`, `becaAnteriorId = null` y `periodosCursados = 0`
+- **AND** `fechaVencimientoAceptacion = ahora + 15 días` y se registra la referencia al job de expiración en Hangfire
 - **AND** se publica `OfertaBecaEmitida` y se programa la expiración a los 15 días
 
 #### Scenario: Postulación no adjudicable

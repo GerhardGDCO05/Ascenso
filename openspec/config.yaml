@@ -1,93 +1,85 @@
 schema: spec-driven
 
-# Project context (Tech stack, conventions, domain knowledge, etc.)
-context:
-  # 1. Inclusión del Contexto General de Negocio y Glosario DDD
-  - include: ../docs/Explicacion_del_DDD_V7.md
+context: |
+  Idioma del Proyecto: Español. Escribir todos los artefactos, propuestas, diseños y tareas en Español.
+  Tecnología Principal: C# (.NET 10).
+  Arquitectura: Hexagonal con inversión de dependencias estricta y Domain-Driven Design (DDD).
 
-  # 2. Convenciones Técnicas y DDD (fuente única en docs/)
-  - include: ../docs/convenciones_c_y_ddd.md
+  Documentación maestra obligatoria del repositorio (leer antes de diseñar o implementar):
+  - `docs/Explicacion_del_DDD_V7.md` (Contexto General de Negocio y Glosario DDD)
+  - `docs/organizacion_repositorio.md` (Organización general del repositorio por microservicio)
 
-  # 3. Organización general del repositorio por microservicio
-  - include: ../docs/organizacion_repositorio.md
+  ## Requisitos Arquitectónicos No Funcionales (Atributos de Calidad)
+  - **Escalabilidad:** Diseñar cada microservicio pensando en un modelo sin estado (*stateless*). Las consultas pesadas o listados del lado de API/Infraestructura deben soportar paginación estricta desde el inicio. Evitar acoplamientos en memoria para permitir el escalado horizontal.
+  - **Rendimiento:** Separar claramente las operaciones de lectura y escritura aplicando principios CQRS-Lite para evitar bloqueos innecesarios en la base de datos de transacciones.
+  - **Mantenibilidad:** Respetar estrictamente el aislamiento de la capa de `Domain`. El dominio debe permanecer puro y agnóstico a bases de datos, proveedores de nube o transporte de mensajería.
 
-  # 4. Instrucciones de Código en línea
-  - inline: |
-      Idioma del Proyecto: Español. Escribir todos los artefactos, propuestas, diseños y tareas en Español.
-      Tecnología Principal: C# (.NET 10).
-      Arquitectura: Hexagonal con inversión de dependencias estricta y Domain-Driven Design (DDD).
+  ## 1. Estructura de Proyectos (Arquitectura Hexagonal)
+  Cada microservicio mantiene cuatro proyectos obligatorios dentro de su carpeta en `Apps/services/<microservicio>/`:
+  - `Ascenso.<Contexto>.Domain/` (C# Puro, sin dependencias externas)
+  - `Ascenso.<Contexto>.Application/` (Casos de Uso, DTOs, Puertos)
+  - `Ascenso.<Contexto>.Infrastructure/` (Adaptadores EF Core, MassTransit, Keycloak)
+  - `Ascenso.<Contexto>.Api/` (Controllers, Middlewares, DI Setup)
 
-      ## Requisitos Arquitectónicos No Funcionales (Atributos de Calidad)
-      - **Escalabilidad:** Diseñar cada microservicio pensando en un modelo sin estado (*stateless*). Las consultas pesadas o listados del lado de API/Infraestructura deben soportar paginación estricta desde el inicio. Evitar acoplamientos en memoria para permitir el escalado horizontal.
-      - **Rendimiento:** Separar claramente las operaciones de lectura y escritura aplicando principios CQRS-Lite para evitar bloqueos innecesarios en la base de datos de transacciones.
-      - **Mantenibilidad:** Respetar estrictamente el aislamiento de la capa de `Domain`. El dominio debe permanecer puro y agnóstico a bases de datos, proveedores de nube o transporte de mensajería.
+  Carpetas y Namespaces usan PascalCase. Forzar 'File-Scoped Namespaces' (C# 10+).
 
+  ## 2. Convenciones Generales de Código C#
+  - Clases / Structs / Records: PascalCase (ej. `EntidadEjemplo`, `AgregadoEjemplo`)
+  - Interfaces: IPascalCase (ej. `IEntidadRepository`)
+  - Métodos y Propiedades: PascalCase (ej. `Transicionar()`, `MontoTotal`)
+  - Campos Privados: _camelCase (ej. `_dbContext`, `_repository`)
+  - Parámetros y Variables locales: camelCase (ej. `entidadId`, `registroExistente`)
+  - Constantes / Enums: PascalCase (ej. `EstadoEjemplo.Activo`)
+  - Tipos Genéricos: T o TPascalCase (ej. `TResult`)
 
-      ## 1. Estructura de Proyectos (Arquitectura Hexagonal)
-      Cada microservicio mantiene cuatro proyectos obligatorios dentro de su carpeta en Apps/services/<microservicio>/ (por ejemplo, Apps/services/ms-becas/ para MS-BECA):
-      - Ascenso.<Contexto>.Domain/ (C# Puro, sin dependencias externas)
-      - Ascenso.<Contexto>.Application/ (Casos de Uso, DTOs, Puertos)
-      - Ascenso.<Contexto>.Infrastructure/ (Adaptadores EF Core, MassTransit, Keycloak)
-      - Ascenso.<Contexto>.Api/ (Controllers, Middlewares, DI Setup)
-      
-      Carpetas y Namespaces usan PascalCase. Forzar 'File-Scoped Namespaces' (C# 10+).
+  ## 3. Convenciones Domain-Driven Design (DDD)
+  - Nomenclatura del Dominio en Español: Conceptos de negocio (Agregados, Entidades, Objetos de Valor, Enums, Eventos de Dominio y Excepciones) DEBEN escribirse literalmente en español según la Especificación Maestra. Abstracciones técnicas o de infraestructura se escriben en inglés.
+  - Agregados y Entidades: Ubicados en `Domain/{Modulo}/Agregados/` o `Domain/{Modulo}/Entidades/`. Heredan de `EntidadAuditable` o `EntidadInmutable`. Identificador UUIDv7 (tipo `Guid`) inicializado mediante `Guid.CreateVersion7()`.
+  - Encapsulamiento Estricto: Ninguna propiedad mutable tiene setter público. Las modificaciones ocurren mediante métodos de dominio expresivos.
+  - Objetos de Valor: Implementados como `readonly record struct` o `sealed record class` inmutables con validación en la instanciación.
+  - Enumeraciones: PascalCase en singular. Los valores se mapean en la Base de Datos como cadenas `VARCHAR` exactas en MAYÚSCULAS.
+  - Puertos e Interfaces: Prefijo 'I' obligatorio. Sufijo 'Async' en métodos asíncronos que retornen `Task` con `CancellationToken` por defecto.
 
-      ## 2. Convenciones Generales de Código C#
-      - Clases / Structs / Records: PascalCase (ej. Beca, OfertaBeca)
-      - Interfaces: IPascalCase (ej. IBecaRepository)
-      - Métodos y Propiedades: PascalCase (ej. Transicionar(), MontoComprometido)
-      - Campos Privados: _camelCase (ej. _dbContext, _becaRepository)
-      - Parámetros y Variables locales: camelCase (ej. postulanteId, becaExistente)
-      - Constantes / Enums: PascalCase (ej. EstadoBeca.Activa)
-      - Tipos Genéricos: T o TPascalCase (ej. TResult)
+  ## 4. Capa de Aplicación (Application/)
+  - Arquitectura CQRS-Lite: Comandos (Sufijo `Command`), Consultas (Sufijo `Query`), Manejadores (Sufijo `CommandHandler` o `QueryHandler`), DTOs (Sufijo `Dto` o `Response`).
 
-      ## 3. Convenciones Domain-Driven Design (DDD)
-      - Nomenclatura del Dominio en Español: Conceptos de negocio (Agregados, Entidades, Objetos de Valor, Enums, Eventos de Dominio y Excepciones) DEBEN escribirse literalmente en español según la Especificación Maestra. Abstracciones técnicas o de infraestructura se escriben en inglés.
-      - Agregados y Entidades: Ubicados en Domain/{Modulo}/Agregados/ o Domain/{Modulo}/Entidades/. Heredan de EntidadAuditable o EntidadInmutable. Identificador UUIDv7 (tipo Guid) inicializado mediante `Guid.CreateVersion7()`.
-      - Encapsulamiento Estricto: Ninguna propiedad mutable tiene setter público. Las modificaciones ocurren mediante métodos de dominio expresivos.
-      - Objetos de Valor: Implementados como readonly record struct o sealed record class inmutables con validación en la instanciación.
-      - Enumeraciones: PascalCase en singular. Los valores se mapean en la Base de Datos como cadenas VARCHAR exactas en MAYÚSCULAS.
-      - Puertos e Interfaces: Prefijo 'I' obligatorio. Sufijo 'Async' en métodos asíncronos que retornen Task con CancellationToken por defecto.
+  ## 5. Infraestructura y API
+  - Repositorios: Sufijo `Repository` (ej. `<Entidad>Repository`). DbContext nombrado `<Contexto>DbContext`.
+  - Clientes HTTP: Sufijo `Client` (ej. `<ServicioExterno>Client`).
+  - Controladores: Ubicados en `Api/Controllers/v1/` o `Api/Controllers/Internal/v1/`. Rutas REST en kebab-case en plural (ej. `/api/v1/<recurso-plural>`).
 
-      ## 4. Capa de Aplicación (Application/)
-      - Arquitectura CQRS-Lite: Comandos (Sufijo Command), Consultas (Sufijo Query), Manejadores (Sufijo CommandHandler o QueryHandler), DTOs (Sufijo Dto o Response).
+  ## 6. Organización por Microservicio
+  - La organización del repositorio es general para todos los microservicios (`ms-beca`, `ms-pos`, `ms-plt`, etc.): cada uno tiene su carpeta en `Apps/services/<microservicio>/`, su especificación en `openspec/specs/<microservicio>/` y sus cambios en `openspec/changes/`.
+  - Ningún microservicio modifica directamente la base de datos o el código interno de otro microservicio; toda comunicación entre servicios ocurre vía APIs internas (`/internal/v1/...`) o eventos de integración.
+  - El workflow `.github/workflows/ci-cd.yml` descubre automáticamente todas las soluciones `.sln`/`.slnx` de `Apps/services/` y ejecuta build + pruebas por microservicio.
+  - Antes de crear un microservicio nuevo, seguir la guía de `docs/organizacion_repositorio.md`.
 
-      ## 5. Infraestructura y API
-      - Repositorios: Sufijo Repository (ej. BecaRepository). DbContext llamado BecasDbContext.
-      - Clientes HTTP: Sufijo Client (ej. PostulacionesClient).
-      - Controladores: Ubicados en API/Controllers/v1/ o API/Controllers/Internal/v1/. Rutas REST en kebab-case en plural (ej. /api/v1/becas/ofertas).
+  ## Reglas de Validación de OpenSpec para el Agente (DeepSeek / OpenCode):
+  1. RECHAZA cualquier propuesta de cambio si una propiedad mutable en `Domain/` contiene un setter público.
+  2. Detén la generación si detectas nombres de entidades o agregados en inglés en la capa de Dominio.
+  3. Asegúrate de que toda tarea de persistencia asíncrona incluya y pase el `CancellationToken`.
 
-      ## 6. Organización por Microservicio
-      - La organización del repositorio es general: cada microservicio tiene su carpeta en Apps/services/, su especificación en openspec/specs/<microservicio>/ y sus cambios en openspec/changes/.
-      - El trabajo activo del equipo se concentra en ms-beca. ms-pos y ms-plt son contexto de otros equipos y no se modifican.
-      - Los cambios se nombran <accion>-<microservicio> y los históricos se archivan en openspec/changes/archive/<fecha-hora>/.
-      - El workflow .github/workflows/ci-cd.yml descubre automáticamente todas las soluciones .sln/.slnx de Apps/services/ y ejecuta build + pruebas por microservicio.
-      - Antes de crear un microservicio nuevo, seguir la guía de docs/organizacion_repositorio.md.
-
-      ## Reglas de Validación de OpenSpec para el Agente (DeepSeek / OpenCode):
-      1. RECHAZA cualquier propuesta de cambio si una propiedad mutable en `Domain/` contiene un setter público.
-      2. Detén la generación si detectas nombres de entidades o agregados en inglés en la capa de Dominio.
-      3. Asegúrate de que toda tarea de persistencia asíncrona incluya y pase el `CancellationToken`.
-
-# Per-artifact rules
 rules:
   proposal:
     - "Verificar que la propuesta respete los límites de proyectos de la Arquitectura Hexagonal de Ascenso."
-    - "El agente debe leer 'openspec/roadmaps/por_integrante.md' y 'openspec/roadmaps/por_microservicio.md' ANTES de aceptar el cambio."
+    - "El agente debe leer 'openspec/roadmaps/por_integrante.md' y 'openspec/roadmaps/por_microservicio.md' (si existen) ANTES de aceptar el cambio."
     - "RECHAZAR la propuesta si el RF solicitado no corresponde al microservicio mapeado o si pertenece a otro Integrante del equipo."
-    - "Nombrar la carpeta del cambio bajo el patrón estricto: [ID-Cambio]-[Integrante]-[Microservicio]."
+    - "Nombrar la carpeta del cambio siguiendo esta convencion '[ID-Cambio]-[Integrante]-[Microservicio]' para historias de usuario y tareas específicas."
     - "Para el [ID-Cambio], utilizar el código de requerimiento (ej: rf15) si es una HU de negocio. Si es una tarea arbitraria o técnica, obligar al uso exclusivo de uno de estos cuatro identificadores: 'tech' (infraestructura/carpetas), 'test' (pruebas unitarias/integración), 'chore' (mantenimiento/NuGet) o 'fix' (corrección de fallos menores)."
     
   specs:
     - "Garantizar que las reglas del negocio descritas utilicen la terminología de dominio estrictamente en español."
-    - "Organizar siempre las especificaciones dentro de una subcarpeta que corresponda al microservicio afectado (ej: ms-beca/, ms-pos/ o ms-plt/)."
-    - "Mantener una carpeta por microservicio en openspec/specs/; no mezclar escenarios de contextos distintos ni modificar las especificaciones de otros equipos."
+    - "Organizar siempre las especificaciones dentro de una subcarpeta que corresponda al microservicio afectado en `openspec/specs/<microservicio>/`."
+    - "Mantener una carpeta por microservicio en `openspec/specs/`; no mezclar escenarios de contextos distintos."
 
-# Per-operation guidance
 operations:
   apply:
     guidance:
       - "Identificar al Integrante actual del equipo antes de escribir código."
-      - "Solo trabajar en los RFs asignados a dicho integrante que estén en estado [ ] (PENDIENTE)."
+      - "Solo trabajar en los RFs o tareas asignadas a dicho integrante que estén en estado `[ ]` (PENDIENTE)."
       - "Está estrictamente PROHIBIDO modificar o asumir código de RFs asignados a otros miembros."
-      - "Al completar con éxito una funcionalidad de negocio, marcar con un check [x] el RF correspondiente tanto en 'openspec/roadmaps/por_integrante.md' como en 'openspec/roadmaps/por_microservicio.md'."
+      - "Al completar con éxito una funcionalidad de negocio, marcar con un check `[x]` el RF correspondiente tanto en `tasks.md` como en `openspec/roadmaps/por_integrante.md` y `openspec/roadmaps/por_microservicio.md` (si existen)."
+  archive:
+    guidance:
+      - "Todo cambio archivado debe seguir estrictamente el formato de carpeta `YYYY-MM-DD-[ID-Cambio]-[Integrante]-[Microservicio]`, sin hora `HHMM`."
+      - "Antes de archivar un cambio con `/opsx:archive` o `openspec archive`, verificar que contenga `.openspec.yaml`, `proposal.md`, `design.md`, `tasks.md` (con todas las tareas en `[x]`) y su bitácora `log-YYYY-MM-DD-[ID-Cambio]-[Integrante]-[Microservicio].md`."
