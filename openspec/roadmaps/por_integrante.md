@@ -26,7 +26,7 @@
 
 ## 👥 Integrante 3 (Programas, Fondos, Donantes y Otorgamiento)
 - [x] **RF-11**: Registro y configuración de programas de becas (Microservicio PRG)
-- [ ] **RF-12**: Gestión de presupuesto y disponibilidad de cupos (Microservicio PRG)
+- [x] **RF-12**: Gestión de presupuesto y disponibilidad de cupos (Microservicio PRG)
 - [x] **RF-13**: Alta y gestión de donantes / aportes (Microservicio PRG)
 - [x] **RF-14**: Convenios con universidades aliadas y aranceles (Microservicio PRG)
 - [ ] **RF-15**: Emisión de carta de otorgamiento / Oferta (Microservicio BEC)

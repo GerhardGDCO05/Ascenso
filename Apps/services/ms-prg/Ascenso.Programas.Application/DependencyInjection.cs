@@ -7,10 +7,16 @@ using Ascenso.Programas.Application.Donantes.Consultas.ConsultarDonantes;
 using Ascenso.Programas.Application.Donantes.Consultas.ConsultarHistorialAportes;
 using Ascenso.Programas.Application.Donantes.Consultas.ObtenerDonantePorId;
 using Ascenso.Programas.Application.Programas.Comandos.AsignarPresupuestoDonantes;
+using Ascenso.Programas.Application.Programas.Comandos.CerrarPeriodoPrograma;
 using Ascenso.Programas.Application.Programas.Comandos.ConfigurarCriteriosElegibilidad;
+using Ascenso.Programas.Application.Programas.Comandos.ConfirmarReservaPresupuesto;
 using Ascenso.Programas.Application.Programas.Comandos.CrearProgramaBeca;
+using Ascenso.Programas.Application.Programas.Comandos.LiberarReservaPresupuesto;
 using Ascenso.Programas.Application.Programas.Comandos.ReajustarPresupuestoDonante;
+using Ascenso.Programas.Application.Programas.Comandos.ReservarPresupuestoPrograma;
+using Ascenso.Programas.Application.Programas.Consultas.ConsultarMovimientosPresupuestarios;
 using Ascenso.Programas.Application.Programas.Consultas.ConsultarProgramas;
+using Ascenso.Programas.Application.Programas.Consultas.ObtenerBalancePrograma;
 using Ascenso.Programas.Application.Programas.Consultas.ObtenerProgramaPorId;
 using Ascenso.Programas.Application.Universidades.Comandos.ActualizarCostoMatricula;
 using Ascenso.Programas.Application.Universidades.Comandos.AgregarCarreraElegible;
@@ -57,11 +63,16 @@ public static class DependencyInjection
         services.AddScoped<AsignarPresupuestoDonantesCommandHandler>();
         services.AddScoped<ReajustarPresupuestoDonanteCommandHandler>();
         services.AddScoped<ConfigurarCriteriosElegibilidadCommandHandler>();
+        services.AddScoped<ReservarPresupuestoProgramaCommandHandler>();
+        services.AddScoped<ConfirmarReservaPresupuestoCommandHandler>();
+        services.AddScoped<LiberarReservaPresupuestoCommandHandler>();
+        services.AddScoped<CerrarPeriodoProgramaCommandHandler>();
 
         services.AddScoped<ConsultarProgramasQueryHandler>();
         services.AddScoped<ObtenerProgramaPorIdQueryHandler>();
+        services.AddScoped<ObtenerBalanceProgramaQueryHandler>();
+        services.AddScoped<ConsultarMovimientosPresupuestariosQueryHandler>();
 
         return services;
     }
 }
-

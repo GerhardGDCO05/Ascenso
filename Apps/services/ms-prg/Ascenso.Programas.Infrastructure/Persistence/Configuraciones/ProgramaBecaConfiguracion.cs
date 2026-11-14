@@ -18,15 +18,22 @@ internal sealed class ProgramaBecaConfiguracion : IEntityTypeConfiguration<Progr
                 "ck_programa_beca_estado_valido",
                 $"estado IN ({ConfiguracionPersistencia.ValoresSql<EstadoProgramaBeca>()})");
             tabla.HasCheckConstraint("ck_programa_beca_cupo_positivo", "cupo_total > 0");
+            tabla.HasCheckConstraint("ck_programa_beca_cupos_reservados_no_negativo", "cupos_reservados >= 0");
             tabla.HasCheckConstraint("ck_programa_beca_cupos_ocupados_no_negativo", "cupos_ocupados >= 0");
+            tabla.HasCheckConstraint("ck_programa_beca_cupos_dentro_de_limite", "cupos_reservados + cupos_ocupados <= cupo_total");
             tabla.HasCheckConstraint("ck_programa_beca_duracion_positiva", "duracion_periodos > 0");
             tabla.HasCheckConstraint("ck_programa_beca_fechas_vigencia", "vigencia_hasta > vigencia_desde");
             tabla.HasCheckConstraint("ck_programa_beca_presupuesto_no_negativo", "presupuesto_total_asignado >= 0");
+            tabla.HasCheckConstraint("ck_programa_beca_presupuesto_reservado_no_negativo", "presupuesto_reservado >= 0");
+            tabla.HasCheckConstraint("ck_programa_beca_presupuesto_ejecutado_no_negativo", "presupuesto_ejecutado >= 0");
+            tabla.HasCheckConstraint("ck_programa_beca_presupuesto_dentro_de_limite", "presupuesto_reservado + presupuesto_ejecutado <= presupuesto_total_asignado");
         });
 
         builder.HasKey(programa => programa.Id).HasName("pk_programas_beca");
 
         builder.Ignore(programa => programa.EventosDominio);
+        builder.Ignore(programa => programa.PresupuestoDisponible);
+        builder.Ignore(programa => programa.CuposDisponibles);
 
         ConfiguracionPersistencia.ConfigurarEntidadAuditable(builder);
 
@@ -71,6 +78,10 @@ internal sealed class ProgramaBecaConfiguracion : IEntityTypeConfiguration<Progr
             .HasColumnName("cupo_total")
             .IsRequired();
 
+        builder.Property(programa => programa.CuposReservados)
+            .HasColumnName("cupos_reservados")
+            .IsRequired();
+
         builder.Property(programa => programa.CuposOcupados)
             .HasColumnName("cupos_ocupados")
             .IsRequired();
@@ -108,6 +119,14 @@ internal sealed class ProgramaBecaConfiguracion : IEntityTypeConfiguration<Progr
 
         builder.Property(programa => programa.PresupuestoTotalAsignado)
             .ComoDinero("presupuesto_total_asignado")
+            .IsRequired();
+
+        builder.Property(programa => programa.PresupuestoReservado)
+            .ComoDinero("presupuesto_reservado")
+            .IsRequired();
+
+        builder.Property(programa => programa.PresupuestoEjecutado)
+            .ComoDinero("presupuesto_ejecutado")
             .IsRequired();
 
         builder.Property(programa => programa.Moneda)
@@ -204,6 +223,26 @@ internal sealed class ProgramaBecaConfiguracion : IEntityTypeConfiguration<Progr
 
         builder.Navigation(programa => programa.AsignacionesFondo)
             .HasField("_asignacionesFondo")
+            .UsePropertyAccessMode(PropertyAccessMode.Field);
+
+        builder.HasMany(programa => programa.ReservasPresupuestarias)
+            .WithOne()
+            .HasForeignKey(reserva => reserva.ProgramaBecaId)
+            .HasConstraintName("fk_reservas_presupuestarias_programa")
+            .OnDelete(DeleteBehavior.Restrict);
+
+        builder.Navigation(programa => programa.ReservasPresupuestarias)
+            .HasField("_reservasPresupuestarias")
+            .UsePropertyAccessMode(PropertyAccessMode.Field);
+
+        builder.HasMany(programa => programa.MovimientosPresupuestarios)
+            .WithOne()
+            .HasForeignKey(movimiento => movimiento.ProgramaBecaId)
+            .HasConstraintName("fk_movimientos_presupuestarios_programa")
+            .OnDelete(DeleteBehavior.Restrict);
+
+        builder.Navigation(programa => programa.MovimientosPresupuestarios)
+            .HasField("_movimientosPresupuestarios")
             .UsePropertyAccessMode(PropertyAccessMode.Field);
 
         builder.HasIndex(programa => programa.Codigo)
