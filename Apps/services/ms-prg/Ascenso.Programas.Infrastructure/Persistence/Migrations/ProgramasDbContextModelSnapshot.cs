@@ -218,6 +218,204 @@ namespace Ascenso.Programas.Infrastructure.Persistence.Migrations
                         });
                 });
 
+            modelBuilder.Entity("Ascenso.Programas.Domain.Programas.Agregados.ProgramaBeca", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .HasColumnType("uuid")
+                        .HasColumnName("id");
+
+                    b.Property<string>("Codigo")
+                        .IsRequired()
+                        .HasMaxLength(40)
+                        .HasColumnType("character varying(40)")
+                        .HasColumnName("codigo");
+
+                    b.Property<int>("CupoTotal")
+                        .HasColumnType("integer")
+                        .HasColumnName("cupo_total");
+
+                    b.Property<int>("CuposOcupados")
+                        .HasColumnType("integer")
+                        .HasColumnName("cupos_ocupados");
+
+                    b.Property<string>("Descripcion")
+                        .IsRequired()
+                        .HasMaxLength(1500)
+                        .HasColumnType("character varying(1500)")
+                        .HasColumnName("descripcion");
+
+                    b.Property<int>("DuracionPeriodos")
+                        .HasColumnType("integer")
+                        .HasColumnName("duracion_periodos");
+
+                    b.Property<string>("Estado")
+                        .IsRequired()
+                        .HasMaxLength(20)
+                        .HasColumnType("varchar")
+                        .HasColumnName("estado");
+
+                    b.Property<DateTimeOffset>("FechaCreacion")
+                        .HasColumnType("timestamptz")
+                        .HasColumnName("fecha_creacion");
+
+                    b.Property<DateTimeOffset>("FechaUltimaModificacion")
+                        .HasColumnType("timestamptz")
+                        .HasColumnName("fecha_ultima_modificacion");
+
+                    b.Property<string>("Moneda")
+                        .IsRequired()
+                        .HasMaxLength(3)
+                        .HasColumnType("character varying(3)")
+                        .HasColumnName("moneda");
+
+                    b.Property<string>("Nombre")
+                        .IsRequired()
+                        .HasMaxLength(200)
+                        .HasColumnType("character varying(200)")
+                        .HasColumnName("nombre");
+
+                    b.Property<string>("PeriodoInicialId")
+                        .IsRequired()
+                        .HasMaxLength(30)
+                        .HasColumnType("character varying(30)")
+                        .HasColumnName("periodo_inicial_id");
+
+                    b.Property<bool>("PermiteAcumulacion")
+                        .HasColumnType("boolean")
+                        .HasColumnName("permite_acumulacion");
+
+                    b.Property<decimal>("PresupuestoTotalAsignado")
+                        .HasPrecision(18, 2)
+                        .HasColumnType("numeric(18,2)")
+                        .HasColumnName("presupuesto_total_asignado");
+
+                    b.Property<bool>("RequiereCompromisoFirmado")
+                        .HasColumnType("boolean")
+                        .HasColumnName("requiere_compromiso_firmado");
+
+                    b.Property<string>("TerminosCompromisoEspecial")
+                        .HasMaxLength(2000)
+                        .HasColumnType("character varying(2000)")
+                        .HasColumnName("terminos_compromiso_especial");
+
+                    b.Property<Guid>("UsuarioCreacionId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("usuario_creacion_id");
+
+                    b.Property<Guid>("UsuarioModificacionId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("usuario_modificacion_id");
+
+                    b.Property<int>("Version")
+                        .IsConcurrencyToken()
+                        .HasColumnType("integer")
+                        .HasColumnName("version");
+
+                    b.Property<DateOnly>("VigenciaDesde")
+                        .HasColumnType("date")
+                        .HasColumnName("vigencia_desde");
+
+                    b.Property<DateOnly>("VigenciaHasta")
+                        .HasColumnType("date")
+                        .HasColumnName("vigencia_hasta");
+
+                    b.HasKey("Id")
+                        .HasName("pk_programas_beca");
+
+                    b.HasIndex("Codigo")
+                        .IsUnique()
+                        .HasDatabaseName("ux_programa_beca_codigo");
+
+                    b.ToTable("programas_beca", "programas", t =>
+                        {
+                            t.HasCheckConstraint("ck_programa_beca_cupo_positivo", "cupo_total > 0");
+
+                            t.HasCheckConstraint("ck_programa_beca_cupos_ocupados_no_negativo", "cupos_ocupados >= 0");
+
+                            t.HasCheckConstraint("ck_programa_beca_duracion_positiva", "duracion_periodos > 0");
+
+                            t.HasCheckConstraint("ck_programa_beca_estado_valido", "estado IN ('BORRADOR', 'CONFIGURADO', 'ACTIVO', 'CERRADO', 'ARCHIVADO')");
+
+                            t.HasCheckConstraint("ck_programa_beca_fechas_vigencia", "vigencia_hasta > vigencia_desde");
+
+                            t.HasCheckConstraint("ck_programa_beca_presupuesto_no_negativo", "presupuesto_total_asignado >= 0");
+                        });
+                });
+
+            modelBuilder.Entity("Ascenso.Programas.Domain.Programas.Entidades.AsignacionFondoPrograma", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .HasColumnType("uuid")
+                        .HasColumnName("id");
+
+                    b.Property<Guid>("AutorizadoPorUsuarioId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("autorizado_por_usuario_id");
+
+                    b.Property<Guid>("DonanteId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("donante_id");
+
+                    b.Property<string>("Estado")
+                        .IsRequired()
+                        .HasMaxLength(20)
+                        .HasColumnType("varchar")
+                        .HasColumnName("estado");
+
+                    b.Property<DateTimeOffset>("FechaAsignacion")
+                        .HasColumnType("timestamptz")
+                        .HasColumnName("fecha_asignacion");
+
+                    b.Property<DateTimeOffset>("FechaCreacion")
+                        .HasColumnType("timestamptz")
+                        .HasColumnName("fecha_creacion");
+
+                    b.Property<DateTimeOffset>("FechaUltimaModificacion")
+                        .HasColumnType("timestamptz")
+                        .HasColumnName("fecha_ultima_modificacion");
+
+                    b.Property<decimal>("MontoAsignado")
+                        .HasPrecision(18, 2)
+                        .HasColumnType("numeric(18,2)")
+                        .HasColumnName("monto_asignado");
+
+                    b.Property<string>("PeriodoAcademicoId")
+                        .IsRequired()
+                        .HasMaxLength(30)
+                        .HasColumnType("character varying(30)")
+                        .HasColumnName("periodo_academico_id");
+
+                    b.Property<Guid>("ProgramaBecaId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("programa_beca_id");
+
+                    b.Property<Guid>("UsuarioCreacionId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("usuario_creacion_id");
+
+                    b.Property<Guid>("UsuarioModificacionId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("usuario_modificacion_id");
+
+                    b.Property<int>("Version")
+                        .IsConcurrencyToken()
+                        .HasColumnType("integer")
+                        .HasColumnName("version");
+
+                    b.HasKey("Id")
+                        .HasName("pk_asignaciones_fondo_programa");
+
+                    b.HasIndex("ProgramaBecaId", "DonanteId", "PeriodoAcademicoId")
+                        .HasDatabaseName("ix_asignacion_fondo_programa_donante_periodo");
+
+                    b.ToTable("asignaciones_fondo_programa", "programas", t =>
+                        {
+                            t.HasCheckConstraint("ck_asignacion_fondo_estado_valido", "estado IN ('ASIGNADA', 'DESASIGNADA')");
+
+                            t.HasCheckConstraint("ck_asignacion_fondo_monto_no_negativo", "monto_asignado >= 0");
+                        });
+                });
+
             modelBuilder.Entity("Ascenso.Programas.Domain.Universidades.Agregados.UniversidadAliada", b =>
                 {
                     b.Property<Guid>("Id")
@@ -736,6 +934,157 @@ namespace Ascenso.Programas.Infrastructure.Persistence.Migrations
                         .HasConstraintName("fk_aportes_donante_donante");
                 });
 
+            modelBuilder.Entity("Ascenso.Programas.Domain.Programas.Agregados.ProgramaBeca", b =>
+                {
+                    b.OwnsOne("Ascenso.Programas.Domain.Programas.ObjetosValor.CondicionesPermanencia", "CondicionesPermanencia", b1 =>
+                        {
+                            b1.Property<Guid>("ProgramaBecaId")
+                                .HasColumnType("uuid");
+
+                            b1.Property<string>("ConsecuenciaIncumplimiento")
+                                .IsRequired()
+                                .HasMaxLength(30)
+                                .HasColumnType("varchar")
+                                .HasColumnName("permanencia_consecuencia_incumplimiento");
+
+                            b1.Property<int>("DuracionMaximaPausaPeriodos")
+                                .HasColumnType("integer")
+                                .HasColumnName("permanencia_duracion_maxima_pausa_periodos");
+
+                            b1.Property<string>("FrecuenciaReportes")
+                                .IsRequired()
+                                .HasMaxLength(20)
+                                .HasColumnType("varchar")
+                                .HasColumnName("permanencia_frecuencia_reportes");
+
+                            b1.Property<int>("HorasServicioPorPeriodo")
+                                .HasColumnType("integer")
+                                .HasColumnName("permanencia_horas_servicio_periodo");
+
+                            b1.Property<decimal>("MargenRiesgoPromedio")
+                                .HasPrecision(5, 2)
+                                .HasColumnType("numeric(5,2)")
+                                .HasColumnName("permanencia_margen_riesgo_promedio");
+
+                            b1.Property<int>("MateriasMinimasAprobadas")
+                                .HasColumnType("integer")
+                                .HasColumnName("permanencia_materias_minimas_aprobadas");
+
+                            b1.Property<int>("MaximoMateriasReprobadas")
+                                .HasColumnType("integer")
+                                .HasColumnName("permanencia_maximo_materias_reprobadas");
+
+                            b1.Property<bool>("PermiteRenovacionTardiaExcepcional")
+                                .HasColumnType("boolean")
+                                .HasColumnName("permanencia_permite_renovacion_tardia");
+
+                            b1.Property<decimal>("PromedioMinimoRenovacion")
+                                .HasPrecision(5, 2)
+                                .HasColumnType("numeric(5,2)")
+                                .HasColumnName("permanencia_promedio_minimo_renovacion");
+
+                            b1.HasKey("ProgramaBecaId");
+
+                            b1.ToTable("programas_beca", "programas");
+
+                            b1.WithOwner()
+                                .HasForeignKey("ProgramaBecaId");
+                        });
+
+                    b.OwnsOne("Ascenso.Programas.Domain.Programas.ObjetosValor.CriteriosElegibilidadPrograma", "CriteriosElegibilidad", b1 =>
+                        {
+                            b1.Property<Guid>("ProgramaBecaId")
+                                .HasColumnType("uuid");
+
+                            b1.Property<string>("CarrerasElegiblesIds")
+                                .IsRequired()
+                                .HasColumnType("jsonb")
+                                .HasColumnName("criterio_carreras_elegibles_ids");
+
+                            b1.Property<int>("EdadMaxima")
+                                .HasColumnType("integer")
+                                .HasColumnName("criterio_edad_maxima");
+
+                            b1.Property<int>("EdadMinima")
+                                .HasColumnType("integer")
+                                .HasColumnName("criterio_edad_minima");
+
+                            b1.Property<decimal>("PromedioMinimoIngreso")
+                                .HasPrecision(5, 2)
+                                .HasColumnType("numeric(5,2)")
+                                .HasColumnName("criterio_promedio_minimo_ingreso");
+
+                            b1.Property<decimal>("TopeIngresoFamiliarMensual")
+                                .HasPrecision(18, 2)
+                                .HasColumnType("numeric(18,2)")
+                                .HasColumnName("criterio_tope_ingreso_familiar");
+
+                            b1.Property<string>("UniversidadesElegiblesIds")
+                                .IsRequired()
+                                .HasColumnType("jsonb")
+                                .HasColumnName("criterio_universidades_elegibles_ids");
+
+                            b1.HasKey("ProgramaBecaId");
+
+                            b1.ToTable("programas_beca", "programas");
+
+                            b1.WithOwner()
+                                .HasForeignKey("ProgramaBecaId");
+                        });
+
+                    b.OwnsOne("Ascenso.Programas.Domain.Programas.ObjetosValor.PoliticaCobertura", "PoliticaCobertura", b1 =>
+                        {
+                            b1.Property<Guid>("ProgramaBecaId")
+                                .HasColumnType("uuid");
+
+                            b1.Property<string>("Modalidad")
+                                .IsRequired()
+                                .HasMaxLength(20)
+                                .HasColumnType("varchar")
+                                .HasColumnName("modalidad_cobertura");
+
+                            b1.Property<string>("Moneda")
+                                .IsRequired()
+                                .HasMaxLength(3)
+                                .HasColumnType("character varying(3)")
+                                .HasColumnName("moneda_cobertura");
+
+                            b1.Property<decimal>("MontoFijoPeriodo")
+                                .HasPrecision(18, 2)
+                                .HasColumnType("numeric(18,2)")
+                                .HasColumnName("monto_fijo_periodo");
+
+                            b1.Property<decimal>("PorcentajeCobertura")
+                                .HasPrecision(18, 2)
+                                .HasColumnType("numeric(18,2)")
+                                .HasColumnName("porcentaje_cobertura");
+
+                            b1.HasKey("ProgramaBecaId");
+
+                            b1.ToTable("programas_beca", "programas");
+
+                            b1.WithOwner()
+                                .HasForeignKey("ProgramaBecaId");
+                        });
+
+                    b.Navigation("CondicionesPermanencia");
+
+                    b.Navigation("CriteriosElegibilidad");
+
+                    b.Navigation("PoliticaCobertura")
+                        .IsRequired();
+                });
+
+            modelBuilder.Entity("Ascenso.Programas.Domain.Programas.Entidades.AsignacionFondoPrograma", b =>
+                {
+                    b.HasOne("Ascenso.Programas.Domain.Programas.Agregados.ProgramaBeca", null)
+                        .WithMany("AsignacionesFondo")
+                        .HasForeignKey("ProgramaBecaId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired()
+                        .HasConstraintName("fk_asignaciones_fondo_programa_programa");
+                });
+
             modelBuilder.Entity("Ascenso.Programas.Domain.Universidades.Agregados.UniversidadAliada", b =>
                 {
                     b.OwnsOne("Ascenso.Programas.Domain.Universidades.ObjetosValor.ContactoEnlace", "ContactoEnlace", b1 =>
@@ -857,6 +1206,11 @@ namespace Ascenso.Programas.Infrastructure.Persistence.Migrations
             modelBuilder.Entity("Ascenso.Programas.Domain.Donantes.Agregados.Donante", b =>
                 {
                     b.Navigation("Aportes");
+                });
+
+            modelBuilder.Entity("Ascenso.Programas.Domain.Programas.Agregados.ProgramaBeca", b =>
+                {
+                    b.Navigation("AsignacionesFondo");
                 });
 
             modelBuilder.Entity("Ascenso.Programas.Domain.Universidades.Agregados.UniversidadAliada", b =>

@@ -3,6 +3,9 @@ using Ascenso.Programas.Domain.Donantes.Agregados;
 using Ascenso.Programas.Domain.Donantes.Entidades;
 using Ascenso.Programas.Domain.Donantes.ObjetosValor;
 using Ascenso.Programas.Domain.Enums;
+using Ascenso.Programas.Domain.Programas.Agregados;
+using Ascenso.Programas.Domain.Programas.Entidades;
+using Ascenso.Programas.Domain.Programas.ObjetosValor;
 using Ascenso.Programas.Domain.Universidades.Agregados;
 using Ascenso.Programas.Domain.Universidades.Entidades;
 using Ascenso.Programas.Domain.Universidades.ObjetosValor;
@@ -252,6 +255,60 @@ public sealed class ModeloPersistenciaProgramasTests
         contexto.Entry(costoV1).State.Should().Be(EntityState.Modified);
         costoV1.Estado.Should().Be(EstadoVersionCosto.Historico);
         costoV2.NumeroVersion.Should().Be(2);
+    }
+
+    [Fact]
+    public void Debe_ConfigurarValueGeneratedNeverEnProgramasYAsignaciones_YDetectarNuevasAsignacionesComoAdded()
+    {
+        using var contexto = CrearContextoModelo();
+
+        var entidadPrograma = contexto.Model.FindEntityType(typeof(ProgramaBeca))!;
+        entidadPrograma.GetTableName().Should().Be("programas_beca");
+        entidadPrograma.GetSchema().Should().Be(ProgramasDbContext.Esquema);
+        entidadPrograma.FindProperty(nameof(ProgramaBeca.Id))!.ValueGenerated.Should().Be(ValueGenerated.Never);
+        var versionPrograma = entidadPrograma.FindProperty(nameof(ProgramaBeca.Version))!;
+        versionPrograma.IsConcurrencyToken.Should().BeTrue();
+        versionPrograma.ValueGenerated.Should().Be(ValueGenerated.Never);
+
+        var entidadAsignacion = contexto.Model.FindEntityType(typeof(AsignacionFondoPrograma))!;
+        entidadAsignacion.GetTableName().Should().Be("asignaciones_fondo_programa");
+        entidadAsignacion.FindProperty(nameof(AsignacionFondoPrograma.Id))!.ValueGenerated.Should().Be(ValueGenerated.Never);
+        var versionAsignacion = entidadAsignacion.FindProperty(nameof(AsignacionFondoPrograma.Version))!;
+        versionAsignacion.IsConcurrencyToken.Should().BeTrue();
+        versionAsignacion.ValueGenerated.Should().Be(ValueGenerated.Never);
+
+        var usuarioId = UuidV7.Nuevo();
+        var programa = ProgramaBeca.Crear(
+            "BECA-INT-2026",
+            "Beca Integración",
+            "Prueba de persistencia",
+            new PoliticaCobertura(ModalidadCobertura.Total, 100.00m, 0.00m, "USD"),
+            10,
+            8,
+            "2026-1",
+            new DateOnly(2026, 1, 1),
+            new DateOnly(2026, 12, 31),
+            false,
+            true,
+            null,
+            usuarioId);
+
+        contexto.Attach(programa);
+        contexto.Entry(programa).State.Should().Be(EntityState.Unchanged);
+
+        var asignacion = programa.AsignarFondoDonante(UuidV7.Nuevo(), "2026-1", 10000.00m, usuarioId);
+        programa.ConfigurarElegibilidadYPermanencia(
+            new CriteriosElegibilidadPrograma(15.00m, 17, 25, 1200.00m, [UuidV7.Nuevo()], [UuidV7.Nuevo()]),
+            new CondicionesPermanencia(14.00m, 4, 1, 10, FrecuenciaReporteAcademico.Semestral, ConsecuenciaIncumplimiento.Suspension, 0.50m, 2, true),
+            todasLasUniversidadesTienenConvenioVigente: true,
+            todasLasCarrerasSonElegibles: true,
+            usuarioId);
+
+        contexto.ChangeTracker.DetectChanges();
+
+        contexto.Entry(asignacion).State.Should().Be(EntityState.Added);
+        contexto.Entry(programa).State.Should().Be(EntityState.Modified);
+        programa.Estado.Should().Be(EstadoProgramaBeca.Configurado);
     }
 
     private static IProperty ObtenerPropiedad(

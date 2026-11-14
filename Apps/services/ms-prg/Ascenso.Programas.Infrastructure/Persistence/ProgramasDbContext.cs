@@ -2,6 +2,8 @@ using Ascenso.Programas.Domain.Donantes.Agregados;
 using Ascenso.Programas.Domain.Donantes.Entidades;
 using Ascenso.Programas.Domain.Excepciones;
 using Ascenso.Programas.Domain.Interfaces;
+using Ascenso.Programas.Domain.Programas.Agregados;
+using Ascenso.Programas.Domain.Programas.Entidades;
 using Ascenso.Programas.Domain.Universidades.Agregados;
 using Ascenso.Programas.Domain.Universidades.Entidades;
 using MassTransit;
@@ -34,6 +36,10 @@ public sealed class ProgramasDbContext : DbContext, IUnitOfWork
 
     public DbSet<CostoMatriculaReferencia> CostosMatriculaReferencia => Set<CostoMatriculaReferencia>();
 
+    public DbSet<ProgramaBeca> ProgramasBeca => Set<ProgramaBeca>();
+
+    public DbSet<AsignacionFondoPrograma> AsignacionesFondoPrograma => Set<AsignacionFondoPrograma>();
+
     public async Task<int> GuardarCambiosAsync(CancellationToken cancellationToken = default)
     {
         try
@@ -65,6 +71,11 @@ public sealed class ProgramasDbContext : DbContext, IUnitOfWork
             if (string.Equals(pg.ConstraintName, "ux_carrera_elegible_universidad_codigo", StringComparison.OrdinalIgnoreCase))
             {
                 throw new CodigoCarreraDuplicadoException(Guid.Empty, pg.Detail ?? "duplicado");
+            }
+
+            if (string.Equals(pg.ConstraintName, "ux_programa_beca_codigo", StringComparison.OrdinalIgnoreCase))
+            {
+                throw new CodigoProgramaDuplicadoException(pg.Detail ?? "duplicado");
             }
 
             throw;

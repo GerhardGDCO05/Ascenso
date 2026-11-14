@@ -6,6 +6,12 @@ using Ascenso.Programas.Application.Donantes.Comandos.RegistrarDonante;
 using Ascenso.Programas.Application.Donantes.Consultas.ConsultarDonantes;
 using Ascenso.Programas.Application.Donantes.Consultas.ConsultarHistorialAportes;
 using Ascenso.Programas.Application.Donantes.Consultas.ObtenerDonantePorId;
+using Ascenso.Programas.Application.Programas.Comandos.AsignarPresupuestoDonantes;
+using Ascenso.Programas.Application.Programas.Comandos.ConfigurarCriteriosElegibilidad;
+using Ascenso.Programas.Application.Programas.Comandos.CrearProgramaBeca;
+using Ascenso.Programas.Application.Programas.Comandos.ReajustarPresupuestoDonante;
+using Ascenso.Programas.Application.Programas.Consultas.ConsultarProgramas;
+using Ascenso.Programas.Application.Programas.Consultas.ObtenerProgramaPorId;
 using Ascenso.Programas.Application.Universidades.Comandos.ActualizarCostoMatricula;
 using Ascenso.Programas.Application.Universidades.Comandos.AgregarCarreraElegible;
 using Ascenso.Programas.Application.Universidades.Comandos.MarcarConvenioVencido;
@@ -46,6 +52,14 @@ public static class DependencyInjection
         services.AddScoped<ConsultarUniversidadesQueryHandler>();
         services.AddScoped<ObtenerUniversidadPorIdQueryHandler>();
         services.AddScoped<ConsultarHistorialCostosCarreraQueryHandler>();
+
+        services.AddScoped<CrearProgramaBecaCommandHandler>();
+        services.AddScoped<AsignarPresupuestoDonantesCommandHandler>();
+        services.AddScoped<ReajustarPresupuestoDonanteCommandHandler>();
+        services.AddScoped<ConfigurarCriteriosElegibilidadCommandHandler>();
+
+        services.AddScoped<ConsultarProgramasQueryHandler>();
+        services.AddScoped<ObtenerProgramaPorIdQueryHandler>();
 
         return services;
     }
