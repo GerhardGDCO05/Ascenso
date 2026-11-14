@@ -31,7 +31,7 @@
 
 *Programas, fondos, donantes, convenios y control presupuestario.*
 
-- [ ] **RF-11**: Registro y configuración de programas de becas
+- [x] **RF-11**: Registro y configuración de programas de becas
 - [ ] **RF-12**: Gestión de presupuesto y disponibilidad de cupos
 - [x] **RF-13**: Alta y gestión de donantes / aportes
 - [x] **RF-14**: Convenios con universidades aliadas y aranceles

@@ -1,0 +1,51 @@
+# Proposal: Registro y Configuración de Programas de Becas (`rf11-int3-msprg`)
+
+## Why
+
+El microservicio `MS-PRG` (`Ascenso.Programas`) gobierna el catálogo transaccional de programas de becas, donantes, universidades aliadas, convocatorias y control presupuestario de la Plataforma Ascenso. Habiendo completado los módulos fundacionales de Donantes y Aportes (`RF-13`) y de Universidades Aliadas, Convenios y Versionado de Costos de Matrícula (`RF-14`), el siguiente hito asignado al Integrante 3 (`int3`) es el **RF-11: Registro y Configuración de Programas de Becas** (`[HU-11.1]`, `[HU-11.2]`, `[HU-11.3]`).
+
+Sin el agregado raíz `ProgramaBeca`, el sistema no puede estructurar las políticas de cobertura (`PoliticaCobertura`), comprometer de forma atómica el saldo disponible de múltiples donantes hacia el presupuesto del programa (`AsignacionFondoPrograma`, `RN-PRG-02`), ni parametrizar por composición los criterios de elegibilidad (`CriteriosElegibilidadPrograma`) y condiciones de permanencia (`CondicionesPermanencia`) requeridos para transicionar un programa al estado `Configurado` (`RN-PRG-01`) y habilitar convocatorias (`MS-POS`) y otorgamientos (`MS-BEC`).
+
+## What Changes
+
+Se diseñan e implementan los componentes de dominio, aplicación, infraestructura, exposición REST y pruebas automatizadas para cubrir las tres Historias de Usuario del **RF-11** en `Apps/services/ms-prg/`:
+
+- **[HU-11.1] Creación de Estructura Base y Parámetros del Programa de Becas:**
+  - Creación del agregado raíz `ProgramaBeca` (`AggregateRoot` / `EntidadAuditable<Guid>`) con `Guid.CreateVersion7()` (`UuidV7.Nuevo()`), encapsulando `codigo` unívoco (`409 Conflict` con código `CODIGO_PROGRAMA_DUPLICADO`), `nombre`, `descripcion`, objeto de valor inmutable `PoliticaCobertura` (`modalidad`: `ModalidadCobertura.Total`, `ModalidadCobertura.Parcial`, `ModalidadCobertura.MontoFijo`, `porcentajeCobertura`, `montoFijoPeriodo`, `moneda`: `"USD"`), `cupoTotal` (`> 0`), `duracionPeriodos` (`> 0`), `periodoInicialId`, `vigenciaDesde` y `vigenciaHasta` (`DateOnly`, validando `vigenciaHasta > vigenciaDesde` → `400 Bad Request` con código `FECHAS_VIGENCIA_PROGRAMA_INVALIDAS`), `permiteAcumulacion` (`bool`), `requiereCompromisoFirmado` (`bool`), `terminosCompromisoEspecial` (`string?`), `presupuestoTotalAsignado` (`decimal`), `cuposOcupados` (`int`) y `estado` (`EstadoProgramaBeca`: `Borrador`, `Configurado`, `Activo`, `Cerrado`, `Archivado`).
+  - Al crearse mediante `ProgramaBeca.Crear(...)`, el programa nace en estado `EstadoProgramaBeca.Borrador` con `presupuestoTotalAsignado = 0.00m` y `cuposOcupados = 0` (`201 Created`), registrando y publicando el evento de integración `ProgramaBecaCreado` en el Transactional Outbox.
+
+- **[HU-11.2] Asignación y Control Presupuestario de Donantes al Programa (`RN-PRG-02`):**
+  - Creación de la entidad `AsignacionFondoPrograma` (`EntidadAuditable<Guid>`) dentro del agregado `ProgramaBeca`, con `programaBecaId`, `donanteId`, `periodoAcademicoId`, `montoAsignado` (`> 0`), `estado` (`EstadoAsignacionFondo.Asignada`, `EstadoAsignacionFondo.Desasignada`), `fechaAsignacion` (`DateTimeOffset`) y `autorizadoPorUsuarioId` (`Guid`).
+  - Incorporación en `Donante` de los métodos de dominio expresivos `ComprometerSaldoParaPrograma` y `ReintegrarSaldoDePrograma` para deducir y restituir `SaldoDisponibleAsignacion` validando `EstadoDonante == EstadoDonante.Activo` y `montoAsignado <= SaldoDisponibleAsignacion` (`409 Conflict` con código `SALDO_DONANTE_INSUFICIENTE`).
+  - En una misma transacción de `IUnitOfWork` (`ProgramasDbContext`), el caso de uso `AsignarPresupuestoDonantesCommand` deduce el saldo disponible de cada `Donante`, registra la `AsignacionFondoPrograma` en `ProgramaBeca`, incrementa `presupuestoTotalAsignado` y emite el evento de integración `PresupuestoProgramaAsignado`.
+  - Soporte para reajuste o desasignación parcial/total (`ReajustarPresupuestoDonanteCommand`) devolviendo el saldo al `Donante` únicamente cuando el `ProgramaBeca` se encuentra en `Borrador` o `Configurado`, y bloqueando cualquier reducción cuando el programa está en estado `Activo` con convocatoria en curso (`409 Conflict` con código `PRESUPUESTO_EN_EJECUCION`).
+
+- **[HU-11.3] Configuración de Criterios de Elegibilidad y Condiciones de Permanencia (`RN-PRG-01`):**
+  - Modelado por composición de los objetos de valor inmutables en `ProgramaBeca`:
+    - `CriteriosElegibilidadPrograma`: `promedioMinimoIngreso` (`0.00m` a `20.00m` → `400 Bad Request` si está fuera de rango), `edadMinima`, `edadMaxima`, `topeIngresoFamiliarMensual`, `universidadesElegiblesIds` (`IReadOnlyList<Guid>`, al menos 1) y `carrerasElegiblesIds` (`IReadOnlyList<Guid>`, al menos 1).
+    - `CondicionesPermanencia`: `promedioMinimoRenovacion` (`0.00m` a `20.00m`), `materiasMinimasAprobadas`, `maximoMateriasReprobadas`, `horasServicioPorPeriodo`, `frecuenciaReportes` (`FrecuenciaReporteAcademico`: `Semestral`, `Trimestral`, `Anual`), `consecuenciaIncumplimiento` (`ConsecuenciaIncumplimiento`: `LlamadoAtencion`, `Suspension`, `Revocacion`), `margenRiesgoPromedio`, `duracionMaximaPausaPeriodos` y `permiteRenovacionTardiaExcepcional`.
+  - Regla de transición a `EstadoProgramaBeca.Configurado` (`RN-PRG-01`): al ejecutar `ConfigurarCriteriosElegibilidadCommand`, el sistema verifica que `presupuestoTotalAsignado > 0`, `cupoTotal > 0` y que todas las `universidadesElegiblesIds` existan, estén activas y posean al menos un `Convenio` en estado `Vigente` (y que las `carrerasElegiblesIds` pertenezcan a dichas universidades); si alguna condición no se cumple, rechaza con `422 Unprocessable Entity` (`PROGRAMA_NO_CONFIGURABLE`). Si se cumple, transiciona el programa a `Configurado` y emite el evento de integración `ProgramaBecaConfigurado`.
+  - Consultas CQRS-Lite: listado paginado de programas (`ConsultarProgramasQuery`, filtrable por `estado`, `periodoInicialId` y `modalidadCobertura`) y consulta de detalle completo por ID (`ObtenerProgramaPorIdQuery`, incluyendo asignaciones de fondos de donantes, política de cobertura, criterios de elegibilidad y condiciones de permanencia).
+
+- **Infraestructura, Persistencia (`ProgramasDbContext`) y API REST (`ProgramasController`):**
+  - Configuraciones EF Core (`ProgramaBecaConfiguracion`, `AsignacionFondoProgramaConfiguracion`) en el esquema `programas` respetando `.ValueGeneratedNever()` en todos los `Id` UUIDv7 generados en dominio y en `Version` (`.IsConcurrencyToken().ValueGeneratedNever()`), mapeo de objetos de valor compuestos y colecciones primitivas/JSONB de IDs elegibles, e índices únicos y restricciones `CHECK`.
+  - Nueva migración EF Core en `Ascenso.Programas.Infrastructure/Persistence/Migrations/`, implementación de `ProgramaBecaRepository` (y actualización de `DonanteRepository.TieneFondosComprometidosEnProgramaVigenteAsync`) y controlador `ProgramasController` bajo `/api/v1/programas`.
+
+## Capabilities
+
+### New Capabilities
+- `ms-prg/programas`: Creación y configuración de programas de becas (`ProgramaBeca`), políticas de cobertura (`PoliticaCobertura`), asignación y reajuste atómico de presupuesto multi-donante (`AsignacionFondoPrograma`, `RN-PRG-02`), y configuración por composición de criterios de elegibilidad (`CriteriosElegibilidadPrograma`) y condiciones de permanencia (`CondicionesPermanencia`) con transición validada al estado `Configurado` (`RN-PRG-01`) (`RF-11`: `HU-11.1`, `HU-11.2`, `HU-11.3`).
+
+### Modified Capabilities
+<!-- Ninguna capacidad existente modifica sus requisitos a nivel de contrato en este cambio. -->
+
+## Impact
+
+- **Especificaciones OpenSpec:** Se añade la especificación delta `openspec/changes/rf11-int3-msprg/specs/ms-prg/programas/spec.md` que al archivarse se sincronizará hacia `openspec/specs/ms-prg/programas/spec.md`.
+- **Microservicio `MS-PRG` (`Apps/services/ms-prg/`):**
+  - `Ascenso.Programas.Domain`: Nueva carpeta `Programas/` (`Agregados/ProgramaBeca.cs`, `Entidades/AsignacionFondoPrograma.cs`, `ObjetosValor/PoliticaCobertura.cs`, `ObjetosValor/CriteriosElegibilidadPrograma.cs`, `ObjetosValor/CondicionesPermanencia.cs`, `Eventos/`), extensión en `Donantes/Agregados/Donante.cs` (`ComprometerSaldoParaPrograma`, `ReintegrarSaldoDePrograma`), nuevas enumeraciones en `Enums/` (`EstadoProgramaBeca`, `ModalidadCobertura`, `EstadoAsignacionFondo`, `FrecuenciaReporteAcademico`, `ConsecuenciaIncumplimiento`), nuevas excepciones en `Excepciones/` (`CodigoProgramaDuplicadoException`, `ProgramaBecaNoEncontradoException`, `FechasVigenciaProgramaInvalidasException`, `SaldoDonanteInsuficienteException`, `PresupuestoEnEjecucionException`, `ProgramaNoConfigurableException`, `PromedioAcademicoInvalidoException`, `PoliticaCoberturaInvalidaException`) y puerto `IProgramaBecaRepository` en `Interfaces/`.
+  - `Ascenso.Programas.Application`: Nueva carpeta `Programas/` con comandos (`CrearProgramaBecaCommand`, `AsignarPresupuestoDonantesCommand`, `ReajustarPresupuestoDonanteCommand`, `ConfigurarCriteriosElegibilidadCommand`), consultas (`ConsultarProgramasQuery`, `ObtenerProgramaPorIdQuery`), handlers, validadores FluentValidation, DTOs y eventos de integración (`ProgramaBecaCreado`, `PresupuestoProgramaAsignado`, `ProgramaBecaConfigurado`), más su registro en `DependencyInjection.cs`.
+  - `Ascenso.Programas.Infrastructure`: Nuevas configuraciones EF Core (`ProgramaBecaConfiguracion.cs`, `AsignacionFondoProgramaConfiguracion.cs`), `DbSet`s y traducción de restricción única `ux_programa_beca_codigo` en `ProgramasDbContext.cs`, nueva migración EF Core en `Persistence/Migrations/`, `ProgramaBecaRepository.cs` en `Persistence/Repositorios/` y registro en `DependencyInjection.cs`.
+  - `Ascenso.Programas.Api`: Nuevo controlador `Controllers/v1/ProgramasController.cs` bajo `/api/v1/programas`.
+  - Proyectos de prueba (`Domain.Tests`, `Application.Tests`, `IntegrationTests`, `ArchitectureTests`): Cobertura unitaria y de integración para `[HU-11.1]`, `[HU-11.2]` y `[HU-11.3]`, validando `.ValueGeneratedNever()`, transacciones de asignación/reajuste con `Donante` y formato limpio con `dotnet format --verify-no-changes`.
+- **Roadmaps del proyecto:** Al finalizar la implementación en `/opsx:apply`, se actualizarán `openspec/roadmaps/por_integrante.md` y `openspec/roadmaps/por_microservicio.md` marcando `[x] RF-11`.

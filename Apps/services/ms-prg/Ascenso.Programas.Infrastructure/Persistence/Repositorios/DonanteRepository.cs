@@ -74,7 +74,7 @@ public sealed class DonanteRepository : IDonanteRepository
             .AnyAsync(aporte => aporte.NumeroReferenciaBancaria == normalizada, cancellationToken);
     }
 
-    public Task<bool> TieneFondosComprometidosEnProgramaVigenteAsync(
+    public async Task<bool> TieneFondosComprometidosEnProgramaVigenteAsync(
         Guid donanteId,
         CancellationToken cancellationToken = default)
     {
@@ -83,8 +83,28 @@ public sealed class DonanteRepository : IDonanteRepository
             throw new ArgumentException("El identificador del donante es obligatorio.", nameof(donanteId));
         }
 
-        // Antes de integrar las asignaciones por programa (RF-01), se protege cualquier compromiso reflejado en saldo.
-        return _contexto.Donantes
+        var tieneAsignacionActiva = await _contexto.AsignacionesFondoPrograma
+            .AsNoTracking()
+            .Join(
+                _contexto.ProgramasBeca.AsNoTracking(),
+                asignacion => asignacion.ProgramaBecaId,
+                programa => programa.Id,
+                (asignacion, programa) => new { asignacion, programa })
+            .AnyAsync(
+                x => x.asignacion.DonanteId == donanteId
+                    && x.asignacion.Estado == EstadoAsignacionFondo.Asignada
+                    && x.asignacion.MontoAsignado > 0.00m
+                    && (x.programa.Estado == EstadoProgramaBeca.Borrador
+                        || x.programa.Estado == EstadoProgramaBeca.Configurado
+                        || x.programa.Estado == EstadoProgramaBeca.Activo),
+                cancellationToken);
+
+        if (tieneAsignacionActiva)
+        {
+            return true;
+        }
+
+        return await _contexto.Donantes
             .AsNoTracking()
             .AnyAsync(
                 donante => donante.Id == donanteId

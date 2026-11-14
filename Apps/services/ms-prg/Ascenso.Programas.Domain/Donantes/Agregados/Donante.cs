@@ -264,5 +264,45 @@ public sealed class Donante : AggregateRoot
 
         return aporte;
     }
+
+    public void ComprometerSaldoParaPrograma(
+        decimal montoAsignado,
+        Guid usuarioModificacionId,
+        DateTimeOffset? fechaModificacion = null)
+    {
+        if (EstadoDonante != EstadoDonante.Activo)
+        {
+            throw new DonanteInactivoException(Id);
+        }
+
+        var montoRedondeado = decimal.Round(montoAsignado, 2, MidpointRounding.AwayFromZero);
+        if (montoRedondeado <= 0.00m)
+        {
+            throw new ArgumentOutOfRangeException(nameof(montoAsignado), "El monto a comprometer debe ser mayor que cero.");
+        }
+
+        if (montoRedondeado > SaldoDisponibleAsignacion)
+        {
+            throw new SaldoDonanteInsuficienteException(Id, SaldoDisponibleAsignacion, montoRedondeado);
+        }
+
+        SaldoDisponibleAsignacion = decimal.Round(SaldoDisponibleAsignacion - montoRedondeado, 2, MidpointRounding.AwayFromZero);
+        ActualizarAuditoria(usuarioModificacionId, (fechaModificacion ?? DateTimeOffset.UtcNow).ToUniversalTime());
+    }
+
+    public void ReintegrarSaldoDePrograma(
+        decimal montoAReintegrar,
+        Guid usuarioModificacionId,
+        DateTimeOffset? fechaModificacion = null)
+    {
+        var montoRedondeado = decimal.Round(montoAReintegrar, 2, MidpointRounding.AwayFromZero);
+        if (montoRedondeado <= 0.00m)
+        {
+            throw new ArgumentOutOfRangeException(nameof(montoAReintegrar), "El monto a reintegrar debe ser mayor que cero.");
+        }
+
+        SaldoDisponibleAsignacion = decimal.Round(SaldoDisponibleAsignacion + montoRedondeado, 2, MidpointRounding.AwayFromZero);
+        ActualizarAuditoria(usuarioModificacionId, (fechaModificacion ?? DateTimeOffset.UtcNow).ToUniversalTime());
+    }
 }
 

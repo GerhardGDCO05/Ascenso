@@ -32,6 +32,7 @@ public static class DependencyInjection
         services.AddScoped<IUnitOfWork>(proveedor => proveedor.GetRequiredService<ProgramasDbContext>());
         services.AddScoped<IDonanteRepository, DonanteRepository>();
         services.AddScoped<IUniversidadAliadaRepository, UniversidadAliadaRepository>();
+        services.AddScoped<IProgramaBecaRepository, ProgramaBecaRepository>();
         services.AddScoped<IIntegrationEventPublisher, MassTransitIntegrationEventPublisher>();
 
         services.AddMassTransit(bus =>
