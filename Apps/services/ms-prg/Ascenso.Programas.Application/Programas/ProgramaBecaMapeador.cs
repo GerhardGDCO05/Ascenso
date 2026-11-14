@@ -54,6 +54,55 @@ internal static class ProgramaBecaMapeador
             programa.FechaCreacion,
             programa.FechaUltimaModificacion);
 
+    public static BalancePresupuestarioProgramaResponse ABalanceResponse(ProgramaBeca programa)
+        => new(
+            programa.Id,
+            programa.Codigo,
+            programa.Nombre,
+            programa.Estado.ACodigo(),
+            programa.Moneda,
+            programa.PresupuestoTotalAsignado,
+            programa.PresupuestoReservado,
+            programa.PresupuestoEjecutado,
+            programa.PresupuestoDisponible,
+            programa.CupoTotal,
+            programa.CuposReservados,
+            programa.CuposOcupados,
+            programa.CuposDisponibles,
+            programa.FechaUltimaModificacion);
+
+    public static MovimientoPresupuestarioResponse AMovimientoResponse(MovimientoPresupuestario movimiento)
+        => new(
+            movimiento.Id,
+            movimiento.ProgramaBecaId,
+            movimiento.TipoMovimiento.ACodigo(),
+            movimiento.Monto,
+            movimiento.Moneda,
+            movimiento.ReferenciaExternaId,
+            movimiento.PeriodoAcademicoId,
+            movimiento.Descripcion,
+            movimiento.FechaMovimiento,
+            movimiento.UsuarioAutorId);
+
+    public static ReservaPresupuestariaResponse AReservaResponse(
+        ReservaPresupuestaria reserva,
+        ProgramaBeca programa,
+        bool yaExistia = false)
+        => new(
+            reserva.Id,
+            reserva.ProgramaBecaId,
+            reserva.ReferenciaExternaId,
+            reserva.PeriodoAcademicoId,
+            reserva.Monto,
+            reserva.Moneda,
+            reserva.Descripcion,
+            reserva.Estado.ACodigo(),
+            reserva.MotivoLiberacion,
+            reserva.FechaReserva,
+            reserva.FechaResolucion,
+            ABalanceResponse(programa),
+            yaExistia);
+
     private static PoliticaCoberturaDto ADto(PoliticaCobertura politica)
         => new(
             politica.Modalidad.ACodigo(),

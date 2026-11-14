@@ -238,6 +238,10 @@ namespace Ascenso.Programas.Infrastructure.Persistence.Migrations
                         .HasColumnType("integer")
                         .HasColumnName("cupos_ocupados");
 
+                    b.Property<int>("CuposReservados")
+                        .HasColumnType("integer")
+                        .HasColumnName("cupos_reservados");
+
                     b.Property<string>("Descripcion")
                         .IsRequired()
                         .HasMaxLength(1500)
@@ -283,6 +287,16 @@ namespace Ascenso.Programas.Infrastructure.Persistence.Migrations
                     b.Property<bool>("PermiteAcumulacion")
                         .HasColumnType("boolean")
                         .HasColumnName("permite_acumulacion");
+
+                    b.Property<decimal>("PresupuestoEjecutado")
+                        .HasPrecision(18, 2)
+                        .HasColumnType("numeric(18,2)")
+                        .HasColumnName("presupuesto_ejecutado");
+
+                    b.Property<decimal>("PresupuestoReservado")
+                        .HasPrecision(18, 2)
+                        .HasColumnType("numeric(18,2)")
+                        .HasColumnName("presupuesto_reservado");
 
                     b.Property<decimal>("PresupuestoTotalAsignado")
                         .HasPrecision(18, 2)
@@ -330,7 +344,11 @@ namespace Ascenso.Programas.Infrastructure.Persistence.Migrations
                         {
                             t.HasCheckConstraint("ck_programa_beca_cupo_positivo", "cupo_total > 0");
 
+                            t.HasCheckConstraint("ck_programa_beca_cupos_dentro_de_limite", "cupos_reservados + cupos_ocupados <= cupo_total");
+
                             t.HasCheckConstraint("ck_programa_beca_cupos_ocupados_no_negativo", "cupos_ocupados >= 0");
+
+                            t.HasCheckConstraint("ck_programa_beca_cupos_reservados_no_negativo", "cupos_reservados >= 0");
 
                             t.HasCheckConstraint("ck_programa_beca_duracion_positiva", "duracion_periodos > 0");
 
@@ -338,7 +356,13 @@ namespace Ascenso.Programas.Infrastructure.Persistence.Migrations
 
                             t.HasCheckConstraint("ck_programa_beca_fechas_vigencia", "vigencia_hasta > vigencia_desde");
 
+                            t.HasCheckConstraint("ck_programa_beca_presupuesto_dentro_de_limite", "presupuesto_reservado + presupuesto_ejecutado <= presupuesto_total_asignado");
+
+                            t.HasCheckConstraint("ck_programa_beca_presupuesto_ejecutado_no_negativo", "presupuesto_ejecutado >= 0");
+
                             t.HasCheckConstraint("ck_programa_beca_presupuesto_no_negativo", "presupuesto_total_asignado >= 0");
+
+                            t.HasCheckConstraint("ck_programa_beca_presupuesto_reservado_no_negativo", "presupuesto_reservado >= 0");
                         });
                 });
 
@@ -413,6 +437,180 @@ namespace Ascenso.Programas.Infrastructure.Persistence.Migrations
                             t.HasCheckConstraint("ck_asignacion_fondo_estado_valido", "estado IN ('ASIGNADA', 'DESASIGNADA')");
 
                             t.HasCheckConstraint("ck_asignacion_fondo_monto_no_negativo", "monto_asignado >= 0");
+                        });
+                });
+
+            modelBuilder.Entity("Ascenso.Programas.Domain.Programas.Entidades.MovimientoPresupuestario", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .HasColumnType("uuid")
+                        .HasColumnName("id");
+
+                    b.Property<Guid>("CorrelacionId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("correlacion_id");
+
+                    b.Property<string>("Descripcion")
+                        .IsRequired()
+                        .HasMaxLength(1000)
+                        .HasColumnType("character varying(1000)")
+                        .HasColumnName("descripcion");
+
+                    b.Property<DateTimeOffset>("FechaCreacion")
+                        .HasColumnType("timestamptz")
+                        .HasColumnName("fecha_creacion");
+
+                    b.Property<DateTimeOffset>("FechaMovimiento")
+                        .HasColumnType("timestamptz")
+                        .HasColumnName("fecha_movimiento");
+
+                    b.Property<string>("Moneda")
+                        .IsRequired()
+                        .HasMaxLength(3)
+                        .HasColumnType("character(3)")
+                        .HasColumnName("moneda")
+                        .IsFixedLength();
+
+                    b.Property<decimal>("Monto")
+                        .HasPrecision(18, 2)
+                        .HasColumnType("numeric(18,2)")
+                        .HasColumnName("monto");
+
+                    b.Property<string>("PeriodoAcademicoId")
+                        .IsRequired()
+                        .HasMaxLength(40)
+                        .HasColumnType("character varying(40)")
+                        .HasColumnName("periodo_academico_id");
+
+                    b.Property<Guid>("ProgramaBecaId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("programa_beca_id");
+
+                    b.Property<Guid?>("ReferenciaExternaId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("referencia_externa_id");
+
+                    b.Property<string>("TipoMovimiento")
+                        .IsRequired()
+                        .HasMaxLength(35)
+                        .HasColumnType("varchar")
+                        .HasColumnName("tipo_movimiento");
+
+                    b.Property<Guid>("UsuarioAutorId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("usuario_autor_id");
+
+                    b.HasKey("Id")
+                        .HasName("pk_movimientos_presupuestarios");
+
+                    b.HasIndex("ProgramaBecaId", "FechaMovimiento")
+                        .IsDescending(false, true)
+                        .HasDatabaseName("ix_movimiento_presupuestario_programa_fecha");
+
+                    b.HasIndex("ProgramaBecaId", "PeriodoAcademicoId")
+                        .HasDatabaseName("ix_movimiento_presupuestario_programa_periodo");
+
+                    b.ToTable("movimientos_presupuestarios", "programas", t =>
+                        {
+                            t.HasCheckConstraint("ck_movimiento_presupuestario_monto_no_negativo", "monto >= 0");
+
+                            t.HasCheckConstraint("ck_movimiento_presupuestario_tipo_valido", "tipo_movimiento IN ('ASIGNACION_DONANTE', 'REAJUSTE_DONANTE', 'RESERVA_CUPO', 'CONFIRMACION_DESEMBOLSO', 'LIBERACION_RESERVA', 'CIERRE_PERIODO')");
+                        });
+                });
+
+            modelBuilder.Entity("Ascenso.Programas.Domain.Programas.Entidades.ReservaPresupuestaria", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .HasColumnType("uuid")
+                        .HasColumnName("id");
+
+                    b.Property<string>("Descripcion")
+                        .IsRequired()
+                        .HasMaxLength(500)
+                        .HasColumnType("character varying(500)")
+                        .HasColumnName("descripcion");
+
+                    b.Property<string>("Estado")
+                        .IsRequired()
+                        .HasMaxLength(20)
+                        .HasColumnType("varchar")
+                        .HasColumnName("estado");
+
+                    b.Property<DateTimeOffset>("FechaCreacion")
+                        .HasColumnType("timestamptz")
+                        .HasColumnName("fecha_creacion");
+
+                    b.Property<DateTimeOffset>("FechaReserva")
+                        .HasColumnType("timestamptz")
+                        .HasColumnName("fecha_reserva");
+
+                    b.Property<DateTimeOffset?>("FechaResolucion")
+                        .HasColumnType("timestamptz")
+                        .HasColumnName("fecha_resolucion");
+
+                    b.Property<DateTimeOffset>("FechaUltimaModificacion")
+                        .HasColumnType("timestamptz")
+                        .HasColumnName("fecha_ultima_modificacion");
+
+                    b.Property<string>("Moneda")
+                        .IsRequired()
+                        .HasMaxLength(3)
+                        .HasColumnType("character(3)")
+                        .HasColumnName("moneda")
+                        .IsFixedLength();
+
+                    b.Property<decimal>("Monto")
+                        .HasPrecision(18, 2)
+                        .HasColumnType("numeric(18,2)")
+                        .HasColumnName("monto");
+
+                    b.Property<string>("MotivoLiberacion")
+                        .HasMaxLength(500)
+                        .HasColumnType("character varying(500)")
+                        .HasColumnName("motivo_liberacion");
+
+                    b.Property<string>("PeriodoAcademicoId")
+                        .IsRequired()
+                        .HasMaxLength(40)
+                        .HasColumnType("character varying(40)")
+                        .HasColumnName("periodo_academico_id");
+
+                    b.Property<Guid>("ProgramaBecaId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("programa_beca_id");
+
+                    b.Property<Guid>("ReferenciaExternaId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("referencia_externa_id");
+
+                    b.Property<Guid>("UsuarioCreacionId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("usuario_creacion_id");
+
+                    b.Property<Guid>("UsuarioModificacionId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("usuario_modificacion_id");
+
+                    b.Property<int>("Version")
+                        .IsConcurrencyToken()
+                        .HasColumnType("integer")
+                        .HasColumnName("version");
+
+                    b.HasKey("Id")
+                        .HasName("pk_reservas_presupuestarias");
+
+                    b.HasIndex("ProgramaBecaId", "ReferenciaExternaId")
+                        .IsUnique()
+                        .HasDatabaseName("ux_reserva_presupuestaria_programa_referencia");
+
+                    b.HasIndex("ProgramaBecaId", "PeriodoAcademicoId", "Estado")
+                        .HasDatabaseName("ix_reserva_presupuestaria_programa_periodo_estado");
+
+                    b.ToTable("reservas_presupuestarias", "programas", t =>
+                        {
+                            t.HasCheckConstraint("ck_reserva_presupuestaria_estado_valido", "estado IN ('RESERVADA', 'CONFIRMADA', 'LIBERADA')");
+
+                            t.HasCheckConstraint("ck_reserva_presupuestaria_monto_positivo", "monto > 0");
                         });
                 });
 
@@ -1085,6 +1283,26 @@ namespace Ascenso.Programas.Infrastructure.Persistence.Migrations
                         .HasConstraintName("fk_asignaciones_fondo_programa_programa");
                 });
 
+            modelBuilder.Entity("Ascenso.Programas.Domain.Programas.Entidades.MovimientoPresupuestario", b =>
+                {
+                    b.HasOne("Ascenso.Programas.Domain.Programas.Agregados.ProgramaBeca", null)
+                        .WithMany("MovimientosPresupuestarios")
+                        .HasForeignKey("ProgramaBecaId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired()
+                        .HasConstraintName("fk_movimientos_presupuestarios_programa");
+                });
+
+            modelBuilder.Entity("Ascenso.Programas.Domain.Programas.Entidades.ReservaPresupuestaria", b =>
+                {
+                    b.HasOne("Ascenso.Programas.Domain.Programas.Agregados.ProgramaBeca", null)
+                        .WithMany("ReservasPresupuestarias")
+                        .HasForeignKey("ProgramaBecaId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired()
+                        .HasConstraintName("fk_reservas_presupuestarias_programa");
+                });
+
             modelBuilder.Entity("Ascenso.Programas.Domain.Universidades.Agregados.UniversidadAliada", b =>
                 {
                     b.OwnsOne("Ascenso.Programas.Domain.Universidades.ObjetosValor.ContactoEnlace", "ContactoEnlace", b1 =>
@@ -1211,6 +1429,10 @@ namespace Ascenso.Programas.Infrastructure.Persistence.Migrations
             modelBuilder.Entity("Ascenso.Programas.Domain.Programas.Agregados.ProgramaBeca", b =>
                 {
                     b.Navigation("AsignacionesFondo");
+
+                    b.Navigation("MovimientosPresupuestarios");
+
+                    b.Navigation("ReservasPresupuestarias");
                 });
 
             modelBuilder.Entity("Ascenso.Programas.Domain.Universidades.Agregados.UniversidadAliada", b =>

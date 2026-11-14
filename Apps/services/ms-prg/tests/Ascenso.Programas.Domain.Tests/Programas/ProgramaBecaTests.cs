@@ -34,6 +34,22 @@ public sealed class ProgramaBecaTests
             "Mantener promedio mínimo de 15.00 puntos.",
             _usuarioPruebaId);
 
+    private static ProgramaBeca CrearProgramaActivoConPresupuesto(
+        decimal presupuesto = 20000.00m,
+        int cupoTotal = 5)
+    {
+        var programa = CrearProgramaPrueba("BECA-ACT-2026", cupoTotal);
+        programa.AsignarFondoDonante(Guid.NewGuid(), "2026-1", presupuesto, _usuarioPruebaId);
+        programa.ConfigurarElegibilidadYPermanencia(
+            CrearCriteriosPrueba(),
+            CrearCondicionesPrueba(),
+            todasLasUniversidadesTienenConvenioVigente: true,
+            todasLasCarrerasSonElegibles: true,
+            _usuarioPruebaId);
+        programa.Activar(_usuarioPruebaId);
+        return programa;
+    }
+
     private static Donante CrearDonanteConSaldo(decimal montoAporte = 50000.00m)
     {
         var donante = Donante.Crear(
@@ -134,6 +150,8 @@ public sealed class ProgramaBecaTests
         donante.SaldoDisponibleAsignacion.Should().Be(35000.00m);
         programa.PresupuestoTotalAsignado.Should().Be(15000.00m);
         programa.AsignacionesFondo.Should().ContainSingle();
+        programa.MovimientosPresupuestarios.Should().ContainSingle(
+            m => m.TipoMovimiento == TipoMovimientoPresupuestario.AsignacionDonante && m.Monto == 15000.00m);
         asignacion.Estado.Should().Be(EstadoAsignacionFondo.Asignada);
         asignacion.MontoAsignado.Should().Be(15000.00m);
         programa.EventosDominio.Should().Contain(e => e is PresupuestoProgramaAsignadoDominioEvent);
@@ -247,5 +265,115 @@ public sealed class ProgramaBecaTests
         var ex2 = accionCondiciones.Should().Throw<PromedioAcademicoInvalidoException>().Which;
         ex2.EstadoHttp.Should().Be(400);
         ex2.Codigo.Should().Be(PromedioAcademicoInvalidoException.CodigoError);
+    }
+
+    [Fact]
+    public void Debe_CalcularBalanceEnTiempoRealYRegistrarMovimientos_EnCicloReservarConfirmarLiberar_HU12_1_HU12_2()
+    {
+        var programa = CrearProgramaActivoConPresupuesto(presupuesto: 10000.00m, cupoTotal: 3);
+        var refConfirmar = Guid.Parse("01966000-0000-7000-8000-000000000901");
+        var refLiberar = Guid.Parse("01966000-0000-7000-8000-000000000902");
+
+        var (reserva1, mov1, yaExistia1) = programa.ReservarPresupuesto(
+            refConfirmar,
+            "2026-1",
+            3000.00m,
+            "Reserva postulación 1",
+            _usuarioPruebaId);
+
+        yaExistia1.Should().BeFalse();
+        reserva1.Estado.Should().Be(EstadoReservaPresupuestaria.Reservada);
+        mov1.TipoMovimiento.Should().Be(TipoMovimientoPresupuestario.ReservaCupo);
+        programa.PresupuestoReservado.Should().Be(3000.00m);
+        programa.PresupuestoDisponible.Should().Be(7000.00m);
+        programa.CuposReservados.Should().Be(1);
+        programa.CuposDisponibles.Should().Be(2);
+
+        // Idempotencia con misma referenciaExternaId y monto
+        var (reservaIdemp, _, yaExistiaIdemp) = programa.ReservarPresupuesto(
+            refConfirmar,
+            "2026-1",
+            3000.00m,
+            "Reintento idempotente",
+            _usuarioPruebaId);
+
+        yaExistiaIdemp.Should().BeTrue();
+        reservaIdemp.Id.Should().Be(reserva1.Id);
+        programa.PresupuestoReservado.Should().Be(3000.00m);
+        programa.CuposReservados.Should().Be(1);
+
+        // Segunda reserva para posteriormente liberarla
+        programa.ReservarPresupuesto(refLiberar, "2026-1", 2500.00m, "Reserva postulación 2", _usuarioPruebaId);
+        programa.PresupuestoReservado.Should().Be(5500.00m);
+        programa.PresupuestoDisponible.Should().Be(4500.00m);
+        programa.CuposReservados.Should().Be(2);
+        programa.CuposDisponibles.Should().Be(1);
+
+        // Confirmar primera reserva -> pasa a ejecutado y cupo ocupado
+        var (reservaConfirmada, movConfirmacion) = programa.ConfirmarReservaPresupuesto(
+            refConfirmar,
+            "Beca adjudicada y desembolsada",
+            _usuarioPruebaId);
+
+        reservaConfirmada.Estado.Should().Be(EstadoReservaPresupuestaria.Confirmada);
+        movConfirmacion.TipoMovimiento.Should().Be(TipoMovimientoPresupuestario.ConfirmacionDesembolso);
+        programa.PresupuestoReservado.Should().Be(2500.00m);
+        programa.PresupuestoEjecutado.Should().Be(3000.00m);
+        programa.PresupuestoDisponible.Should().Be(4500.00m);
+        programa.CuposReservados.Should().Be(1);
+        programa.CuposOcupados.Should().Be(1);
+        programa.CuposDisponibles.Should().Be(1);
+
+        // Liberar segunda reserva -> devuelve monto y cupo a disponible
+        var (reservaLiberada, movLiberacion) = programa.LiberarReservaPresupuesto(
+            refLiberar,
+            "Postulante declinó la beca",
+            _usuarioPruebaId);
+
+        reservaLiberada.Estado.Should().Be(EstadoReservaPresupuestaria.Liberada);
+        movLiberacion.TipoMovimiento.Should().Be(TipoMovimientoPresupuestario.LiberacionReserva);
+        programa.PresupuestoReservado.Should().Be(0.00m);
+        programa.PresupuestoEjecutado.Should().Be(3000.00m);
+        programa.PresupuestoDisponible.Should().Be(7000.00m);
+        programa.CuposReservados.Should().Be(0);
+        programa.CuposOcupados.Should().Be(1);
+        programa.CuposDisponibles.Should().Be(2);
+    }
+
+    [Fact]
+    public void Debe_RechazarReservaOTansicionInvalidaOCierreConPendientes_SegunReglasDeNegocio_HU12_2()
+    {
+        var programa = CrearProgramaActivoConPresupuesto(presupuesto: 4000.00m, cupoTotal: 1);
+        var ref1 = Guid.Parse("01966000-0000-7000-8000-000000000911");
+        var ref2 = Guid.Parse("01966000-0000-7000-8000-000000000912");
+
+        programa.ReservarPresupuesto(ref1, "2026-1", 2500.00m, "Reserva único cupo", _usuarioPruebaId);
+
+        // Sin cupos disponibles -> 409 SIN_DISPONIBILIDAD_PRESUPUESTARIA
+        var accionSinCupo = () => programa.ReservarPresupuesto(ref2, "2026-1", 500.00m, "Excede cupo", _usuarioPruebaId);
+        var exSinCupo = accionSinCupo.Should().Throw<SinDisponibilidadPresupuestariaException>().Which;
+        exSinCupo.EstadoHttp.Should().Be(409);
+        exSinCupo.Codigo.Should().Be(SinDisponibilidadPresupuestariaException.CodigoError);
+
+        // Cierre con reserva pendiente -> 409 RESERVAS_PENDIENTES_EN_PERIODO
+        var accionCerrarConPendiente = () => programa.CerrarPeriodo("2026-1", "Intento cierre", false, _usuarioPruebaId);
+        var exPendientes = accionCerrarConPendiente.Should().Throw<ReservasPendientesEnPeriodoException>().Which;
+        exPendientes.EstadoHttp.Should().Be(409);
+        exPendientes.Codigo.Should().Be(ReservasPendientesEnPeriodoException.CodigoError);
+
+        // Confirmar reserva y luego intentar liberarla -> 409 TRANSICION_ESTADO_RESERVA_INVALIDA
+        programa.ConfirmarReservaPresupuesto(ref1, "Confirmada", _usuarioPruebaId);
+
+        var accionLiberarConfirmada = () => programa.LiberarReservaPresupuesto(ref1, "Intento inválido", _usuarioPruebaId);
+        var exTransicion = accionLiberarConfirmada.Should().Throw<TransicionEstadoReservaInvalidaException>().Which;
+        exTransicion.EstadoHttp.Should().Be(409);
+        exTransicion.Codigo.Should().Be(TransicionEstadoReservaInvalidaException.CodigoError);
+
+        // Cerrar período definitivamente una vez sin reservas pendientes
+        var movCierre = programa.CerrarPeriodo("2026-1", "Cierre contable definitivo del período 2026-1", true, _usuarioPruebaId);
+        movCierre.TipoMovimiento.Should().Be(TipoMovimientoPresupuestario.CierrePeriodo);
+        movCierre.Monto.Should().Be(1500.00m);
+        programa.Estado.Should().Be(EstadoProgramaBeca.Cerrado);
+        programa.EventosDominio.Should().Contain(e => e is PeriodoProgramaCerradoDominioEvent);
     }
 }
