@@ -55,17 +55,14 @@ flowchart LR
     AUD2["Read Models CQRS / Exportaciones / Indicadores"]
   end
 
-  PLT -- "Open Host Service: Consumir OTP (REST /internal/v1/...)" --> BEC
-  PLT -- "Published Language: PeriodoAcademicoActivado, UsuarioRolAsignado" --> PRG
-  PLT -- "Published Language" --> POS
-  PRG -- "Published Language: ConvocatoriaPublicada, ProgramaBecaConfigurado, ConvenioVencido, CostoMatriculaActualizado" --> POS
-  PRG -- "Published Language (eventos + condiciones de programa)" --> BEC
-  BEC -- "Customer/Supplier: Reservar/Confirmar/Liberar cupo+presupuesto (REST /internal/v1/... + Idempotency-Key + eventos)" --> PRG
-  POS -- "Customer/Supplier: ¿Postulación adjudicable? (REST /internal/v1/...)" --> BEC
-  BEC -- "Published Language: OfertaBecaEmitida/Aceptada/Rechazada/Expirada/Anulada" --> POS
-  POS -- "Conformist (consulta síncrona RF-01): ¿tiene becas activas?" --> BEC
-  PRG & POS & BEC & PLT -- "Sincronización de BDs y Auditoría (MassTransit + RabbitMQ Outbox/Inbox)" --> AUD
-  PRG & POS & BEC -- "NotificacionSolicitada (RabbitMQ)" --> PLT
+  BEC -- "REST /internal/v1/otp/consumir" --> PLT
+  PRG & POS & BEC -- "REST /internal/v1/periodos-academicos/actual" --> PLT
+  POS -- "REST /internal/v1/...: Universidades, convocatorias, disponibilidad" --> PRG
+  BEC -- "REST /internal/v1/...: Condiciones/arancel, reservas y movimientos presupuesto" --> PRG
+  BEC -- "REST /internal/v1/...: ¿Adjudicable? y Marcar otorgada" --> POS
+  POS -- "REST /internal/v1/becas/activas: Pre-validación RF-01" --> BEC
+  PRG & POS & BEC & PLT -- "Eventos de Dominio fire-and-forget (RabbitMQ + Idempotent Inbox)" --> AUD
+  PRG & POS & BEC -- "Eventos de Hitos y Plazos (RabbitMQ + Idempotent Inbox)" --> PLT
 ```
 
 ### 1.3 Stack Tecnológico, Arquitectura Hexagonal y Decisiones Transversales Obligatorias
@@ -73,12 +70,12 @@ flowchart LR
 - **Arquitectura Hexagonal (Puertos y Adaptadores) en cada Microservicio:** Cada uno de los 5 microservicios se estructura internamente en 4 capas con inversión de dependencias estricta:
   1. **`Domain`:** C# puro sin dependencias a marcos de trabajo externos (sin EF Core, ASP.NET Core ni Firebase). Contiene Agregados Raíz, Entidades, Objetos de Valor, Estrategias, Eventos de Dominio, Excepciones de Dominio e interfaces de Puertos de Salida (Repositorios).
   2. **`Application`:** Casos de uso (Command Handlers / Query Handlers), DTOs de contrato, orquestación de validaciones previas y puertos de servicios de aplicación.
-  3. **`Infrastructure`:** Adaptadores secundarios (`DbContext` de EF Core con PostgreSQL, `Transactional Outbox` / `Idempotent Inbox` de MassTransit + RabbitMQ, integración OIDC/OAuth2 con **Keycloak**, adaptador de Firebase Storage, servicio de cifrado `AES-GCM` para datos bancarios, adaptador SMTP y clientes HTTP tipados para `/internal/v1/...`).
+  3. **`Infrastructure`:** Adaptadores secundarios (`DbContext` de EF Core con PostgreSQL, publicación de eventos y consumidores con `Idempotent Inbox` mediante MassTransit + RabbitMQ, integración OIDC/OAuth2 con **Keycloak**, adaptador de Firebase Storage, servicio de cifrado `AES-GCM` para datos bancarios, adaptador SMTP y clientes HTTP tipados para `/internal/v1/...`).
   4. **`API`:** Adaptadores primarios (Controllers públicos expuestos tras el API Gateway validando JWT de Keycloak y endpoints internos protegidos `/internal/v1/...` autenticados con *Service Account Tokens* de Keycloak e `Idempotency-Key`).
 - **Autenticación, 2FA y Tokens de Servicio (Keycloak):** **Keycloak** es el proveedor único de identidad (IdP OIDC/OAuth2) de la plataforma. Gestiona de forma centralizada las credenciales, el bloqueo por intentos fallidos de inicio de sesión, el **Segundo Factor obligatorio (2FA/TOTP)** al iniciar sesión para todo el personal de la Fundación y comité, y la emisión de **Service Tokens** (*Client Credentials Grant*) para las llamadas REST internas `/internal/v1/...`. En `MS-PLT`, `Usuario` se vincula mediante `keycloakSubjectId` (`sub`) para administrar el RBAC de dominio con alcance por programa (`AsignacionRol`), mientras que `AutorizacionOTP` se encarga exclusivamente de los códigos transaccionales de un solo uso para operaciones sensibles de negocio (`RF-20`, `RF-22` y modificación de datos de pago).
 - **Fotografías de Configuración (Snapshots Inmutables):** Al instanciar expedientes de postulación (`Postulacion`), ofertas de beca (`OfertaBeca`) o nuevas filas de `Beca` por renovación semestral, se toma una fotografía (*snapshot*) de la configuración vigente de la convocatoria, el arancel vigente (`CostoMatriculaReferencia`) y la política de cobertura. Cambios posteriores en los programas o costos de matrícula aplican únicamente a nuevas ofertas o al instanciarse la `Beca` sucesora del siguiente periodo académico, sin alterar retroactivamente los contratos ni calendarios en curso.
 - **Almacenamiento de Archivos (Restricción del Cliente):** **Firebase Storage** se utiliza única y exclusivamente para alojar documentos binarios (documentos de postulantes, convenios PDF, comprobantes de donantes, cartas de otorgamiento, acuerdos de compromiso firmados, reportes académicos y paquetes de exportación). En PostgreSQL solo se persiste la URI inmutable (`urlArchivoFirebase`), `hashSha256`, `tamanioBytes` y `tipoMime`.
-- **Sincronización de Bases de Datos y Bus de Eventos:** **MassTransit + RabbitMQ** implementando el patrón *Transactional Outbox* (garantía *at-least-once* en la misma transacción local de PostgreSQL) e *Idempotent Inbox* (`InboxState` por `eventId`) en todos los consumidores. Este mecanismo garantiza la consistencia eventual y sincronización automática entre las 5 bases de datos (incluyendo las proyecciones CQRS de `MS-AUD` y las réplicas locales como `ConvocatoriaRef` y `PlazoVigilado`) sin necesidad de *polling* ni *websockets* complejos.
+- **Comunicación Híbrida Pragmática (REST Síncrono + RabbitMQ):** Para evitar complejidad innecesaria de sincronización distribuida y mantenimiento de réplicas locales, las consultas de datos maestros, catálogos, validaciones bloqueantes y actualizaciones operativas directas entre microservicios se realizan mediante llamadas REST síncronas internas (`/internal/v1/...`). MassTransit + RabbitMQ se reserva exclusivamente para publicación de eventos de dominio desacoplados (*fire-and-forget*) hacia Auditoría (`MS-AUD`) y Notificaciones/Comunicaciones (`MS-PLT`, incluyendo `PlazoVigilado`), utilizando *Idempotent Inbox* en los consumidores críticos sin necesidad de mantener tablas espejo de catálogos.
 - **Trabajos en Segundo Plano (Background Jobs):** **Hangfire** respaldado en tablas de PostgreSQL para garantizar que temporizadores críticos (como los 15 días de expiración de `OfertaBeca`, cierres de convocatorias, vencimiento de convenios y lotes masivos de notificaciones) sobrevivan a reinicios de contenedores o infraestructura.
 
 ---
@@ -717,21 +714,6 @@ classDiagram
     +Decimal ingresoMensual
   }
 
-  class ConvocatoriaRef {
-    <<ReadModel>>
-    +UUID id
-    +UUID programaBecaId
-    +UUID periodoAcademicoId
-    +EstadoConvocatoria estado
-    +DateTimeOffset fechaApertura
-    +DateTimeOffset fechaCierre
-    +DateTimeOffset fechaLimiteSubsanacionDocumentos
-    +Boolean requiereRevisionDocumentalPrevia
-    +Boolean permiteAcumulacion
-    +String reglasJson
-    +String documentosRequeridosJson
-  }
-
   class BorradorPostulacion {
     <<AggregateRoot>>
     +UUID id
@@ -840,7 +822,6 @@ classDiagram
   Postulacion "1" *-- "1..*" VerificacionElegibilidad : dictamina con
   VerificacionElegibilidad *-- "1..*" DetalleReglaEvaluada : desglosa
   Postulacion "1" *-- "1..*" HistorialEstadoPostulacion : audita transiciones
-  BorradorPostulacion "*" ..> "1" ConvocatoriaRef : valida contra
 ```
 
 #### 2.3.B Sub-modelo de Comité, Rúbrica, Evaluación Ciega, Ranking y Lista de Espera (Contexto 4)
@@ -1555,7 +1536,7 @@ stateDiagram-v2
 | `EN_VERIFICACION → EN_EVALUACION` | Automático / Aprobación doc. | Sistema / Coordinador | `VerificacionElegibilidad.esElegible == true` **y** (`!requiereRevisionDocumentalPrevia` **o** todos los `DocumentoPostulacion` obligatorios en `APROBADO`) | No | No | `PostulacionElegibleParaEvaluacion` |
 | `EN_VERIFICACION → NO_ELEGIBLE` | Automático / Vencimiento doc. | Sistema | Alguna `DetalleReglaEvaluada.esExcluyente` incumplida **o** documento rechazado vence sin subsanar | Auto | No | `PostulacionDictaminadaNoElegible` |
 | `NO_ELEGIBLE → EN_EVALUACION` | `AnularElegibilidad` | Coordinador (sin conflicto) | Único camino de reconsideración en casos límite (RF-04) | **Sí** | No | `ElegibilidadAnuladaPorExcepcion` |
-| `EN_EVALUACION → OTORGADA` | Consumo `OfertaBecaEmitida` | Sistema | Postulación `DENTRO_DE_CUPO` o promovida de `EntradaListaEspera` con `OfertaBeca` emitida | No | No | `PostulacionOtorgada` |
+| `EN_EVALUACION → OTORGADA` | Invocación REST desde `MS-BEC` al emitir oferta (`POST /internal/v1/postulaciones/{id}/otorgar`) | Sistema (`MS-BEC`) | Postulación `DENTRO_DE_CUPO` o promovida de `EntradaListaEspera` con `OfertaBeca` emitida | No | No | `PostulacionOtorgada` |
 | `EN_EVALUACION → RECHAZADA` | `FinalizarConvocatoria` | Coordinador / Sistema | Cierre de adjudicación del ciclo sin alcanzar puntaje o cupo disponible | Auto / **Sí** | No | `PostulacionRechazada` |
 
 ---
@@ -1645,6 +1626,7 @@ stateDiagram-v2
 | **`DEC-05`** | Regla transversal de No Doble Beneficio (1 sola beca `TOTAL` activa en la Fundación) vs RF-01 (no postular con beca activa en el mismo periodo salvo acumulación). | Se aplican ambas invariantes: **(a)** prohibición absoluta de 2 becas `ACTIVA` con `modalidad == TOTAL` para el mismo estudiante en cualquier programa/periodo; **(b)** prohibición de 2 becas `ACTIVA` en el mismo `PeriodoAcademico` salvo que ambos programas tengan `permiteAcumulacion == true`. Se pre-valida al postular (MS-POS) y se blinda transaccionalmente al aceptar la oferta (MS-BEC). |
 | **`DEC-06`** | El PRD declara "Portal de autoservicio para donantes" fuera de alcance, pero la HU-33A menciona al rol donante. | El rol `DONANTE_PATROCINADOR` queda registrado en el esquema RBAC pero **inactivo/deshabilitado por defecto**. Los reportes de impacto (`ReporteImpactoDonante`) los genera y exporta el personal de la Fundación. |
 | **`DEC-07`** | El PRD exige código OTP estrictamente para 3 operaciones: desembolsar (RF-20), revocar beca (RF-22) y modificar datos de pago del becario, mientras que el RNF de Accesibilidad pide evitar fricción al postulante. | El OTP es **estrictamente obligatorio** en las **3 operaciones del PRD** (`CONFIRMAR_DESEMBOLSO`, `REVOCAR_BECA` con `tipoCierre == REVOCACION_DEFINITIVA`, y `MODIFICAR_DATOS_PAGO`). `AutorizacionOTP` soporta además en su enumeración las operaciones administrativas de oferta (`EMITIR_OFERTA_BECA`, `ANULAR_OFERTA_BECA`), pero `AceptarOfertaBeca` no exige OTP al postulante para cumplir el RNF de Accesibilidad en conexiones limitadas. |
+| **`DEC-08`** | Replicación de catálogos mediante eventos (*Read Models*) vs. simplicidad operativa y reducción de acoplamiento técnico en el semestre. | Se adopta un modelo de **Comunicación Híbrida Pragmática**: Orquestación REST Síncrona interna (`/internal/v1/...`) para lecturas de datos maestros/catálogos, validaciones bloqueantes y mutaciones operativas directas entre `MS-PLT`, `MS-PRG`, `MS-POS` y `MS-BEC`; y Mensajería Asíncrona con MassTransit + RabbitMQ exclusivamente hacia `MS-AUD` (auditoría/reportería) y `MS-PLT` (notificaciones/comunicaciones y `PlazoVigilado`). Se eliminan las tablas espejo locales de catálogos (`ConvocatoriaRef`) y el patrón *Transactional Outbox* obligatorio, aceptando dependencia temporal directa en consultas síncronas a cambio de mayor simplicidad y velocidad de desarrollo. |
 
 ---
 
@@ -1710,7 +1692,7 @@ Cada regla `RN-xxx` se traduce directamente en una prueba unitaria o de integrac
 5. **`C5` — Dos Evaluadores Calificando la Misma Postulación (`MS-POS`):** Cada evaluador escribe sobre su propia instancia de `Evaluacion` (filas separadas). Al completarse la última evaluación requerida, el cálculo de `ResultadoConsolidadoRanking` es determinista e idempotente. El bloqueo de `RubricaEvaluacion` se ejecuta con `UPDATE rubricas SET estado = 'BLOQUEADA' WHERE id = @id AND estado = 'PUBLICADA'`.
 6. **`C6` — Promoción en Lista de Espera (`MS-POS`):** La promoción selecciona y bloquea atómicamente al candidato con `MIN(posicion_orden)` en estado `EN_ESPERA`.
 7. **`C7` — Transición de Periodo Académico (`MS-PLT`):** Cambio atómico en una sola transacción local respaldado por índice único parcial `WHERE es_actual = true`.
-8. **`C8` — Consistencia Eventual entre Microservicios:** Uso obligatorio de *Transactional Outbox* al publicar y *Idempotent Inbox* (`InboxState` por `eventId`) al consumir en MassTransit + RabbitMQ, acompañado de reservas con TTL de 5 minutos y jobs de Hangfire que siempre revalidan el estado actual en base de datos antes de ejecutar.
+8. **`C8` — Integración entre Microservicios (REST *Fail-Closed* + Eventos Desacoplados):** Las consultas, validaciones y mutaciones síncronas entre microservicios usan endpoints internos `/internal/v1/...` autenticados con *Service Account Tokens*, con *timeout* de 3 segundos, `Idempotency-Key` en operaciones `POST` y política *fail-closed* (si el servicio proveedor no responde, la operación retorna `503 Service Unavailable` sin corromper datos locales). Los eventos hacia `MS-AUD` y `MS-PLT` viajan por RabbitMQ de forma asíncrona (*fire-and-forget*) con *Idempotent Inbox* (`InboxState` por `eventId`) para evitar duplicidad de registros de auditoría, correos o plazos ante reintentos.
 
 ---
 
@@ -1719,7 +1701,7 @@ Cada regla `RN-xxx` se traduce directamente en una prueba unitaria o de integrac
 | RF | Prioridad PRD | Microservicio | Agregados Raíces y Entidades que lo Resuelven | Reglas de Negocio Asociadas |
 | :--- | :---: | :---: | :--- | :--- |
 | **RF-01** Registro de postulantes | Debe tener | `MS-POS` (+`MS-BEC`) | `Postulante`, `MiembroFamiliar`, `BorradorPostulacion` | `RN-POS-01`, `DEC-05`, `RN-BEC-01` |
-| **RF-02** Publicación de convocatorias | Debe tener | `MS-PRG` / `MS-POS` | `Convocatoria`, `ReglaElegibilidad`, `ConvocatoriaRef` | `RN-PRG-01`, `RN-POS-02` |
+| **RF-02** Publicación de convocatorias | Debe tener | `MS-PRG` / `MS-POS` | `Convocatoria`, `ReglaElegibilidad` | `RN-PRG-01`, `RN-POS-02` |
 | **RF-03** Carga de documentos de soporte | Debe tener | `MS-PRG` / `MS-POS` | `DocumentoRequerido`, `DocumentoPostulacion`, `HistorialDocumentoPostulacion` | `RN-POS-02`, `RN-POS-03`, `DEC-02` |
 | **RF-04** Verificación automática elegibilidad | Debe tener | `MS-POS` | `VerificacionElegibilidad`, `DetalleReglaEvaluada`, `Postulacion` | `DEC-02`, `RN-POS-06` |
 | **RF-05** Retiro voluntario de postulación | Debería tener | `MS-POS` | `Postulacion`, `HistorialEstadoPostulacion` | Tabla 3.1 (`RECIBIDA/EN_VERIFICACION → RETIRADA`) |
@@ -1763,31 +1745,33 @@ Cada regla `RN-xxx` se traduce directamente en una prueba unitaria o de integrac
 
 ## 6. Contratos de Integración Híbrida (REST `/internal/v1/...` + Eventos MassTransit/RabbitMQ) y Jobs
 
-### 6.1 Sincronización de Bases de Datos y Catálogo de Eventos de Integración (MassTransit + RabbitMQ)
+### 6.1 Catálogo de Eventos de Integración (MassTransit + RabbitMQ — Auditoría y Notificaciones)
 
-Para garantizar que las 5 bases de datos PostgreSQL se sincronicen automáticamente sin acoplamiento temporal en cascada ni *polling* manual, toda transición de estado o asiento contable persiste sus cambios locales y publica en la misma transacción un evento en la tabla *Transactional Outbox* de MassTransit. Todos los consumidores aplican *Idempotent Inbox* (`InboxState` por `eventId`) y los eventos viajan envueltos en `EventoIntegracion<TPayload>` con `eventId` (UUID de idempotencia), `occurredAt`, `correlationId`, `producer`, `aggregateId`, `aggregateVersion` y sin exponer PII socioeconómica:
+RabbitMQ se utiliza exclusivamente para desacoplar procesos secundarios (*fire-and-forget*) que no deben bloquear la respuesta al usuario. Los eventos viajan envueltos en `EventoIntegracion<TPayload>` con `eventId` (UUID de idempotencia), `occurredAt`, `correlationId`, `producer`, `aggregateId`, `aggregateVersion` y sin exponer PII socioeconómica; los consumidores críticos aplican *Idempotent Inbox* (`InboxState` por `eventId`):
 
-* **Desde `MS-PLT` (Identidad, Calendario y Comunicaciones):**
-  `PeriodoAcademicoActivado`, `UsuarioRolAsignado`, `UsuarioRolRevocado`, `EventoSeguridadOTP`, `ParametrosRecordatorioActualizados`, `RecordatorioVencimientoEnviado`, `LoteNotificacionMasivaIniciado`, `LoteNotificacionMasivaFinalizado`, `ConsultaCreada`, `ConsultaRespondida`, `ConsultaCerrada`, `LoteMigracionCompletado`.
-* **Desde `MS-PRG` (Programas, Presupuesto, Donantes y Convenios):**
-  `ProgramaBecaCreado`, `PresupuestoProgramaAsignado`, `ProgramaBecaConfigurado`, `BalancePresupuestarioActualizado`, `AporteDonanteRegistrado`, `ConvenioUniversidadRegistrado`, `ConvenioUniversidadVencido`, `CostoMatriculaActualizado`, `ConvocatoriaPublicada`, `ConvocatoriaCerrada`, `ConvocatoriaFinalizada`.
-* **Desde `MS-POS` (Postulación, Elegibilidad, Comité y Selección):**
-  `PostulacionRecibida`, `DocumentoPostulacionRechazado`, `DocumentoPostulacionSubsanado`, `PostulacionDictaminadaNoElegible`, `PostulacionElegibleParaEvaluacion`, `ElegibilidadAnuladaPorExcepcion`, `PostulacionRetiradaVoluntariamente`, `PostulacionOtorgada`, `PostulacionRechazada`, `RubricaEvaluacionBloqueada`, `EvaluadoresAsignadosAPostulacion`, `ConflictoInteresDeclarado`, `ExcepcionEvaluadorUnicoAutorizada`, `EvaluacionDefinitivaEnviada`, `DiscrepanciaEvaluadoresDetectada`, `RankingProgramaConsolidado`, `DesempateCasoLimiteResuelto`, `CandidatoElegibleDeListaEspera`, `CandidatoPromovidoDeListaEspera`.
-* **Desde `MS-BEC` (Otorgamiento, Beca, Desembolsos y Seguimiento Académico):**
-  `OfertaBecaEmitida` (sincroniza `Postulacion → OTORGADA` en `MS-POS` y dispara notificación en `MS-PLT`), `OfertaBecaExpirada`, `OfertaBecaAnulada`, `OfertaBecaRechazada`, `BecaActivada`, `BecaActivadaNuevoPeriodo` (al crearse la fila de `Beca` sucesora en `ACTIVA`), `CompromisoBecarioCargado`, `CompromisoBecarioAprobado`, `CompromisoBecarioRechazado`, `CalendarioDesembolsoGenerado`, `DatosPagoBecarioModificadosConOTP`, `DesembolsoEjecutadoRegistrado`, `DesembolsoConfirmadoConOTP` (sincroniza asiento contable en `BalancePresupuestarioPrograma` de `MS-PRG`), `DesembolsoFallidoODevuelto`, `DesembolsosBecaSuspendidos`, `DesembolsosBecaReanudados`, `BecaRevocadaDefinitivamente` (libera saldo y cupo en `MS-PRG`), `ReporteAcademicoEntregado`, `ReporteAcademicoTardioDetectado`, `CondicionesPermanenciaEvaluadas`, `IncumplimientoPermanenciaActivado`, `RenovacionBecaSolicitada`, `RenovacionBecaAprobada`, `RenovacionBecaRechazada`, `BecaConcluidaPorVencimientoRenovacion`, `SolicitudPausaBecaEnviada`, `PausaBecaAprobada`, `SolicitudPausaBecaRechazada`, `BecaReactivadaTrasPausa`.
-* **Desde `MS-AUD` (Auditoría y Reportería):**
-  `HistorialBecarioConsultadoPorFundacion`, `ConsentimientoDatosBecarioActualizado`, `ReporteImpactoDonanteExportado`, `ReporteConsolidadoInstitucionalGenerado`, `PlantillaExportacionAuditoriaGuardada`, `PaqueteAuditoriaExternaGenerado`.
+* **Hacia `MS-AUD` (Auditoría Inmutable y Reportería CQRS):** Todos los microservicios (`MS-PLT`, `MS-PRG`, `MS-POS`, `MS-BEC` y el propio `MS-AUD` en eventos de acceso/exportación) publican eventos de dominio ante cambios de estado críticos, decisiones con justificación o movimientos financieros (`PeriodoAcademicoActivado`, `ProgramaBecaConfigurado`, `ConvocatoriaPublicada`, `PostulacionRecibida`, `ElegibilidadAnuladaPorExcepcion`, `OfertaBecaEmitida`, `BecaActivada`, `DesembolsoConfirmadoConOTP`, `BecaRevocadaDefinitivamente`, `RenovacionBecaAprobada`, `EventoSeguridadOTP`, etc.) para alimentar `RegistroAuditoria` y las vistas consolidadas (`EventoHistorialBecario`, `IndicadorDireccion`, `BecaResumenAnonimizadoVista`).
+* **Hacia `MS-PLT` (Comunicaciones y Seguimiento de Plazos `PlazoVigilado`):** `MS-PRG`, `MS-POS` y `MS-BEC` publican eventos de hitos de negocio (`ConvocatoriaPublicada`, `DocumentoPostulacionRechazado`, `DocumentoPostulacionSubsanado`, `EvaluadoresAsignadosAPostulacion`, `OfertaBecaEmitida`, `BecaActivada`, `ReporteAcademicoEntregado`, `RenovacionBecaSolicitada`, `DesembolsoConfirmadoConOTP`, etc.) para disparar el envío asíncrono de correos electrónicos/notificaciones internas y actualizar el cumplimiento de `PlazoVigilado` sin ralentizar la transacción principal.
 
 ---
 
-### 6.2 Llamadas REST Síncronas Internas Permitidas (`/internal/v1/...` + `Idempotency-Key`, Lista Cerrada *Fail-Closed*)
+### 6.2 Llamadas REST Síncronas Internas (`/internal/v1/...`)
 
-Las rutas de integración síncrona bajo `/internal/v1/...` son inaccesibles desde el API Gateway público, exigen autenticación mediante **Tokens de Servicio** e incluyen el encabezado **`Idempotency-Key`** en toda operación `POST`. Se utilizan exclusivamente para **validaciones o reservas previas bloqueantes** (con *timeout* máximo de 3 segundos y política *fail-closed*):
-1. `MS-BEC → MS-PLT` (`POST /internal/v1/otp/consumir`): Valida y consume atómicamente un `AutorizacionOTP` antes de confirmar desembolso (`RF-20`), revocar beca (`RF-22`), modificar `DatosPagoBecario` (con cifrado `AES-GCM`) o ejecutar acciones administrativas con OTP.
-2. `MS-BEC → MS-PRG` (`POST /internal/v1/programas/{id}/reservas` con `Idempotency-Key: oferta-{id}` o `renovacion-{id}`): Crea una `ReservaPresupuestoCupo` idempotente verificando disponibilidad real y arancel vigente (`CostoMatriculaReferencia`) con la consulta SQL atómica `C2`.
-3. `MS-BEC → MS-POS` (`GET /internal/v1/postulaciones/{id}/adjudicable`): Verifica que la postulación esté `DENTRO_DE_CUPO` con ranking confirmado o promovida desde `EntradaListaEspera` antes de emitir la carta de otorgamiento.
-4. `MS-POS → MS-BEC` (`GET /internal/v1/becas/activas?postulanteId=&periodoId=`): Pre-valida la regla de No Doble Beneficio (RF-01) al postular.
-5. `MS-POS → MS-PRG` (`GET /internal/v1/programas/{id}/disponibilidad`): Obtiene el corte de cupos y presupuesto disponible al calcular la línea de corte del ranking o promover desde la lista de espera.
+Las rutas de integración síncrona bajo `/internal/v1/...` son internas (no expuestas en el API Gateway público), autenticadas mediante **Service Account Tokens** de Keycloak, con *timeout* máximo de 3 segundos, política *fail-closed* (`503 Service Unavailable` si el proveedor no responde) y encabezado **`Idempotency-Key`** obligatorio en toda operación `POST`. Se habilitan para consultas de datos maestros, validaciones bloqueantes y actualizaciones operativas directas entre contextos:
+
+#### A. Consultas de Catálogos y Datos Maestros (`GET`)
+1. **`MS-POS → MS-PRG`** (`GET /internal/v1/universidades/activas` y `GET /internal/v1/universidades/{id}/validar`): Obtiene el catálogo de universidades y carreras en convenio vigente para el perfil del postulante (`RF-01`).
+2. **`MS-POS → MS-PRG`** (`GET /internal/v1/convocatorias/abiertas` y `GET /internal/v1/convocatorias/{id}`): Consulta fechas, cupos, reglas de elegibilidad y documentos requeridos de una convocatoria (`RF-02`, `RF-03`, `RF-04`).
+3. **`MS-POS / MS-PRG / MS-BEC → MS-PLT`** (`GET /internal/v1/periodos-academicos/actual`): Obtiene el `PeriodoAcademico` activo institucional (`RF-38`).
+4. **`MS-BEC → MS-PRG`** (`GET /internal/v1/programas/{id}/condiciones?carreraId=&periodoId=`): Consulta cobertura, arancel vigente (`CostoMatriculaReferencia`), vigencia del convenio universitario y condiciones de permanencia al emitir ofertas o renovaciones (`RF-14`, `RF-15`, `RF-26`).
+
+#### B. Validaciones Bloqueantes y Operaciones Transaccionales (`GET` / `POST` con `Idempotency-Key`)
+5. **`MS-POS → MS-BEC`** (`GET /internal/v1/becas/activas?postulanteId=&periodoId=`): Pre-valida la regla de No Doble Beneficio al postular (`RF-01`, `RF-02`).
+6. **`MS-POS → MS-PRG`** (`GET /internal/v1/programas/{id}/disponibilidad`): Verifica cupos y presupuesto disponible al consolidar el ranking o promover desde lista de espera (`RF-09`, `RF-10`).
+7. **`MS-BEC → MS-POS`** (`GET /internal/v1/postulaciones/{id}/adjudicable`): Confirma que el postulante está en ranking confirmado o promovido de lista de espera antes de emitir oferta (`RF-15`).
+8. **`MS-BEC → MS-POS`** (`POST /internal/v1/postulaciones/{id}/otorgar` con `Idempotency-Key`): Transiciona la postulación de `EN_EVALUACION → OTORGADA` al emitirse la `OfertaBeca` (`RF-15`, Tabla 3.1).
+9. **`MS-BEC → MS-PRG`** (`POST /internal/v1/programas/{id}/reservas` y `POST /internal/v1/programas/{id}/reservas/{reservaId}/{confirmar|activar|liberar}` con `Idempotency-Key`): Crea (`C2`), confirma, activa o libera `ReservaPresupuestoCupo` de forma atómica al emitir, aceptar, rechazar, expirar o anular ofertas y renovaciones (`RF-12`, `RF-15`, `RF-16`, `RF-26`).
+10. **`MS-BEC → MS-PRG`** (`POST /internal/v1/programas/{id}/movimientos-presupuesto` con `Idempotency-Key`): Registra en `BalancePresupuestarioPrograma` los movimientos contables derivados de desembolsos confirmados (`RF-20`), suspensiones/reanudaciones (`RF-21`, `RF-27`) y revocaciones/conclusiones (`RF-22`, `RF-26`).
+11. **`MS-BEC → MS-PLT`** (`POST /internal/v1/otp/consumir` con `Idempotency-Key`): Valida y consume atómicamente el `AutorizacionOTP` antes de confirmar desembolsos, modificar `DatosPagoBecario` (con cifrado `AES-GCM`) o revocar becas (`RF-20`, `RF-22`).
 
 ---
 

@@ -34,7 +34,7 @@ Gestión integral del diseño y configuración de programas de becas (`ProgramaB
   - `cuposDisponibles = cupoTotal - cuposOcupadosActivos - cuposSuspendidos - cuposRetenidosEnOfertas`
 - **Invariante Contable de No Doble Conteo:** `comprometidoBecasActivas` y `comprometidoBecasSuspendidas` representan únicamente el saldo comprometido pendiente por desembolsar en el periodo. Al confirmarse un desembolso (`RF-20`), en el mismo movimiento contable se deduce de `comprometidoBecasActivas` y se suma a `montoDesembolsadoEjecutado`, manteniendo intacto `presupuestoDisponibleActual`. Al transicionar una beca entre `ACTIVA ↔ SUSPENDIDA`, su saldo pendiente y su cupo se transfieren entre las bolsas activas y suspendidas sin liberarse como disponibles.
 - **Reserva Atómica (`C2`):** Al emitir una oferta o aprobar una renovación (`POST /internal/v1/programas/{id}/reservas` con `Idempotency-Key`), `MS-PRG` ejecuta una actualización atómica condicional (`ExecuteUpdateAsync`) exigiendo `cuposDisponibles >= 1` y `presupuestoDisponibleActual >= monto`. Si `filasAfectadas == 0`, rechaza con `409 SIN_CUPO_O_PRESUPUESTO`.
-- **Libro Mayor Inmutable:** Cada reserva, confirmación, liberación o ajuste presupuestario registra un `MovimientoPresupuesto` inmutable con el `disponibleResultante` y el `eventoId` de trazabilidad. Las `ReservaPresupuestoCupo` pendientes tienen TTL de 5 minutos y expiran automáticamente si no se confirman.
+- **Libro Mayor Inmutable:** Cada reserva, confirmación, liberación o ajuste presupuestario registra un `MovimientoPresupuesto` inmutable con el `disponibleResultante` y el identificador de trazabilidad (`eventoId` / `operacionId`). Las `ReservaPresupuestoCupo` pendientes tienen TTL de 5 minutos y expiran automáticamente si no se confirman.
 
 ### 3. Donantes, Aportes y Asignación Multi-Donante (RF-13, RN-PRG-02, RN-PRG-04)
 
@@ -50,12 +50,12 @@ Gestión integral del diseño y configuración de programas de becas (`ProgramaB
 ### 5. Convocatorias y Documentos Requeridos (RF-02, RF-03)
 
 - **Parametrización de Convocatorias:** Cada `Convocatoria` se vincula a un `ProgramaBeca` y a un `PeriodoAcademico`, definiendo ventanas (`fechaApertura < fechaCierre`, `fechaLimiteSubsanacionDocumentos`), `cupoConvocatoria`, `ReglaElegibilidad` evaluables y el catálogo de `DocumentoRequerido` (tipo de documento, obligatoriedad, tipos MIME permitidos y tamaño máximo en MB).
-- **Publicación y Cierre:** Al publicarse, emite `ConvocatoriaPublicada` para sincronizar la réplica `ConvocatoriaRef` en `MS-POS`.
+- **Publicación y Cierre:** Al publicarse, emite `ConvocatoriaPublicada` por RabbitMQ hacia `MS-AUD` y `MS-PLT`; `MS-POS` consulta las convocatorias abiertas y sus reglas directamente vía REST interno (`/internal/v1/convocatorias/...`).
 
 ### 6. Integraciones de Negocio
 
-- `MS-PLT` publica `PeriodoAcademicoActivado` para habilitar calendarios y convocatorias en `MS-PRG`.
-- `MS-PRG` publica `ProgramaBecaCreado`, `ProgramaBecaConfigurado`, `PresupuestoProgramaAsignado`, `BalancePresupuestarioActualizado`, `AporteDonanteRegistrado`, `ConvenioUniversidadRegistrado`, `ConvenioUniversidadVencido`, `CostoMatriculaActualizado`, `ConvocatoriaPublicada`, `ConvocatoriaCerrada` y `ConvocatoriaFinalizada`.
-- `MS-BEC` consume `POST /internal/v1/programas/{id}/reservas` (con `Idempotency-Key`) para reservar cupo y presupuesto de ofertas/renovaciones, y publica `DesembolsoConfirmadoConOTP` y `BecaRevocadaDefinitivamente` para actualizar los saldos en `BalancePresupuestarioPrograma`.
-- `MS-POS` consume `GET /internal/v1/programas/{id}/disponibilidad` para calcular la línea de corte del ranking y promociones de lista de espera.
+- `MS-PRG` consulta `GET /internal/v1/periodos-academicos/actual` en `MS-PLT` (REST interno *fail-closed*) para validar el `PeriodoAcademico` activo al planificar calendarios y convocatorias.
+- `MS-PRG` publica eventos de dominio desacoplados (*fire-and-forget* vía MassTransit + RabbitMQ) únicamente hacia `MS-AUD` (auditoría y reportería) y `MS-PLT` (notificaciones y seguimiento de `PlazoVigilado`): `ProgramaBecaCreado`, `ProgramaBecaConfigurado`, `PresupuestoProgramaAsignado`, `BalancePresupuestarioActualizado`, `AporteDonanteRegistrado`, `ConvenioUniversidadRegistrado`, `ConvenioUniversidadVencido`, `CostoMatriculaActualizado`, `ConvocatoriaPublicada`, `ConvocatoriaCerrada` y `ConvocatoriaFinalizada`.
+- `MS-BEC` consume vía REST interno (`/internal/v1/...`, con *Service Token*, timeout de 3 s e `Idempotency-Key` en `POST`): `GET /internal/v1/programas/{id}/condiciones?carreraId=&periodoId=` (cobertura, arancel `CostoMatriculaReferencia` y vigencia de convenio), `POST /internal/v1/programas/{id}/reservas` y `/reservas/{reservaId}/{confirmar|activar|liberar}` para el ciclo de reservas, y `POST /internal/v1/programas/{id}/movimientos-presupuesto` para registrar asientos contables de desembolsos confirmados, suspensiones/reanudaciones y revocaciones/conclusiones en `BalancePresupuestarioPrograma`.
+- `MS-POS` consume vía REST interno `GET /internal/v1/universidades/activas`, `GET /internal/v1/universidades/{id}/validar`, `GET /internal/v1/convocatorias/abiertas`, `GET /internal/v1/convocatorias/{id}` y `GET /internal/v1/programas/{id}/disponibilidad`.
 
