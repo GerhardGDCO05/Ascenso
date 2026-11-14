@@ -2,6 +2,8 @@ using Ascenso.Programas.Domain.Donantes.Agregados;
 using Ascenso.Programas.Domain.Donantes.Entidades;
 using Ascenso.Programas.Domain.Excepciones;
 using Ascenso.Programas.Domain.Interfaces;
+using Ascenso.Programas.Domain.Universidades.Agregados;
+using Ascenso.Programas.Domain.Universidades.Entidades;
 using MassTransit;
 using Microsoft.EntityFrameworkCore;
 using Npgsql;
@@ -24,6 +26,14 @@ public sealed class ProgramasDbContext : DbContext, IUnitOfWork
 
     public DbSet<AporteDonante> AportesDonante => Set<AporteDonante>();
 
+    public DbSet<UniversidadAliada> UniversidadesAliadas => Set<UniversidadAliada>();
+
+    public DbSet<Convenio> ConveniosUniversidad => Set<Convenio>();
+
+    public DbSet<CarreraElegible> CarrerasElegibles => Set<CarreraElegible>();
+
+    public DbSet<CostoMatriculaReferencia> CostosMatriculaReferencia => Set<CostoMatriculaReferencia>();
+
     public async Task<int> GuardarCambiosAsync(CancellationToken cancellationToken = default)
     {
         try
@@ -45,6 +55,16 @@ public sealed class ProgramasDbContext : DbContext, IUnitOfWork
             if (string.Equals(pg.ConstraintName, "ux_aporte_donante_referencia_bancaria", StringComparison.OrdinalIgnoreCase))
             {
                 throw new ReferenciaBancariaDuplicadaException(pg.Detail ?? "duplicada");
+            }
+
+            if (string.Equals(pg.ConstraintName, "ux_universidad_aliada_codigo_institucional", StringComparison.OrdinalIgnoreCase))
+            {
+                throw new CodigoInstitucionalDuplicadoException(pg.Detail ?? "duplicado");
+            }
+
+            if (string.Equals(pg.ConstraintName, "ux_carrera_elegible_universidad_codigo", StringComparison.OrdinalIgnoreCase))
+            {
+                throw new CodigoCarreraDuplicadoException(Guid.Empty, pg.Detail ?? "duplicado");
             }
 
             throw;

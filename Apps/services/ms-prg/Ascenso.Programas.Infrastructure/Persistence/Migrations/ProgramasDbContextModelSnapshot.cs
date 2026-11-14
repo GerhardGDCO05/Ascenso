@@ -26,7 +26,6 @@ namespace Ascenso.Programas.Infrastructure.Persistence.Migrations
             modelBuilder.Entity("Ascenso.Programas.Domain.Donantes.Agregados.Donante", b =>
                 {
                     b.Property<Guid>("Id")
-                        .ValueGeneratedOnAdd()
                         .HasColumnType("uuid")
                         .HasColumnName("id");
 
@@ -130,7 +129,6 @@ namespace Ascenso.Programas.Infrastructure.Persistence.Migrations
             modelBuilder.Entity("Ascenso.Programas.Domain.Donantes.Entidades.AporteDonante", b =>
                 {
                     b.Property<Guid>("Id")
-                        .ValueGeneratedOnAdd()
                         .HasColumnType("uuid")
                         .HasColumnName("id");
 
@@ -217,6 +215,303 @@ namespace Ascenso.Programas.Infrastructure.Persistence.Migrations
                             t.HasCheckConstraint("ck_aporte_donante_estado_valido", "estado_aporte IN ('PENDIENTE_VERIFICACION', 'CONFIRMADO', 'ANULADO')");
 
                             t.HasCheckConstraint("ck_aporte_donante_monto_positivo", "monto_aporte > 0");
+                        });
+                });
+
+            modelBuilder.Entity("Ascenso.Programas.Domain.Universidades.Agregados.UniversidadAliada", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .HasColumnType("uuid")
+                        .HasColumnName("id");
+
+                    b.Property<string>("CodigoInstitucional")
+                        .IsRequired()
+                        .HasMaxLength(40)
+                        .HasColumnType("character varying(40)")
+                        .HasColumnName("codigo_institucional");
+
+                    b.Property<string>("Direccion")
+                        .IsRequired()
+                        .HasMaxLength(400)
+                        .HasColumnType("character varying(400)")
+                        .HasColumnName("direccion");
+
+                    b.Property<string>("Estado")
+                        .IsRequired()
+                        .HasMaxLength(20)
+                        .HasColumnType("varchar")
+                        .HasColumnName("estado");
+
+                    b.Property<DateTimeOffset>("FechaCreacion")
+                        .HasColumnType("timestamptz")
+                        .HasColumnName("fecha_creacion");
+
+                    b.Property<DateTimeOffset>("FechaUltimaModificacion")
+                        .HasColumnType("timestamptz")
+                        .HasColumnName("fecha_ultima_modificacion");
+
+                    b.Property<string>("Nombre")
+                        .IsRequired()
+                        .HasMaxLength(200)
+                        .HasColumnType("character varying(200)")
+                        .HasColumnName("nombre");
+
+                    b.Property<Guid>("UsuarioCreacionId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("usuario_creacion_id");
+
+                    b.Property<Guid?>("UsuarioEnlaceId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("usuario_enlace_id");
+
+                    b.Property<Guid>("UsuarioModificacionId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("usuario_modificacion_id");
+
+                    b.Property<int>("Version")
+                        .IsConcurrencyToken()
+                        .HasColumnType("integer")
+                        .HasColumnName("version");
+
+                    b.HasKey("Id")
+                        .HasName("pk_universidades_aliadas");
+
+                    b.HasIndex("CodigoInstitucional")
+                        .IsUnique()
+                        .HasDatabaseName("ux_universidad_aliada_codigo_institucional");
+
+                    b.ToTable("universidades_aliadas", "programas", t =>
+                        {
+                            t.HasCheckConstraint("ck_universidad_aliada_estado_valido", "estado IN ('ACTIVA', 'INACTIVA')");
+                        });
+                });
+
+            modelBuilder.Entity("Ascenso.Programas.Domain.Universidades.Entidades.CarreraElegible", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .HasColumnType("uuid")
+                        .HasColumnName("id");
+
+                    b.Property<bool>("Activa")
+                        .HasColumnType("boolean")
+                        .HasColumnName("activa");
+
+                    b.Property<string>("CodigoCarrera")
+                        .IsRequired()
+                        .HasMaxLength(40)
+                        .HasColumnType("character varying(40)")
+                        .HasColumnName("codigo_carrera");
+
+                    b.Property<int>("DuracionSemestres")
+                        .HasColumnType("integer")
+                        .HasColumnName("duracion_semestres");
+
+                    b.Property<DateTimeOffset>("FechaCreacion")
+                        .HasColumnType("timestamptz")
+                        .HasColumnName("fecha_creacion");
+
+                    b.Property<DateTimeOffset>("FechaUltimaModificacion")
+                        .HasColumnType("timestamptz")
+                        .HasColumnName("fecha_ultima_modificacion");
+
+                    b.Property<string>("Nombre")
+                        .IsRequired()
+                        .HasMaxLength(200)
+                        .HasColumnType("character varying(200)")
+                        .HasColumnName("nombre");
+
+                    b.Property<Guid>("UniversidadAliadaId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("universidad_aliada_id");
+
+                    b.Property<Guid>("UsuarioCreacionId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("usuario_creacion_id");
+
+                    b.Property<Guid>("UsuarioModificacionId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("usuario_modificacion_id");
+
+                    b.Property<int>("Version")
+                        .IsConcurrencyToken()
+                        .HasColumnType("integer")
+                        .HasColumnName("version");
+
+                    b.HasKey("Id")
+                        .HasName("pk_carreras_elegibles");
+
+                    b.HasIndex("UniversidadAliadaId", "CodigoCarrera")
+                        .IsUnique()
+                        .HasDatabaseName("ux_carrera_elegible_universidad_codigo");
+
+                    b.ToTable("carreras_elegibles", "programas", t =>
+                        {
+                            t.HasCheckConstraint("ck_carrera_elegible_duracion_positiva", "duracion_semestres > 0");
+                        });
+                });
+
+            modelBuilder.Entity("Ascenso.Programas.Domain.Universidades.Entidades.Convenio", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .HasColumnType("uuid")
+                        .HasColumnName("id");
+
+                    b.Property<string>("Estado")
+                        .IsRequired()
+                        .HasMaxLength(20)
+                        .HasColumnType("varchar")
+                        .HasColumnName("estado");
+
+                    b.Property<DateTimeOffset>("FechaCreacion")
+                        .HasColumnType("timestamptz")
+                        .HasColumnName("fecha_creacion");
+
+                    b.Property<DateOnly>("FechaFin")
+                        .HasColumnType("date")
+                        .HasColumnName("fecha_fin");
+
+                    b.Property<DateOnly>("FechaInicio")
+                        .HasColumnType("date")
+                        .HasColumnName("fecha_inicio");
+
+                    b.Property<DateTimeOffset>("FechaUltimaModificacion")
+                        .HasColumnType("timestamptz")
+                        .HasColumnName("fecha_ultima_modificacion");
+
+                    b.Property<string>("NumeroConvenio")
+                        .IsRequired()
+                        .HasMaxLength(60)
+                        .HasColumnType("character varying(60)")
+                        .HasColumnName("numero_convenio");
+
+                    b.Property<bool>("PermiteIntercambioAutomaticoDatos")
+                        .HasColumnType("boolean")
+                        .HasColumnName("permite_intercambio_automatico_datos");
+
+                    b.Property<string>("TerminosResumen")
+                        .IsRequired()
+                        .HasMaxLength(2000)
+                        .HasColumnType("character varying(2000)")
+                        .HasColumnName("terminos_resumen");
+
+                    b.Property<Guid>("UniversidadAliadaId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("universidad_aliada_id");
+
+                    b.Property<string>("UrlDocumentoPdfFirebase")
+                        .IsRequired()
+                        .HasMaxLength(1000)
+                        .HasColumnType("character varying(1000)")
+                        .HasColumnName("url_documento_pdf_firebase");
+
+                    b.Property<Guid>("UsuarioCreacionId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("usuario_creacion_id");
+
+                    b.Property<Guid>("UsuarioModificacionId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("usuario_modificacion_id");
+
+                    b.Property<int>("Version")
+                        .IsConcurrencyToken()
+                        .HasColumnType("integer")
+                        .HasColumnName("version");
+
+                    b.HasKey("Id")
+                        .HasName("pk_convenios_universidad");
+
+                    b.HasIndex("UniversidadAliadaId", "NumeroConvenio")
+                        .HasDatabaseName("ix_convenio_universidad_numero");
+
+                    b.ToTable("convenios_universidad", "programas", t =>
+                        {
+                            t.HasCheckConstraint("ck_convenio_estado_valido", "estado IN ('VIGENTE', 'VENCIDO', 'SUSPENDIDO')");
+
+                            t.HasCheckConstraint("ck_convenio_fechas_validas", "fecha_fin > fecha_inicio");
+                        });
+                });
+
+            modelBuilder.Entity("Ascenso.Programas.Domain.Universidades.Entidades.CostoMatriculaReferencia", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .HasColumnType("uuid")
+                        .HasColumnName("id");
+
+                    b.Property<Guid>("CarreraElegibleId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("carrera_elegible_id");
+
+                    b.Property<string>("Estado")
+                        .IsRequired()
+                        .HasMaxLength(20)
+                        .HasColumnType("varchar")
+                        .HasColumnName("estado");
+
+                    b.Property<DateTimeOffset>("FechaCreacion")
+                        .HasColumnType("timestamptz")
+                        .HasColumnName("fecha_creacion");
+
+                    b.Property<DateTimeOffset>("FechaUltimaModificacion")
+                        .HasColumnType("timestamptz")
+                        .HasColumnName("fecha_ultima_modificacion");
+
+                    b.Property<DateTimeOffset>("FechaVigenciaDesde")
+                        .HasColumnType("timestamptz")
+                        .HasColumnName("fecha_vigencia_desde");
+
+                    b.Property<DateTimeOffset?>("FechaVigenciaHasta")
+                        .HasColumnType("timestamptz")
+                        .HasColumnName("fecha_vigencia_hasta");
+
+                    b.Property<string>("Moneda")
+                        .IsRequired()
+                        .HasMaxLength(3)
+                        .HasColumnType("character(3)")
+                        .HasColumnName("moneda")
+                        .IsFixedLength();
+
+                    b.Property<decimal>("MontoReferenciaMatricula")
+                        .HasPrecision(18, 2)
+                        .HasColumnType("numeric(18,2)")
+                        .HasColumnName("monto_referencia_matricula");
+
+                    b.Property<int>("NumeroVersion")
+                        .HasColumnType("integer")
+                        .HasColumnName("numero_version");
+
+                    b.Property<string>("PeriodoAcademicoId")
+                        .IsRequired()
+                        .HasMaxLength(20)
+                        .HasColumnType("character varying(20)")
+                        .HasColumnName("periodo_academico_id");
+
+                    b.Property<Guid>("UsuarioCreacionId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("usuario_creacion_id");
+
+                    b.Property<Guid>("UsuarioModificacionId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("usuario_modificacion_id");
+
+                    b.Property<int>("Version")
+                        .IsConcurrencyToken()
+                        .HasColumnType("integer")
+                        .HasColumnName("version");
+
+                    b.HasKey("Id")
+                        .HasName("pk_costos_matricula_referencia");
+
+                    b.HasIndex("CarreraElegibleId", "PeriodoAcademicoId", "NumeroVersion")
+                        .IsUnique()
+                        .HasDatabaseName("ux_costo_matricula_carrera_periodo_version");
+
+                    b.ToTable("costos_matricula_referencia", "programas", t =>
+                        {
+                            t.HasCheckConstraint("ck_costo_matricula_estado_valido", "estado IN ('VIGENTE', 'HISTORICO')");
+
+                            t.HasCheckConstraint("ck_costo_matricula_monto_positivo", "monto_referencia_matricula > 0");
+
+                            t.HasCheckConstraint("ck_costo_matricula_version_positiva", "numero_version > 0");
                         });
                 });
 
@@ -441,6 +736,112 @@ namespace Ascenso.Programas.Infrastructure.Persistence.Migrations
                         .HasConstraintName("fk_aportes_donante_donante");
                 });
 
+            modelBuilder.Entity("Ascenso.Programas.Domain.Universidades.Agregados.UniversidadAliada", b =>
+                {
+                    b.OwnsOne("Ascenso.Programas.Domain.Universidades.ObjetosValor.ContactoEnlace", "ContactoEnlace", b1 =>
+                        {
+                            b1.Property<Guid>("UniversidadAliadaId")
+                                .HasColumnType("uuid");
+
+                            b1.Property<string>("Email")
+                                .IsRequired()
+                                .HasMaxLength(200)
+                                .HasColumnType("character varying(200)")
+                                .HasColumnName("contacto_enlace_email");
+
+                            b1.Property<string>("Nombre")
+                                .IsRequired()
+                                .HasMaxLength(150)
+                                .HasColumnType("character varying(150)")
+                                .HasColumnName("contacto_enlace_nombre");
+
+                            b1.Property<string>("Telefono")
+                                .IsRequired()
+                                .HasMaxLength(40)
+                                .HasColumnType("character varying(40)")
+                                .HasColumnName("contacto_enlace_telefono");
+
+                            b1.HasKey("UniversidadAliadaId");
+
+                            b1.ToTable("universidades_aliadas", "programas");
+
+                            b1.WithOwner()
+                                .HasForeignKey("UniversidadAliadaId");
+                        });
+
+                    b.OwnsOne("Ascenso.Programas.Domain.Universidades.ObjetosValor.CuentaBancariaInstitucional", "CuentaBancariaInstitucional", b1 =>
+                        {
+                            b1.Property<Guid>("UniversidadAliadaId")
+                                .HasColumnType("uuid");
+
+                            b1.Property<string>("Banco")
+                                .IsRequired()
+                                .HasMaxLength(120)
+                                .HasColumnType("character varying(120)")
+                                .HasColumnName("cuenta_banco");
+
+                            b1.Property<string>("NumeroCuentaCifrado")
+                                .IsRequired()
+                                .HasMaxLength(200)
+                                .HasColumnType("character varying(200)")
+                                .HasColumnName("cuenta_numero_cifrado");
+
+                            b1.Property<string>("RifTitular")
+                                .IsRequired()
+                                .HasMaxLength(40)
+                                .HasColumnType("character varying(40)")
+                                .HasColumnName("cuenta_rif_titular");
+
+                            b1.Property<string>("TipoCuenta")
+                                .IsRequired()
+                                .HasMaxLength(40)
+                                .HasColumnType("character varying(40)")
+                                .HasColumnName("cuenta_tipo");
+
+                            b1.HasKey("UniversidadAliadaId");
+
+                            b1.ToTable("universidades_aliadas", "programas");
+
+                            b1.WithOwner()
+                                .HasForeignKey("UniversidadAliadaId");
+                        });
+
+                    b.Navigation("ContactoEnlace")
+                        .IsRequired();
+
+                    b.Navigation("CuentaBancariaInstitucional");
+                });
+
+            modelBuilder.Entity("Ascenso.Programas.Domain.Universidades.Entidades.CarreraElegible", b =>
+                {
+                    b.HasOne("Ascenso.Programas.Domain.Universidades.Agregados.UniversidadAliada", null)
+                        .WithMany("Carreras")
+                        .HasForeignKey("UniversidadAliadaId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired()
+                        .HasConstraintName("fk_carreras_elegibles_universidad");
+                });
+
+            modelBuilder.Entity("Ascenso.Programas.Domain.Universidades.Entidades.Convenio", b =>
+                {
+                    b.HasOne("Ascenso.Programas.Domain.Universidades.Agregados.UniversidadAliada", null)
+                        .WithMany("Convenios")
+                        .HasForeignKey("UniversidadAliadaId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired()
+                        .HasConstraintName("fk_convenios_universidad_universidad");
+                });
+
+            modelBuilder.Entity("Ascenso.Programas.Domain.Universidades.Entidades.CostoMatriculaReferencia", b =>
+                {
+                    b.HasOne("Ascenso.Programas.Domain.Universidades.Entidades.CarreraElegible", null)
+                        .WithMany("CostosMatricula")
+                        .HasForeignKey("CarreraElegibleId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired()
+                        .HasConstraintName("fk_costos_matricula_carrera");
+                });
+
             modelBuilder.Entity("MassTransit.EntityFrameworkCoreIntegration.OutboxMessage", b =>
                 {
                     b.HasOne("MassTransit.EntityFrameworkCoreIntegration.OutboxState", null)
@@ -456,6 +857,18 @@ namespace Ascenso.Programas.Infrastructure.Persistence.Migrations
             modelBuilder.Entity("Ascenso.Programas.Domain.Donantes.Agregados.Donante", b =>
                 {
                     b.Navigation("Aportes");
+                });
+
+            modelBuilder.Entity("Ascenso.Programas.Domain.Universidades.Agregados.UniversidadAliada", b =>
+                {
+                    b.Navigation("Carreras");
+
+                    b.Navigation("Convenios");
+                });
+
+            modelBuilder.Entity("Ascenso.Programas.Domain.Universidades.Entidades.CarreraElegible", b =>
+                {
+                    b.Navigation("CostosMatricula");
                 });
 #pragma warning restore 612, 618
         }
