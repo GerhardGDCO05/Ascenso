@@ -30,4 +30,4 @@ Gestión centralizada de la identidad de dominio, control de acceso basado en ro
 ### 3. Notificaciones y Recordatorios Preventivos
 
 - **Idempotencia de Recordatorios:** Al evaluar el envío de un `Recordatorio`, el dominio debe verificar el `RegistroRecordatorio`. Si el `PlazoVigilado` asociado ya está marcado como `Cumplido`, el envío se aborta silenciosamente para evitar comunicaciones redundantes al usuario.
-- **Transiciones de Ciclo:** Al activar un nuevo `PeriodoAcademico`, el dominio debe clausurar automáticamente el periodo anterior (si existe) y emitir un evento de dominio notificando el cambio de ciclo a los demás contextos (Programas y Otorgamiento).
+- **Transiciones de Ciclo:** Al activar un nuevo `PeriodoAcademico`, el dominio debe clausurar automáticamente el periodo anterior (si existe), exponer el periodo activo mediante `GET /internal/v1/periodos-academicos/actual` para consulta síncrona de `MS-PRG`, `MS-POS` y `MS-BEC`, y emitir el evento `PeriodoAcademicoActivado` hacia `MS-AUD` (auditoría) y comunicaciones internas.

@@ -72,7 +72,7 @@ Gestión del otorgamiento y del ciclo de vida de la beca: emisión y respuesta d
 
 ### 8. Integraciones de negocio
 
-* `MS-POS` confirma que la postulación es adjudicable y consume la consulta de becas activas para prevalidar el no doble beneficio.
-* `MS-PRG` confirma la reserva de cupo y presupuesto de la oferta y de la renovación, y recibe la liberación de recursos en rechazos, expiraciones, anulaciones y revocaciones.
-* `MS-PLT` valida y consume las autorizaciones OTP de las operaciones sensibles.
-* `MS-AUD` recibe los eventos de historial y auditoría de las transiciones y decisiones.
+* `MS-POS` responde vía REST interno (`GET /internal/v1/postulaciones/{id}/adjudicable`) para confirmar la adjudicabilidad antes de emitir oferta, recibe `POST /internal/v1/postulaciones/{id}/otorgar` (con `Idempotency-Key`) para transicionar la postulación a `OTORGADA`, y consulta `GET /internal/v1/becas/activas` para prevalidar el no doble beneficio.
+* `MS-PRG` responde vía REST interno (`GET /internal/v1/programas/{id}/condiciones?carreraId=&periodoId=`) para validar arancel vigente, cobertura y vigencia de convenio, gestiona el ciclo de `ReservaPresupuestoCupo` (`POST /internal/v1/programas/{id}/reservas` y `/reservas/{reservaId}/{confirmar|activar|liberar}`) y registra los movimientos contables de desembolsos, suspensiones, revocaciones y conclusiones (`POST /internal/v1/programas/{id}/movimientos-presupuesto`), todos con `Idempotency-Key`.
+* `MS-PLT` expone `GET /internal/v1/periodos-academicos/actual`, valida y consume las autorizaciones OTP mediante `POST /internal/v1/otp/consumir` (con `Idempotency-Key`), y recibe por RabbitMQ los eventos de hitos para notificaciones y actualización de `PlazoVigilado`.
+* `MS-AUD` recibe por RabbitMQ (*fire-and-forget* con *Idempotent Inbox*) los eventos de historial y auditoría de las transiciones y decisiones.

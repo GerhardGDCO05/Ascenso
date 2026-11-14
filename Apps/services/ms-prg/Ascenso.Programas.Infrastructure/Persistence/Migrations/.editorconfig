@@ -1,0 +1,7 @@
+# Los archivos de migración son generados por EF Core; se excluyen de los
+# analizadores de estilo y calidad para no reescribirlos a mano.
+[*.cs]
+generated_code = true
+dotnet_analyzer_diagnostic.severity = none
+dotnet_diagnostic.IDE0005.severity = none
+dotnet_diagnostic.IDE0161.severity = none
