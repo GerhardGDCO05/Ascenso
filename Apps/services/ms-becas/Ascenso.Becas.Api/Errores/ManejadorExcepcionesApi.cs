@@ -44,7 +44,8 @@ public sealed partial class ManejadorExcepcionesApi : IExceptionHandler
             httpContext,
             resultado.EstadoHttp,
             resultado.Codigo,
-            resultado.Mensaje);
+            resultado.Mensaje,
+            resultado.Errores);
 
         return true;
     }

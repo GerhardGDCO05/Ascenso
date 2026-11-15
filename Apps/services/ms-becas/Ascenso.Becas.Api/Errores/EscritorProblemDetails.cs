@@ -17,7 +17,7 @@ public static class EscritorProblemDetails
         int estadoHttp,
         string codigo,
         string mensaje,
-        IDictionary<string, string[]>? errores = null)
+        IReadOnlyDictionary<string, string[]>? errores = null)
     {
         ArgumentNullException.ThrowIfNull(contexto);
         ArgumentException.ThrowIfNullOrWhiteSpace(codigo);

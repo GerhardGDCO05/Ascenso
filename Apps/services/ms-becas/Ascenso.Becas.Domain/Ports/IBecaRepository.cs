@@ -14,6 +14,13 @@ public interface IBecaRepository
     Task<Beca?> ObtenerPorIdAsync(Guid becaId, CancellationToken cancellationToken = default);
 
     /// <summary>
+    /// Recupera el agregado al que pertenece una oferta. La lectura no deja
+    /// entidades rastreadas para que la transacción posterior cargue el estado
+    /// actualizado y aplique el bloqueo de fila.
+    /// </summary>
+    Task<Beca?> ObtenerPorOfertaAsync(Guid ofertaId, CancellationToken cancellationToken = default);
+
+    /// <summary>
     /// Agrega una nueva raíz de agregado al contexto de persistencia.
     /// </summary>
     Task AgregarAsync(Beca beca, CancellationToken cancellationToken = default);
@@ -43,5 +50,13 @@ public interface IBecaRepository
     Task<bool> ExisteActivaEnPeriodoAsync(
         Guid estudianteId,
         Guid periodoAcademicoId,
+        CancellationToken cancellationToken = default);
+
+    /// <summary>
+    /// Devuelve todas las becas activas del estudiante para aplicar la
+    /// invariante de no doble beneficio con las reglas completas del dominio.
+    /// </summary>
+    Task<IReadOnlyList<Beca>> ObtenerActivasPorEstudianteAsync(
+        Guid estudianteId,
         CancellationToken cancellationToken = default);
 }

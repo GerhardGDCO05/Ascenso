@@ -34,6 +34,26 @@ public sealed class BecaRepository : IBecaRepository
             .SingleOrDefaultAsync(beca => beca.Id == becaId, cancellationToken);
     }
 
+    public Task<Beca?> ObtenerPorOfertaAsync(
+        Guid ofertaId,
+        CancellationToken cancellationToken = default)
+    {
+        if (ofertaId == Guid.Empty)
+        {
+            throw new ArgumentException("El identificador de la oferta es obligatorio.", nameof(ofertaId));
+        }
+
+        return _contexto.Becas
+            .AsNoTracking()
+            .Include(beca => beca.Oferta)
+            .Include(beca => beca.Compromiso)
+            .Include(beca => beca.Historial)
+            .AsSplitQuery()
+            .SingleOrDefaultAsync(
+                beca => beca.Oferta != null && beca.Oferta.Id == ofertaId,
+                cancellationToken);
+    }
+
     public async Task AgregarAsync(Beca beca, CancellationToken cancellationToken = default)
     {
         ArgumentNullException.ThrowIfNull(beca);
@@ -107,6 +127,22 @@ public sealed class BecaRepository : IBecaRepository
                     && beca.PeriodoVigenteActualId == periodoAcademicoId
                     && beca.Estado == EstadoBeca.Activa,
                 cancellationToken);
+
+    public async Task<IReadOnlyList<Beca>> ObtenerActivasPorEstudianteAsync(
+        Guid estudianteId,
+        CancellationToken cancellationToken = default)
+    {
+        if (estudianteId == Guid.Empty)
+        {
+            throw new ArgumentException("El identificador del estudiante es obligatorio.", nameof(estudianteId));
+        }
+
+        return await _contexto.Becas
+            .AsNoTracking()
+            .Where(beca => beca.PostulanteEstudianteId == estudianteId
+                && beca.Estado == EstadoBeca.Activa)
+            .ToListAsync(cancellationToken);
+    }
 
     private void ExigirTransaccionActiva()
     {
