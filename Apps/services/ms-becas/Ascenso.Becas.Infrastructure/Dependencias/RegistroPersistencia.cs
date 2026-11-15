@@ -1,6 +1,12 @@
 using Ascenso.Becas.Application.Idempotencia;
+using Ascenso.Becas.Application.Otorgamiento.Puertos;
+using Ascenso.Becas.Domain.Ports;
 using Ascenso.Becas.Infrastructure.Persistence;
+using Ascenso.Becas.Infrastructure.Persistence.Consultas;
+using Ascenso.Becas.Infrastructure.Persistence.Proyecciones;
 using Ascenso.Becas.Infrastructure.Persistence.Repositorios;
+using Ascenso.Becas.Infrastructure.Persistence.UnidadDeTrabajo;
+using Ascenso.Becas.Infrastructure.Tiempo;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
 
@@ -26,6 +32,13 @@ public static class RegistroPersistencia
                     BecasDbContext.Esquema)));
 
         servicios.AddScoped<IAlmacenIdempotencia, AlmacenIdempotencia>();
+        servicios.AddScoped<IBecaRepository, BecaRepository>();
+        servicios.AddScoped<IOfertaBecaRepository, OfertaBecaRepository>();
+        servicios.AddScoped<ICompromisoBecarioRepository, CompromisoBecarioRepository>();
+        servicios.AddScoped<IUnitOfWork, UnidadDeTrabajo>();
+        servicios.AddScoped<IProyeccionesOtorgamiento, ProyeccionesOtorgamiento>();
+        servicios.AddScoped<IConsultasBeca, ConsultasBeca>();
+        servicios.AddSingleton<IClock, RelojSistema>();
 
         return servicios;
     }
