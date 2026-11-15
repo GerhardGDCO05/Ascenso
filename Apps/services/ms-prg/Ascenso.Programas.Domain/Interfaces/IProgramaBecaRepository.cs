@@ -1,10 +1,12 @@
 using Ascenso.Programas.Domain.Enums;
 using Ascenso.Programas.Domain.Programas.Agregados;
+using Ascenso.Programas.Domain.Programas.Entidades;
 
 namespace Ascenso.Programas.Domain.Interfaces;
 
 /// <summary>
-/// Puerto de persistencia para el agregado <see cref="ProgramaBeca"/> y sus asignaciones presupuestarias.
+/// Puerto de persistencia para el agregado <see cref="ProgramaBeca"/>, sus asignaciones presupuestarias,
+/// reservas atómicas concurrentes y libro mayor de movimientos.
 /// </summary>
 public interface IProgramaBecaRepository
 {
@@ -21,5 +23,23 @@ public interface IProgramaBecaRepository
         string? periodoInicialId,
         ModalidadCobertura? modalidadCobertura,
         string? busqueda,
+        CancellationToken cancellationToken = default);
+
+    Task<(ProgramaBeca Programa, ReservaPresupuestaria Reserva, MovimientoPresupuestario Movimiento, bool YaExistia)> ReservarPresupuestoAtomicoAsync(
+        Guid programaId,
+        Guid referenciaExternaId,
+        string periodoAcademicoId,
+        decimal monto,
+        string descripcion,
+        Guid usuarioAutorId,
+        CancellationToken cancellationToken = default);
+
+    Task<(IReadOnlyList<MovimientoPresupuestario> Items, int TotalCount)> ConsultarMovimientosPaginadosAsync(
+        Guid programaId,
+        int pagina,
+        int tamanoPagina,
+        TipoMovimientoPresupuestario? tipoMovimiento,
+        string? periodoAcademicoId,
+        Guid? referenciaExternaId,
         CancellationToken cancellationToken = default);
 }

@@ -17,7 +17,7 @@ namespace Ascenso.Becas.Domain.Otorgamiento.Agregados;
 /// </summary>
 public sealed class Beca : AggregateRoot
 {
-    private const int DiasVigenciaOferta = 15;
+    public const int DiasVigenciaOferta = 15;
     private const int LongitudMinimaJustificacion = 10;
     private const string JustificacionRechazoOferta = "Oferta rechazada por el postulante.";
     private const string JustificacionExpiracionOferta = "Expiración automática de la oferta de beca.";

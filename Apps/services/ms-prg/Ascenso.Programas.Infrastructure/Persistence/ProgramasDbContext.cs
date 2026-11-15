@@ -40,6 +40,10 @@ public sealed class ProgramasDbContext : DbContext, IUnitOfWork
 
     public DbSet<AsignacionFondoPrograma> AsignacionesFondoPrograma => Set<AsignacionFondoPrograma>();
 
+    public DbSet<ReservaPresupuestaria> ReservasPresupuestarias => Set<ReservaPresupuestaria>();
+
+    public DbSet<MovimientoPresupuestario> MovimientosPresupuestarios => Set<MovimientoPresupuestario>();
+
     public async Task<int> GuardarCambiosAsync(CancellationToken cancellationToken = default)
     {
         try
@@ -78,6 +82,11 @@ public sealed class ProgramasDbContext : DbContext, IUnitOfWork
                 throw new CodigoProgramaDuplicadoException(pg.Detail ?? "duplicado");
             }
 
+            if (string.Equals(pg.ConstraintName, "ux_reserva_presupuestaria_programa_referencia", StringComparison.OrdinalIgnoreCase))
+            {
+                throw new ReservaConParametrosDistintosException(Guid.Empty, Guid.Empty);
+            }
+
             throw;
         }
     }
@@ -96,4 +105,3 @@ public sealed class ProgramasDbContext : DbContext, IUnitOfWork
         modelBuilder.AddOutboxMessageEntity(entidad => entidad.ToTable("outbox_message"));
     }
 }
-

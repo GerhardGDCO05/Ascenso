@@ -1,9 +1,15 @@
 using Ascenso.Programas.Application.Donantes.Abstracciones;
 using Ascenso.Programas.Application.Programas.Comandos.AsignarPresupuestoDonantes;
+using Ascenso.Programas.Application.Programas.Comandos.CerrarPeriodoPrograma;
 using Ascenso.Programas.Application.Programas.Comandos.ConfigurarCriteriosElegibilidad;
+using Ascenso.Programas.Application.Programas.Comandos.ConfirmarReservaPresupuesto;
 using Ascenso.Programas.Application.Programas.Comandos.CrearProgramaBeca;
+using Ascenso.Programas.Application.Programas.Comandos.LiberarReservaPresupuesto;
 using Ascenso.Programas.Application.Programas.Comandos.ReajustarPresupuestoDonante;
+using Ascenso.Programas.Application.Programas.Comandos.ReservarPresupuestoPrograma;
+using Ascenso.Programas.Application.Programas.Consultas.ConsultarMovimientosPresupuestarios;
 using Ascenso.Programas.Application.Programas.Consultas.ConsultarProgramas;
+using Ascenso.Programas.Application.Programas.Consultas.ObtenerBalancePrograma;
 using Ascenso.Programas.Application.Programas.Consultas.ObtenerProgramaPorId;
 using Ascenso.Programas.Application.Programas.DTOs;
 using Ascenso.Programas.Application.Programas.EventosIntegracion;
@@ -313,5 +319,138 @@ public sealed class ProgramasCommandAndQueryHandlerTests
 
         detalle.Id.Should().Be(programa.Id);
         detalle.AsignacionesFondo.Should().ContainSingle();
+    }
+
+    [Fact]
+    public async Task Debe_ObtenerBalanceYMovimientosPaginados_YEjecutarCicloDeReservasYCierre_HU12_1_HU12_2()
+    {
+        var programa = CrearProgramaConSaldo(20000.00m);
+        programa.ConfigurarElegibilidadYPermanencia(
+            new CriteriosElegibilidadPrograma(15.00m, 17, 25, 1200.00m, [Guid.NewGuid()], [Guid.NewGuid()]),
+            new CondicionesPermanencia(14.00m, 4, 1, 10, FrecuenciaReporteAcademico.Semestral, ConsecuenciaIncumplimiento.Suspension, 0.50m, 2, true),
+            todasLasUniversidadesTienenConvenioVigente: true,
+            todasLasCarrerasSonElegibles: true,
+            _actorId);
+        programa.Activar(_actorId);
+
+        var refConfirmar = Guid.Parse("01966000-0000-7000-8000-000000000801");
+        var refLiberar = Guid.Parse("01966000-0000-7000-8000-000000000802");
+
+        var (reserva1, mov1, _) = programa.ReservarPresupuesto(refConfirmar, "2026-1", 4000.00m, "Reserva 1", _actorId);
+        var (reserva2, mov2, _) = programa.ReservarPresupuesto(refLiberar, "2026-1", 2000.00m, "Reserva 2", _actorId);
+
+        _programaRepository.ReservarPresupuestoAtomicoAsync(
+                programa.Id,
+                refConfirmar,
+                "2026-1",
+                4000.00m,
+                "Reserva 1",
+                _actorId,
+                Arg.Any<CancellationToken>())
+            .Returns((programa, reserva1, mov1, false));
+
+        _programaRepository.ObtenerPorIdAsync(programa.Id, Arg.Any<CancellationToken>())
+            .Returns(programa);
+
+        var reservarHandler = new ReservarPresupuestoProgramaCommandHandler(
+            _programaRepository,
+            _unitOfWork,
+            _eventPublisher,
+            new ReservarPresupuestoProgramaCommandValidator());
+
+        var respuestaReserva = await reservarHandler.HandleAsync(new ReservarPresupuestoProgramaCommand(
+            programa.Id,
+            refConfirmar,
+            "2026-1",
+            4000.00m,
+            "Reserva 1",
+            _actorId));
+
+        respuestaReserva.YaExistia.Should().BeFalse();
+        respuestaReserva.BalanceResultante.PresupuestoReservado.Should().Be(6000.00m);
+        await _eventPublisher.Received(1)
+            .PublicarAsync(Arg.Any<PresupuestoProgramaReservado>(), Arg.Any<CancellationToken>());
+
+        var confirmarHandler = new ConfirmarReservaPresupuestoCommandHandler(
+            _programaRepository,
+            _unitOfWork,
+            _eventPublisher,
+            new ConfirmarReservaPresupuestoCommandValidator());
+
+        var respuestaConfirmada = await confirmarHandler.HandleAsync(new ConfirmarReservaPresupuestoCommand(
+            programa.Id,
+            refConfirmar,
+            "Desembolso confirmado",
+            _actorId));
+
+        respuestaConfirmada.Estado.Should().Be("CONFIRMADA");
+        respuestaConfirmada.BalanceResultante.PresupuestoEjecutado.Should().Be(4000.00m);
+        respuestaConfirmada.BalanceResultante.CuposOcupados.Should().Be(1);
+        await _eventPublisher.Received(1)
+            .PublicarAsync(Arg.Any<PresupuestoProgramaConfirmado>(), Arg.Any<CancellationToken>());
+
+        var liberarHandler = new LiberarReservaPresupuestoCommandHandler(
+            _programaRepository,
+            _unitOfWork,
+            _eventPublisher,
+            new LiberarReservaPresupuestoCommandValidator());
+
+        var respuestaLiberada = await liberarHandler.HandleAsync(new LiberarReservaPresupuestoCommand(
+            programa.Id,
+            refLiberar,
+            "Postulación retirada",
+            _actorId));
+
+        respuestaLiberada.Estado.Should().Be("LIBERADA");
+        respuestaLiberada.BalanceResultante.PresupuestoReservado.Should().Be(0.00m);
+        respuestaLiberada.BalanceResultante.PresupuestoDisponible.Should().Be(16000.00m);
+        await _eventPublisher.Received(1)
+            .PublicarAsync(Arg.Any<ReservaPresupuestoLiberada>(), Arg.Any<CancellationToken>());
+
+        var balanceHandler = new ObtenerBalanceProgramaQueryHandler(_programaRepository);
+        var balance = await balanceHandler.HandleAsync(new ObtenerBalanceProgramaQuery(programa.Id));
+        balance.PresupuestoTotalAsignado.Should().Be(20000.00m);
+        balance.PresupuestoEjecutado.Should().Be(4000.00m);
+        balance.PresupuestoDisponible.Should().Be(16000.00m);
+
+        var cerrarHandler = new CerrarPeriodoProgramaCommandHandler(
+            _programaRepository,
+            _unitOfWork,
+            _eventPublisher,
+            new CerrarPeriodoProgramaCommandValidator());
+
+        var cierre = await cerrarHandler.HandleAsync(new CerrarPeriodoProgramaCommand(
+            programa.Id,
+            "2026-1",
+            "Cierre contable del período",
+            true,
+            _actorId));
+
+        cierre.EstadoProgramaResultante.Should().Be("CERRADO");
+        cierre.SaldoNoEjecutadoConsolidado.Should().Be(16000.00m);
+        await _eventPublisher.Received(1)
+            .PublicarAsync(Arg.Any<PeriodoProgramaCerrado>(), Arg.Any<CancellationToken>());
+
+        _programaRepository.ConsultarMovimientosPaginadosAsync(
+                programa.Id,
+                1,
+                20,
+                TipoMovimientoPresupuestario.CierrePeriodo,
+                "2026-1",
+                null,
+                Arg.Any<CancellationToken>())
+            .Returns(([programa.MovimientosPresupuestarios.Last()], 1));
+
+        var movimientosHandler = new ConsultarMovimientosPresupuestariosQueryHandler(_programaRepository);
+        var movimientos = await movimientosHandler.HandleAsync(new ConsultarMovimientosPresupuestariosQuery(
+            programa.Id,
+            1,
+            20,
+            "CIERRE_PERIODO",
+            "2026-1",
+            null));
+
+        movimientos.TotalRegistros.Should().Be(1);
+        movimientos.Items.Single().TipoMovimiento.Should().Be("CIERRE_PERIODO");
     }
 }
