@@ -1,0 +1,40 @@
+# Tasks: Fundación Arquitectónica Hexagonal del Microservicio MS-POS (`tech-bootstrap-int1-mspos`)
+
+## 1. Configuración Radicular y Gestión Centralizada de Paquetes
+
+- [x] 1.1 Copiar y adaptar desde `Apps/services/ms-prg/` los archivos `.editorconfig`, `Directory.Build.props` y `Directory.Packages.props` en `Apps/services/ms-postulaciones/`, manteniendo `net10.0`, `Nullable`, `TreatWarningsAsErrors`, `AnalysisLevel`, `RestorePackagesWithLockFile` y `ManagePackageVersionsCentrally`; verificar que los tres archivos existan en la raíz del microservicio.
+- [x] 1.2 Ajustar los `PackageReference` de los 4 proyectos de código (`Application`: `FluentValidation` y `FluentValidation.DependencyInjectionExtensions`; `Infrastructure`: `Microsoft.EntityFrameworkCore`, `Npgsql.EntityFrameworkCore.PostgreSQL` y `Microsoft.EntityFrameworkCore.Design` con `PrivateAssets="all"`; `Api`: `Microsoft.AspNetCore.OpenApi` en `10.0.15`) y de los proyectos de prueba (`xunit`, `xunit.runner.visualstudio`, `Microsoft.NET.Test.Sdk`, `coverlet.collector`, `FluentAssertions`, `NSubstitute`, `NetArchTest.Rules`, `Microsoft.AspNetCore.Mvc.Testing`, `Testcontainers.PostgreSql`); verificar con `dotnet restore Apps/services/ms-postulaciones/Ascenso.Postulaciones.sln` que se genere un `packages.lock.json` por proyecto y el restore finalice con código `0`.
+
+## 2. Shared Kernel Táctico del Dominio
+
+- [x] 2.1 Implementar en `Ascenso.Postulaciones.Domain/Comun/` las abstracciones `EntidadAuditable<TId>`, `EntidadInmutable<TId>`, `AggregateRoot<TId>`, `ValueObject`, `IDomainEvent`, `EventoDominio`, `DomainEvent`, `UuidV7`, `Result` y `Result<TValue>` (sin setters públicos, `UUIDv7` con `Guid.CreateVersion7()` y auditoría en UTC); verificar con pruebas unitarias en `tests/Ascenso.Postulaciones.Domain.Tests/Comun/` que incrementan `Version`, registran marcas UTC y generan identificadores de versión 7.
+- [x] 2.2 Implementar en `Ascenso.Postulaciones.Domain/Excepciones/` la jerarquía `DomainException` (con `EstadoHttp` y `Codigo`), `ExcepcionReglaNegocio`, `ExcepcionEntidadNoEncontrada` y `ExcepcionConflictoConcurrencia`; verificar con pruebas unitarias en `Domain.Tests/Excepciones/` que cada excepción expone el estado HTTP y el código esperados.
+- [x] 2.3 Implementar en `Ascenso.Postulaciones.Domain/Enums/CodigoEnum.cs` la conversión bidireccional entre nombres `PascalCase` y códigos `MAYUSCULAS_CON_GUIONES` (incluyendo siglas y números); verificar con pruebas unitarias en `Domain.Tests/Enums/` que `ACodigo` y `DesdeCodigo` son inversos y que un código desconocido produce un error explícito.
+
+## 3. Normalización de Carpetas y Proyectos de Prueba
+
+- [x] 3.1 Normalizar la estructura de carpetas del microservicio (`Domain/{Comun,Enums,Excepciones,Interfaces,Transiciones}`, `Application/{Common,DTOs,Interfaces,UseCases}`, `Infrastructure/{Adapters,Configurations,Persistence}`, `Api/{Controllers/v1,Controllers/Internal/v1,Middlewares}`) eliminando las carpetas vacías `Entities`, `Exceptions`, `Repositories`, `Ports` (consolidada en `Interfaces`) y `ValueObjects` de la raíz (los objetos de valor van por módulo en `Domain/{Modulo}/ObjetosValor/`); verificar con `dotnet build` que la solución sigue compilando sin advertencias.
+- [x] 3.2 Crear los proyectos `tests/Ascenso.Postulaciones.Application.Tests`, `tests/Ascenso.Postulaciones.ArchitectureTests` y `tests/Ascenso.Postulaciones.IntegrationTests`, registrar los tres en la carpeta de solución `tests` de `Ascenso.Postulaciones.sln` y verificar con `dotnet sln Apps/services/ms-postulaciones/Ascenso.Postulaciones.sln list` que aparezcan los 8 proyectos.
+- [x] 3.3 Implementar en `Ascenso.Postulaciones.ArchitectureTests` las pruebas `DependenciasEntreCapasTests`, `DomainIndependenceTests` y `EncapsulamientoTests` con `NetArchTest.Rules` y reflexión (independencia de `Domain`, dirección `Api → Infrastructure/Application → Domain` y ausencia de setters públicos), retirar la carpeta `Arquitectura` de `Domain.Tests` y verificar con `dotnet test` que la suite falla si se agrega una referencia prohibida.
+
+## 4. Persistencia Base y Inyección de Dependencias
+
+- [x] 4.1 Implementar `PostulacionesDbContext` en `Ascenso.Postulaciones.Infrastructure/Persistence/` con esquema `postulaciones`, `IUnitOfWork.GuardarCambiosAsync(CancellationToken)` que traduzca `DbUpdateConcurrencyException` a `ExcepcionConflictoConcurrencia`, `HasDefaultSchema` y `ApplyConfigurationsFromAssembly`, junto con `ConfiguracionPersistencia` (auditoría `snake_case`, `ValueGeneratedNever()` en `Id` y `Version`, `ComoCodigoEnum` y `ComoDinero`); verificar con `dotnet build` que `Infrastructure` compila sin advertencias.
+- [x] 4.2 Implementar `Application/DependencyInjection.cs` (`AgregarAplicacionPostulaciones` con `AddValidatorsFromAssembly`) e `Infrastructure/DependencyInjection.cs` (`AgregarInfraestructuraPostulaciones` con `AddDbContext<PostulacionesDbContext>`, `MigrationsHistoryTable("__ef_migrations_history", "postulaciones")` y registro de `IUnitOfWork`); verificar con `dotnet build` que `Api` resuelve ambas extensiones.
+- [x] 4.3 Implementar en `Ascenso.Postulaciones.IntegrationTests/Persistencia/ModeloPersistenciaPostulacionesTests.cs` la verificación de que el modelo EF Core usa el esquema `postulaciones` y de que el historial de migraciones se configura en `__ef_migrations_history`, sin requerir una conexión activa a PostgreSQL; verificar que la prueba pase con `dotnet test`.
+
+## 5. Contrato de Errores y Composición de la API
+
+- [x] 5.1 Implementar `Ascenso.Postulaciones.Api/Middlewares/ManejadorExcepcionesDominio.cs` (`DomainException` → `ProblemDetails` con extensión `codigo`; `ValidationException` → `400 ValidationProblemDetails` por campo; `ArgumentException` → `400` con `codigo = SOLICITUD_INVALIDA`); verificar con una prueba en `IntegrationTests` sobre `DefaultHttpContext` que se escriben el estado HTTP y la extensión `codigo` esperados.
+- [x] 5.2 Actualizar `Ascenso.Postulaciones.Api/Program.cs` con `AddProblemDetails()`, `AddExceptionHandler<ManejadorExcepcionesDominio>()`, `AgregarAplicacionPostulaciones()`, `AgregarInfraestructuraPostulaciones(...)` condicionado a `ConnectionStrings:Postulaciones`, `app.UseExceptionHandler()` y `public partial class Program { }`, y agregar la cadena de conexión vacía en `appsettings.json`; verificar con `dotnet build` y una prueba de arranque en `IntegrationTests` mediante `WebApplicationFactory<Program>` sin base de datos.
+- [x] 5.3 Agregar las pruebas humo de ensamblado en `Ascenso.Postulaciones.Application.Tests` (`EnsambladoAplicacionTests.cs`) y `Ascenso.Postulaciones.IntegrationTests` (`EnsambladoApiTests.cs`); verificar que ambos proyectos ejecuten sus pruebas en verde con `dotnet test`.
+
+## 6. Verificación Integral, Bloqueo de Paquetes y Gobernanza
+
+- [x] 6.1 Ejecutar `dotnet restore Apps/services/ms-postulaciones/Ascenso.Postulaciones.sln --locked-mode`, `dotnet format Apps/services/ms-postulaciones/Ascenso.Postulaciones.sln --verify-no-changes --no-restore --verbosity minimal`, `dotnet build Apps/services/ms-postulaciones/Ascenso.Postulaciones.sln --configuration Release` (`0` advertencias, `0` errores) y `dotnet test Apps/services/ms-postulaciones/Ascenso.Postulaciones.sln --configuration Release` (100 % en verde); registrar la salida real de cada comando.
+- [x] 6.2 Crear la bitácora obligatoria `openspec/changes/tech-bootstrap-int1-mspos/log-2026-11-13-tech-bootstrap-int1-mspos.md` con el resumen de actividades, decisiones aplicadas y la evidencia de `restore`, `format`, `build`, `test` y `openspec validate tech-bootstrap-int1-mspos --strict`, y verificar que `openspec status --change tech-bootstrap-int1-mspos` reporte todas las tareas completas.
+
+## Workflow follow-up
+
+- Archivar el cambio con `openspec archive tech-bootstrap-int1-mspos` una vez completadas todas las tareas `[x]` y verificada la bitácora.
+- Confirmar que `openspec/roadmaps/por_integrante.md` no requiere marcar ningún RF, por tratarse de una tarea técnica (`tech`).

@@ -16,6 +16,7 @@
 *Postulación, elegibilidad, comité y selección.*
 
 - [ ] **RF-01**: Registro de postulantes y perfil socioeconómico
+  - [x] HU 1.1: Registro de datos personales y académicos base (2026-11-15)
 - [ ] **RF-02**: Publicación de convocatorias
 - [ ] **RF-03**: Carga de documentos de soporte
 - [ ] **RF-04**: Verificación automática de elegibilidad básica
