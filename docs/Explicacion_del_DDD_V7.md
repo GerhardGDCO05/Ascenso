@@ -686,11 +686,12 @@ classDiagram
   class Postulante {
     <<AggregateRoot>>
     +UUID id
-    +UUID personaId
+    +UUID? personaId
     +UUID usuarioId
     +String numeroDocumentoIdentidad
     +String nombres
     +String apellidos
+    +DatosContacto datosContacto
     +UUID universidadAliadaId
     +UUID carreraId
     +UUID periodoActualId
@@ -702,6 +703,12 @@ classDiagram
     +EstadoPerfil estadoPerfil
     +Boolean aceptaTratamientoDatos
     +DateTimeOffset fechaRegistro
+  }
+
+  class DatosContacto {
+    <<ValueObject>>
+    +String correoElectronico
+    +String telefono
   }
 
   class MiembroFamiliar {
@@ -732,6 +739,7 @@ classDiagram
     +UUID periodoAcademicoId
     +EstadoPostulacion estado
     +Boolean documentacionCompleta
+    +CausaNoElegibilidad? causaNoElegibilidad
     +String snapshotPerfilSocioeconomicoJson
     +DateTimeOffset fechaPostulacion
     +DateTimeOffset fechaInicioEvaluacion
@@ -813,6 +821,7 @@ classDiagram
     +UUID actorUsuarioId
   }
 
+  Postulante "1" *-- "1" DatosContacto : compone
   Postulante "1" *-- "1..*" MiembroFamiliar : declara composición
   Postulante "1" --> "0..*" BorradorPostulacion : prepara en
   BorradorPostulacion "1" ..> "0..1" Postulacion : al enviar promueve mismo UUID a
@@ -823,6 +832,8 @@ classDiagram
   VerificacionElegibilidad *-- "1..*" DetalleReglaEvaluada : desglosa
   Postulacion "1" *-- "1..*" HistorialEstadoPostulacion : audita transiciones
 ```
+
+* **Perfil base de la HU 1.1 (`INCOMPLETO`):** al registrar sus datos personales y académicos base, `Postulante` nace con `estadoPerfil = INCOMPLETO` (código `INCOMPLETO`). En este alcance solo se crea y consulta el perfil propio; no existe transición a `COMPLETO`, que quedará reservada a la HU 1.2 cuando se cumpla `RN-POS-01` (datos académicos válidos y al menos un `MiembroFamiliar`). `personaId` es opcional (`UUID?`), mientras que `usuarioId` proviene del claim `sub` del token JWT y es obligatorio. Los datos de contacto no se modelan como columnas sueltas en el agregado: se encapsulan en el objeto de valor `DatosContacto`, que normaliza y valida `correoElectronico` y `telefono` antes de construir el `Postulante`.
 
 #### 2.3.B Sub-modelo de Comité, Rúbrica, Evaluación Ciega, Ranking y Lista de Espera (Contexto 4)
 * **Entidad Intermedia `AsignacionEvaluacion`:** Separa la responsabilidad administrativa de asignar y balancear la carga de al menos 2 evaluadores independientes (o reasignar por `ConflictoInteres`) del acto de calificación ciega (`Evaluacion`).
@@ -1517,10 +1528,11 @@ stateDiagram-v2
   [*] --> RECIBIDA : EnviarPostulacion (100% docs obligatorios)
   RECIBIDA --> EN_VERIFICACION : IniciarVerificacionAutomatica (síncrono)
   RECIBIDA --> RETIRADA : RetirarPostulacion (voluntario)
-  EN_VERIFICACION --> EN_EVALUACION : Elegible + Documentos Aprobados
+  EN_VERIFICACION --> EN_EVALUACION : Elegible o anulada + Documentos Aprobados
   EN_VERIFICACION --> NO_ELEGIBLE : Falla regla excluyente o doc no subsanado
   EN_VERIFICACION --> RETIRADA : RetirarPostulacion (voluntario)
-  NO_ELEGIBLE --> EN_EVALUACION : AnularElegibilidadPorExcepcion (Coordinador)
+  NO_ELEGIBLE --> EN_VERIFICACION : AnularElegibilidadPorExcepcion (Coordinador)
+  NO_ELEGIBLE --> EN_VERIFICACION : ReabrirSubsanacionDocumental (Coordinador)
   EN_EVALUACION --> OTORGADA : OfertaBecaEmitida (dentro de cupo)
   EN_EVALUACION --> RECHAZADA : Cierre de adjudicación sin alcanzar puntaje/cupo
   OTORGADA --> [*]
@@ -1533,11 +1545,14 @@ stateDiagram-v2
 | `∅ → RECIBIDA` | `EnviarPostulacion` | Postulante | `Convocatoria.estado == PUBLICADA`, `ahora <= fechaCierre`, `Postulante.estadoPerfil == COMPLETO`, 100% de `DocumentoRequerido` obligatorios cargados, pre-validación RF-01 superada | No | No | `PostulacionRecibida` |
 | `RECIBIDA → EN_VERIFICACION` | Automático al recibir | Sistema | Ejecución inmediata en la misma transacción del envío | No | No | `VerificacionElegibilidadIniciada` |
 | `RECIBIDA / EN_VERIFICACION → RETIRADA` | `RetirarPostulacion` | Postulante titular | Estado estrictamente previo a `EN_EVALUACION` (RF-05) | No | No | `PostulacionRetiradaVoluntariamente` |
-| `EN_VERIFICACION → EN_EVALUACION` | Automático / Aprobación doc. | Sistema / Coordinador | `VerificacionElegibilidad.esElegible == true` **y** (`!requiereRevisionDocumentalPrevia` **o** todos los `DocumentoPostulacion` obligatorios en `APROBADO`) | No | No | `PostulacionElegibleParaEvaluacion` |
-| `EN_VERIFICACION → NO_ELEGIBLE` | Automático / Vencimiento doc. | Sistema | Alguna `DetalleReglaEvaluada.esExcluyente` incumplida **o** documento rechazado vence sin subsanar | Auto | No | `PostulacionDictaminadaNoElegible` |
-| `NO_ELEGIBLE → EN_EVALUACION` | `AnularElegibilidad` | Coordinador (sin conflicto) | Único camino de reconsideración en casos límite (RF-04) | **Sí** | No | `ElegibilidadAnuladaPorExcepcion` |
+| `EN_VERIFICACION → EN_EVALUACION` | Automático / Aprobación doc. | Sistema / Coordinador | (`VerificacionElegibilidad.esElegible == true` **o** `VerificacionElegibilidad.anuladaPorCoordinador == true`) **y** (`!requiereRevisionDocumentalPrevia` **o** todos los `DocumentoPostulacion` obligatorios en `APROBADO`). Si la elegibilidad fue anulada, el motor automático no se re-ejecuta | No | No | `PostulacionElegibleParaEvaluacion` |
+| `EN_VERIFICACION → NO_ELEGIBLE` | Automático / Vencimiento doc. | Sistema | Alguna `DetalleReglaEvaluada.esExcluyente` incumplida y no anulada **o** documento rechazado vence sin subsanar. Registra `causaNoElegibilidad` (`REGLA_ELEGIBILIDAD` / `DOCUMENTACION_NO_SUBSANADA`) | Auto | No | `PostulacionDictaminadaNoElegible` |
+| `NO_ELEGIBLE → EN_VERIFICACION` | `AnularElegibilidad` | Coordinador (sin conflicto) | `causaNoElegibilidad == REGLA_ELEGIBILIDAD`; único camino de reconsideración de la regla automática (RF-04). No re-ejecuta el motor automático y deja pendiente la compuerta documental | **Sí** | No | `ElegibilidadAnuladaPorExcepcion` |
+| `NO_ELEGIBLE → EN_VERIFICACION` | `ReabrirSubsanacionDocumental` | Coordinador (sin conflicto) | `causaNoElegibilidad == DOCUMENTACION_NO_SUBSANADA`; asigna nueva `fechaLimiteCorreccion` y reactiva la subsanación documental | **Sí** | No | `SubsanacionDocumentalReabierta` |
 | `EN_EVALUACION → OTORGADA` | Invocación REST desde `MS-BEC` al emitir oferta (`POST /internal/v1/postulaciones/{id}/otorgar`) | Sistema (`MS-BEC`) | Postulación `DENTRO_DE_CUPO` o promovida de `EntradaListaEspera` con `OfertaBeca` emitida | No | No | `PostulacionOtorgada` |
 | `EN_EVALUACION → RECHAZADA` | `FinalizarConvocatoria` | Coordinador / Sistema | Cierre de adjudicación del ciclo sin alcanzar puntaje o cupo disponible | Auto / **Sí** | No | `PostulacionRechazada` |
+
+**Compuertas y orden de verificación:** `EN_VERIFICACION` ejecuta primero el motor automático (RF-04) en la misma transacción del envío. La revisión documental (RF-03) solo se inicia si la elegibilidad resulta aprobada o si el coordinador anula el dictamen; si la regla automática falla, la postulación pasa a `NO_ELEGIBLE` sin consumir trabajo de revisión documental. `NO_ELEGIBLE` nunca transiciona directamente a `EN_EVALUACION`: la anulación de una regla automática devuelve a `EN_VERIFICACION` con `anuladaPorCoordinador = true` y omite la re-ejecución del motor; el paso posterior a `EN_EVALUACION` exige aprobar la compuerta documental. Un `NO_ELEGIBLE` causado por documentación no subsanada no se corrige con `AnularElegibilidad`, sino con `ReabrirSubsanacionDocumental`, que también devuelve a `EN_VERIFICACION`. La pre-validación de no doble beneficio (`DEC-05`) forma parte de las reglas automáticas.
 
 ---
 
@@ -1599,7 +1614,8 @@ stateDiagram-v2
 | Enumeración | Valores Permitidos | Reglas de Transición Estrictas |
 | :--- | :--- | :--- |
 | **`EstadoOferta`** | `PENDIENTE_RESPUESTA, ACEPTADA, RECHAZADA_POR_POSTULANTE, EXPIRADA, ANULADA_POR_COORDINACION` | Nace en `PENDIENTE_RESPUESTA`; transiciona en la misma transacción local que `Beca` hacia cualquiera de los 4 estados terminales. |
-| **`EstadoDocumento`** | `CARGADO, EN_REVISION, APROBADO, RECHAZADO, CORREGIDO, NO_SUBSANADO` | `CARGADO → EN_REVISION → APROBADO / RECHAZADO`. De `RECHAZADO → CORREGIDO` (solo si `ahora <= fechaLimiteCorreccion`, creando versión N+1 en `HistorialDocumentoPostulacion`) o `→ NO_SUBSANADO` (al vencer plazo). `CORREGIDO → APROBADO / RECHAZADO`. |
+| **`CausaNoElegibilidad`** | `REGLA_ELEGIBILIDAD, DOCUMENTACION_NO_SUBSANADA` | Solo aplica cuando `Postulacion.estado == NO_ELEGIBLE`. `REGLA_ELEGIBILIDAD` habilita `AnularElegibilidad`; `DOCUMENTACION_NO_SUBSANADA` habilita `ReabrirSubsanacionDocumental`. Ninguna causa permite el paso directo a `EN_EVALUACION`. |
+| **`EstadoDocumento`** | `CARGADO, EN_REVISION, APROBADO, RECHAZADO, CORREGIDO, NO_SUBSANADO` | `CARGADO → EN_REVISION → APROBADO / RECHAZADO`. De `RECHAZADO → CORREGIDO` (solo si `ahora <= fechaLimiteCorreccion`, creando versión N+1 en `HistorialDocumentoPostulacion`) o `→ NO_SUBSANADO` (al vencer plazo). `NO_SUBSANADO → CORREGIDO` solo mediante `ReabrirSubsanacionDocumental`, que asigna una nueva `fechaLimiteCorreccion`. `CORREGIDO → APROBADO / RECHAZADO`. |
 | **`EstadoRubrica`** | `BORRADOR, PUBLICADA, BLOQUEADA` | `BORRADOR → PUBLICADA` (exige $\sum \text{pesos} = 100.00\%$). `PUBLICADA → BLOQUEADA` automático al iniciar evaluación del ciclo o registrarse la 1.ª calificación (lo que ocurra primero). `BLOQUEADA` es terminal e inmutable en servidor. |
 | **`EstadoAsignacionEvaluacion`** | `PENDIENTE, EN_PROGRESO, COMPLETADA, REASIGNADA_POR_CONFLICTO` | `PENDIENTE → EN_PROGRESO → COMPLETADA`. Desde `PENDIENTE` o `EN_PROGRESO → REASIGNADA_POR_CONFLICTO` al declararse `ConflictoInteres`. |
 | **`EstadoEvaluacion`** | `BORRADOR, ENVIADA_DEFINITIVA, INVALIDADA_POR_CONFLICTO` | `BORRADOR → ENVIADA_DEFINITIVA` (exige 100% de criterios dentro de rango y ciclo abierto). Si declara conflicto posterior al envío, pasa a `INVALIDADA_POR_CONFLICTO` (se conserva en auditoría pero se excluye del promedio). |
@@ -1620,13 +1636,14 @@ stateDiagram-v2
 | Código | Conflicto o Ambigüedad entre PRD e Historias de Usuario | Decisión Definitiva del Equipo |
 | :--- | :--- | :--- |
 | **`DEC-01`** | El PRD fija 7 estados para `Postulacion`, pero la HU-2.2 exige un espacio temporal antes de `RECIBIDA` y la HU-1.1 habla de `Perfil Incompleto`. | `EstadoPerfil` (`INCOMPLETO`, `COMPLETO`) vive en `Postulante`. El espacio temporal previo al envío vive en `BorradorPostulacion`. `Postulacion` nace directamente en `RECIBIDA` conservando los 7 estados exactos del PRD. |
-| **`DEC-02`** | El PRD exige pasar de `RECIBIDA → EN_VERIFICACION → EN_EVALUACION`, combinando elegibilidad automática síncrona (RF-04) y revisión de documentos (RF-03). | `EN_VERIFICACION` abarca tanto el motor automático síncrono de reglas (RF-04) como la aprobación documental (RF-03). Si un documento es `RECHAZADO`, la postulación permanece retenida en `EN_VERIFICACION` hasta que sea `APROBADO` o venza el plazo. |
+| **`DEC-02`** | El PRD exige pasar de `RECIBIDA → EN_VERIFICACION → EN_EVALUACION`, combinando elegibilidad automática síncrona (RF-04) y revisión de documentos (RF-03). | `EN_VERIFICACION` abarca tanto el motor automático síncrono de reglas (RF-04) como la aprobación documental (RF-03). Si un documento es `RECHAZADO`, la postulación permanece retenida en `EN_VERIFICACION` hasta que sea `APROBADO` o venza el plazo. El orden de las compuertas y la anulación se detallan en `DEC-09`. |
 | **`DEC-03`** | ¿Qué ocurre con `Postulacion` y `Beca` si un postulante seleccionado rechaza la `OfertaBeca` o deja vencer los 15 días? | `Postulacion` **permanece en `OTORGADA`** (no retrocede a `RETIRADA` ni `RECHAZADA`). Quien cambia es `OfertaBeca` (`RECHAZADA_POR_POSTULANTE` o `EXPIRADA`) y `Beca` transiciona de `OTORGADA → REVOCADA` con `tipoCierre ∈ {OFERTA_RECHAZADA, OFERTA_EXPIRADA, OFERTA_ANULADA}`, liberando cupo y presupuesto. En `MS-AUD` (`RF-18`, `RF-23`, `RF-40`), las becas cerradas con estos `tipoCierre` se clasifican como *ofertas declinadas/expiradas* y **no** como revocaciones disciplinarias (`REVOCACION_DEFINITIVA`). |
 | **`DEC-04`** | El PRD lista `ACTIVA → RENOVADA` pero no incluye la transición inversa `RENOVADA → ACTIVA` para el semestre siguiente. | Se adopta el **modelo de cadena de becas por periodo**: `RENOVADA` se trata como estado terminal exitoso del semestre saliente (`ACTIVA → RENOVADA`) y, al aprobarse `SolicitudRenovacion`, se crea una nueva fila de `Beca` sucesora directamente en estado **`ACTIVA`** para el nuevo `PeriodoAcademico` con el mismo `cadenaBecaId` y `becaAnteriorId = becaAnterior.id`, cumpliendo 100% las transiciones permitidas del PRD. |
 | **`DEC-05`** | Regla transversal de No Doble Beneficio (1 sola beca `TOTAL` activa en la Fundación) vs RF-01 (no postular con beca activa en el mismo periodo salvo acumulación). | Se aplican ambas invariantes: **(a)** prohibición absoluta de 2 becas `ACTIVA` con `modalidad == TOTAL` para el mismo estudiante en cualquier programa/periodo; **(b)** prohibición de 2 becas `ACTIVA` en el mismo `PeriodoAcademico` salvo que ambos programas tengan `permiteAcumulacion == true`. Se pre-valida al postular (MS-POS) y se blinda transaccionalmente al aceptar la oferta (MS-BEC). |
 | **`DEC-06`** | El PRD declara "Portal de autoservicio para donantes" fuera de alcance, pero la HU-33A menciona al rol donante. | El rol `DONANTE_PATROCINADOR` queda registrado en el esquema RBAC pero **inactivo/deshabilitado por defecto**. Los reportes de impacto (`ReporteImpactoDonante`) los genera y exporta el personal de la Fundación. |
 | **`DEC-07`** | El PRD exige código OTP estrictamente para 3 operaciones: desembolsar (RF-20), revocar beca (RF-22) y modificar datos de pago del becario, mientras que el RNF de Accesibilidad pide evitar fricción al postulante. | El OTP es **estrictamente obligatorio** en las **3 operaciones del PRD** (`CONFIRMAR_DESEMBOLSO`, `REVOCAR_BECA` con `tipoCierre == REVOCACION_DEFINITIVA`, y `MODIFICAR_DATOS_PAGO`). `AutorizacionOTP` soporta además en su enumeración las operaciones administrativas de oferta (`EMITIR_OFERTA_BECA`, `ANULAR_OFERTA_BECA`), pero `AceptarOfertaBeca` no exige OTP al postulante para cumplir el RNF de Accesibilidad en conexiones limitadas. |
 | **`DEC-08`** | Replicación de catálogos mediante eventos (*Read Models*) vs. simplicidad operativa y reducción de acoplamiento técnico en el semestre. | Se adopta un modelo de **Comunicación Híbrida Pragmática**: Orquestación REST Síncrona interna (`/internal/v1/...`) para lecturas de datos maestros/catálogos, validaciones bloqueantes y mutaciones operativas directas entre `MS-PLT`, `MS-PRG`, `MS-POS` y `MS-BEC`; y Mensajería Asíncrona con MassTransit + RabbitMQ exclusivamente hacia `MS-AUD` (auditoría/reportería) y `MS-PLT` (notificaciones/comunicaciones y `PlazoVigilado`). Se eliminan las tablas espejo locales de catálogos (`ConvocatoriaRef`) y el patrón *Transactional Outbox* obligatorio, aceptando dependencia temporal directa en consultas síncronas a cambio de mayor simplicidad y velocidad de desarrollo. |
+| **`DEC-09`** | El DDD permitía `NO_ELEGIBLE → EN_EVALUACION` directo tras anular una descalificación, pero `NO_ELEGIBLE` puede originarse por una regla automática o por documentación no subsanada; el paso directo podía saltarse la compuerta documental. | Se ejecuta primero la verificación automática (RF-04) para evitar revisión documental innecesaria; la revisión documental (RF-03) ocurre después y solo si la elegibilidad fue aprobada o anulada. `NO_ELEGIBLE` registra `causaNoElegibilidad` (`REGLA_ELEGIBILIDAD` / `DOCUMENTACION_NO_SUBSANADA`). La anulación de una regla automática devuelve a `EN_VERIFICACION` con `anuladaPorCoordinador = true`, no re-ejecuta el motor y exige aprobar la compuerta documental antes de `EN_EVALUACION`; se elimina la transición directa `NO_ELEGIBLE → EN_EVALUACION`. La causa documental se atiende con `ReabrirSubsanacionDocumental`, no con `AnularElegibilidad`. La pre-validación de no doble beneficio (`DEC-05`) forma parte de las reglas automáticas. Se preservan los 7 estados del PRD. |
 
 ---
 
@@ -1652,11 +1669,12 @@ Cada regla `RN-xxx` se traduce directamente en una prueba unitaria o de integrac
 #### C. Reglas de Postulación, Documentación, Elegibilidad, Comité y Ranking (`MS-POS`)
 - **`RN-POS-01` 🔒 (Unicidad y Completitud de Perfil):** `Postulante.numeroDocumentoIdentidad` es único (`409 IDENTIDAD_DUPLICADA`). El perfil pasa a `COMPLETO` solo cuando tiene datos académicos válidos en universidad aliada (`ADMITIDO` o `MATRICULADO`) y al menos 1 `MiembroFamiliar` registrado; `ingresoFamiliarMensualTotal` se calcula automáticamente como $\sum \text{ingresoMensual}$.
 - **`RN-POS-02` 🔒 (Envío Formal y Congelamiento):** Solo se permite 1 postulación por postulante y convocatoria (`409 POSTULACION_DUPLICADA`). El envío exige que la convocatoria esté `PUBLICADA` antes de `fechaCierre` y que el 100% de `DocumentoRequerido` obligatorios tengan archivo cargado en Firebase (PDF/PNG/JPG $\le 5\text{ MB}$), congelando el formulario y creando `Postulacion` en `RECIBIDA` (`422 DOCUMENTOS_INCOMPLETOS`).
-- **`RN-POS-03` 🔒 (Subsanación Documental con Plazo Estricto):** Rechazar un `DocumentoPostulacion` exige `motivoRechazo`. El postulante solo puede resubir el archivo rechazado mientras `ahora <= fechaLimiteCorreccion`; si el plazo venció, la carga se bloquea permanentemente (`409 PLAZO_SUBSANACION_VENCIDO`).
+- **`RN-POS-03` 🔒 (Subsanación Documental con Plazo Estricto):** Rechazar un `DocumentoPostulacion` exige `motivoRechazo`. El postulante solo puede resubir el archivo rechazado mientras `ahora <= fechaLimiteCorreccion`; si el plazo venció, la carga se bloquea (`409 PLAZO_SUBSANACION_VENCIDO`), salvo que un coordinador ejecute `ReabrirSubsanacionDocumental` con una nueva fecha límite (`DEC-09`).
 - **`RN-POS-04` 🔒 (Doble Evaluación, Evaluación Ciega y Excepción Única):** Toda postulación en `EN_EVALUACION` requiere mínimo 2 evaluadores independientes asignados sin `ConflictoInteres`, salvo que un Coordinador sin conflicto registre una `excepcionEvaluadorUnico` con justificación obligatoria (`422 EVALUACIONES_INSUFICIENTES`). El envío definitivo de `Evaluacion` exige puntuar el 100% de criterios dentro de `[puntajeMinimo, puntajeMaximo]` antes del cierre de revisión.
 - **`RN-POS-05` 🔒 (Rúbrica Exacta al 100% e Inalterable):** Una `RubricaEvaluacion` solo se publica si $\sum \text{pesoPorcentual} == 100.00$ (`422 PESOS_INVALIDOS`) y se bloquea automáticamente en servidor al iniciar la evaluación o guardarse el primer puntaje (`409 RUBRICA_BLOQUEADA`).
 - **`RN-POS-06` 🔒 (Conflicto de Interés Irreversible y Delegación):** Declarar `ConflictoInteres` exige motivo y es irreversible en el ciclo. Si declara un evaluador, revoca su acceso confidencial, invalida su evaluación previa y reasigna automáticamente a otro miembro del comité. Si declara un coordinador, bloquea sus facultades de anular elegibilidad, autorizar evaluador único y desempatar sobre ese expediente, delegándolas a otro coordinador o a Dirección.
 - **`RN-POS-07` 🔒 (Confirmación de Ranking, Desempates y Lista de Espera):** El ranking no puede confirmarse si existen empates sin resolver en la línea de corte de cupo/presupuesto (`422 EMPATES_SIN_RESOLVER`). Todo desempate exige justificación del coordinador/jefatura. Los elegibles fuera de cupo pasan a `EntradaListaEspera`; al liberarse una vacante, el primero en cola pasa a `ELEGIBLE_POR_VACANTE` alertando al coordinador (la promoción nunca emite oferta desatendida sin confirmación del coordinador).
+- **`RN-POS-08` 🔒 (Orden de Compuertas y Anulación de Elegibilidad):** En `EN_VERIFICACION` se ejecuta primero el motor automático de reglas (RF-04); la revisión documental (RF-03) solo se inicia si la elegibilidad es aprobada o anulada por el coordinador. Si el motor automático falla, la postulación pasa a `NO_ELEGIBLE` con `causaNoElegibilidad = REGLA_ELEGIBILIDAD` sin iniciar revisión documental. `AnularElegibilidad` solo aplica a esa causa, exige justificación, devuelve la postulación a `EN_VERIFICACION` con `anuladaPorCoordinador = true` y no re-ejecuta el motor automático. La postulación solo pasa a `EN_EVALUACION` cuando la compuerta documental también está aprobada (o no requiere revisión previa). Si el `NO_ELEGIBLE` fue por `DOCUMENTACION_NO_SUBSANADA`, se usa `ReabrirSubsanacionDocumental` con una nueva `fechaLimiteCorreccion`; no se permite anular la elegibilidad ni saltar directamente a `EN_EVALUACION`.
 
 #### D. Reglas de Otorgamiento, Beca, Desembolsos y Seguimiento Académico (`MS-BEC`)
 - **`RN-BEC-01` 🔒 (No Doble Beneficio en Write Model):** Al ejecutar `AceptarOfertaBeca` (`ahora <= fechaVencimientoAceptacion`), el sistema verifica bajo aislamiento `Serializable` y bloqueo por estudiante que: (1) no posea otra `Beca` en estado `ACTIVA` de cobertura `TOTAL`, y (2) no posea otra `Beca` en estado `ACTIVA` en el mismo `PeriodoAcademico` salvo que `permiteAcumulacion == true` (respaldado además por los índices únicos parciales `UX_Beca_Estudiante_CoberturaTotal_Activa` y `UX_Beca_Estudiante_Periodo_NoAcumulable_Activa`, retornando `409 DOBLE_BENEFICIO`).
@@ -1702,8 +1720,8 @@ Cada regla `RN-xxx` se traduce directamente en una prueba unitaria o de integrac
 | :--- | :---: | :---: | :--- | :--- |
 | **RF-01** Registro de postulantes | Debe tener | `MS-POS` (+`MS-BEC`) | `Postulante`, `MiembroFamiliar`, `BorradorPostulacion` | `RN-POS-01`, `DEC-05`, `RN-BEC-01` |
 | **RF-02** Publicación de convocatorias | Debe tener | `MS-PRG` / `MS-POS` | `Convocatoria`, `ReglaElegibilidad` | `RN-PRG-01`, `RN-POS-02` |
-| **RF-03** Carga de documentos de soporte | Debe tener | `MS-PRG` / `MS-POS` | `DocumentoRequerido`, `DocumentoPostulacion`, `HistorialDocumentoPostulacion` | `RN-POS-02`, `RN-POS-03`, `DEC-02` |
-| **RF-04** Verificación automática elegibilidad | Debe tener | `MS-POS` | `VerificacionElegibilidad`, `DetalleReglaEvaluada`, `Postulacion` | `DEC-02`, `RN-POS-06` |
+| **RF-03** Carga de documentos de soporte | Debe tener | `MS-PRG` / `MS-POS` | `DocumentoRequerido`, `DocumentoPostulacion`, `HistorialDocumentoPostulacion` | `RN-POS-02`, `RN-POS-03`, `RN-POS-08`, `DEC-02`, `DEC-09` |
+| **RF-04** Verificación automática elegibilidad | Debe tener | `MS-POS` | `VerificacionElegibilidad`, `DetalleReglaEvaluada`, `Postulacion` | `DEC-02`, `DEC-05`, `DEC-09`, `RN-POS-06`, `RN-POS-08` |
 | **RF-05** Retiro voluntario de postulación | Debería tener | `MS-POS` | `Postulacion`, `HistorialEstadoPostulacion` | Tabla 3.1 (`RECIBIDA/EN_VERIFICACION → RETIRADA`) |
 | **RF-06** Conformación comités evaluadores | Debe tener | `MS-POS` | `ComiteEvaluador`, `MiembroComite`, `AsignacionEvaluacion` | `RN-POS-04`, `RN-POS-06` |
 | **RF-07** Rúbrica configurable por programa | Debe tener | `MS-POS` | `RubricaEvaluacion`, `CriterioEvaluacion` | `RN-POS-05`, `RN-PLT-02` |

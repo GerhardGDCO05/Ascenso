@@ -1,5 +1,6 @@
 using Ascenso.Postulaciones.Domain.Excepciones;
 using Ascenso.Postulaciones.Domain.Interfaces;
+using Ascenso.Postulaciones.Domain.Postulantes.Agregados;
 using Microsoft.EntityFrameworkCore;
 
 namespace Ascenso.Postulaciones.Infrastructure.Persistence;
@@ -16,6 +17,8 @@ public sealed class PostulacionesDbContext : DbContext, IUnitOfWork
     {
     }
 
+    public DbSet<Postulante> Postulantes => Set<Postulante>();
+
     public async Task<int> GuardarCambiosAsync(CancellationToken cancellationToken = default)
     {
         try
@@ -25,6 +28,16 @@ public sealed class PostulacionesDbContext : DbContext, IUnitOfWork
         catch (DbUpdateConcurrencyException ex)
         {
             throw new ExcepcionConflictoConcurrencia(ex.Message);
+        }
+        catch (DbUpdateException ex)
+        {
+            var excepcionTraducida = TraductorExcepcionesPersistencia.TraducirSiAplica(ex);
+            if (excepcionTraducida is not null)
+            {
+                throw excepcionTraducida;
+            }
+
+            throw;
         }
     }
 

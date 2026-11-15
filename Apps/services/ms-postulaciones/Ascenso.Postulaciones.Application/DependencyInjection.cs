@@ -1,3 +1,5 @@
+using Ascenso.Postulaciones.Application.Postulantes.Comandos.RegistrarPostulante;
+using Ascenso.Postulaciones.Application.Postulantes.Consultas.ObtenerMiPerfil;
 using FluentValidation;
 using Microsoft.Extensions.DependencyInjection;
 
@@ -10,6 +12,9 @@ public static class DependencyInjection
         ArgumentNullException.ThrowIfNull(services);
 
         services.AddValidatorsFromAssembly(typeof(DependencyInjection).Assembly);
+
+        services.AddScoped<RegistrarPostulanteCommandHandler>();
+        services.AddScoped<ObtenerMiPerfilQueryHandler>();
 
         return services;
     }
