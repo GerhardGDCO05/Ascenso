@@ -1,11 +1,12 @@
+using Ascenso.Becas.Application.Excepciones;
 using Ascenso.Becas.Domain.Excepciones;
 using Microsoft.EntityFrameworkCore;
 
 namespace Ascenso.Becas.Api.Errores;
 
 /// <summary>
-/// Traduce excepciones de dominio y de infraestructura a estatus HTTP y códigos
-/// de error estables.
+/// Traduce excepciones de dominio, aplicación e infraestructura a estatus HTTP
+/// y códigos de error estables.
 /// </summary>
 public static class MapeadorExcepcionesDominio
 {
@@ -15,6 +16,15 @@ public static class MapeadorExcepcionesDominio
 
         return excepcion switch
         {
+            ValidacionAplicacionException validacion => new ResultadoError(
+                validacion.EstadoHttp,
+                validacion.Codigo,
+                validacion.Message,
+                validacion.Errores),
+            AplicacionException aplicacion => new ResultadoError(
+                aplicacion.EstadoHttp,
+                aplicacion.Codigo,
+                aplicacion.Message),
             DomainException dominio => new ResultadoError(
                 dominio.EstadoHttp,
                 dominio.Codigo,
@@ -46,4 +56,8 @@ public static class MapeadorExcepcionesDominio
 /// <summary>
 /// Resultado del mapeo de una excepción a una respuesta HTTP.
 /// </summary>
-public sealed record ResultadoError(int EstadoHttp, string Codigo, string Mensaje);
+public sealed record ResultadoError(
+    int EstadoHttp,
+    string Codigo,
+    string Mensaje,
+    IReadOnlyDictionary<string, string[]>? Errores = null);
