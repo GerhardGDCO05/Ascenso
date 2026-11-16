@@ -19,6 +19,7 @@ public sealed class OutboxBecaFalso : IOutboxBeca
 
     public Task EncolarAsync(
         IDomainEvent evento,
+        int aggregateVersion = 0,
         CancellationToken cancellationToken = default)
     {
         ArgumentNullException.ThrowIfNull(evento);

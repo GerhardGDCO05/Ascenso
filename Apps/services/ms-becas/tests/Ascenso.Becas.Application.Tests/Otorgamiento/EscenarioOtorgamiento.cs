@@ -46,6 +46,8 @@ internal sealed class EscenarioOtorgamiento
 
     public ProyeccionesOtorgamientoFalso Proyecciones { get; } = new();
 
+    public MetricaConfiguracionFaltanteFalsa MetricaConfiguracion { get; } = new();
+
     public GeneradorCartaFalso Generador { get; } = new();
 
     public AlmacenamientoArchivosFalso Almacenamiento { get; } = new();
@@ -100,6 +102,7 @@ internal sealed class EscenarioOtorgamiento
             Reloj,
             Postulaciones,
             Proyecciones,
+            MetricaConfiguracion,
             Programas,
             Generador,
             Almacenamiento,

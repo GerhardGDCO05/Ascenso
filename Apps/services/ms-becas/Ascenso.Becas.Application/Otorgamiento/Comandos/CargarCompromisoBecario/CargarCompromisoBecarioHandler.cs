@@ -190,7 +190,7 @@ public sealed class CargarCompromisoBecarioHandler
     {
         foreach (var evento in beca.EventosDominio)
         {
-            await _outbox.EncolarAsync(evento, cancellationToken);
+            await _outbox.EncolarAsync(evento, beca.Version, cancellationToken);
         }
     }
 
