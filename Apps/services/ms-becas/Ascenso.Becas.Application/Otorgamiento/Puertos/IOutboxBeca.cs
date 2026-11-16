@@ -9,5 +9,8 @@ namespace Ascenso.Becas.Application.Otorgamiento.Puertos;
 /// </summary>
 public interface IOutboxBeca
 {
-    Task EncolarAsync(IDomainEvent evento, CancellationToken cancellationToken = default);
+    Task EncolarAsync(
+        IDomainEvent evento,
+        int aggregateVersion = 0,
+        CancellationToken cancellationToken = default);
 }

@@ -1,0 +1,10 @@
+{
+  "solution": {
+    "path": "Ascenso.Becas.sln",
+    "projects": [
+      "tests/Ascenso.Becas.Domain.Tests/Ascenso.Becas.Domain.Tests.csproj",
+      "tests/Ascenso.Becas.Application.Tests/Ascenso.Becas.Application.Tests.csproj",
+      "tests/Ascenso.Becas.ArchitectureTests/Ascenso.Becas.ArchitectureTests.csproj"
+    ]
+  }
+}

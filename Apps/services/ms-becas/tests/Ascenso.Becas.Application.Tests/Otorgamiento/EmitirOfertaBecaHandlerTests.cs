@@ -98,16 +98,19 @@ public sealed class EmitirOfertaBecaHandlerTests
         excepcion.Which.Codigo.Should().Be("CONFIGURACION_PROGRAMA_NO_DISPONIBLE");
         excepcion.Which.ProgramaBecaId.Should().Be(escenario.ProgramaBecaId);
         escenario.Programas.Llamadas.Should().Be(0);
+        escenario.MetricaConfiguracion.Recursos.Should().ContainSingle()
+            .Which.Should().Be("programa");
     }
 
     [Theory]
-    [InlineData("INACTIVO", "VIGENTE", "VIGENTE")]
-    [InlineData("ACTIVO", "VENCIDO", "VIGENTE")]
-    [InlineData("ACTIVO", "VIGENTE", "VENCIDO")]
+    [InlineData("INACTIVO", "VIGENTE", "VIGENTE", "programa")]
+    [InlineData("ACTIVO", "VENCIDO", "VIGENTE", "costo_matricula")]
+    [InlineData("ACTIVO", "VIGENTE", "VENCIDO", "convenio")]
     public async Task Debe_RechazarLaEmision_Cuando_UnaProyeccionNoEsVigente(
         string estadoPrograma,
         string estadoCosto,
-        string estadoConvenio)
+        string estadoConvenio,
+        string recursoMetrica)
     {
         var escenario = new EscenarioOtorgamiento();
         escenario.Proyecciones.Proyeccion = DatosAplicacion.Proyeccion(
@@ -126,6 +129,8 @@ public sealed class EmitirOfertaBecaHandlerTests
 
         excepcion.Which.Codigo.Should().Be("CONFIGURACION_PROGRAMA_NO_DISPONIBLE");
         escenario.Programas.Llamadas.Should().Be(0);
+        escenario.MetricaConfiguracion.Recursos.Should().ContainSingle()
+            .Which.Should().Be(recursoMetrica);
     }
 
     [Theory]

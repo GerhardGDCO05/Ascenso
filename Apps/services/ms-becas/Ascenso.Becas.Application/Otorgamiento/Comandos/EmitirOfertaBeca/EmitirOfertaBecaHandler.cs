@@ -28,6 +28,7 @@ public sealed class EmitirOfertaBecaHandler
     private readonly IClock _reloj;
     private readonly IPostulacionesClient _postulaciones;
     private readonly IProyeccionesOtorgamiento _proyecciones;
+    private readonly IMetricaConfiguracionFaltante _metricaConfiguracion;
     private readonly IProgramasClient _programas;
     private readonly ICartaOfertaPdfGenerator _generadorCarta;
     private readonly IAlmacenamientoArchivos _almacenamiento;
@@ -41,6 +42,7 @@ public sealed class EmitirOfertaBecaHandler
         IClock reloj,
         IPostulacionesClient postulaciones,
         IProyeccionesOtorgamiento proyecciones,
+        IMetricaConfiguracionFaltante metricaConfiguracion,
         IProgramasClient programas,
         ICartaOfertaPdfGenerator generadorCarta,
         IAlmacenamientoArchivos almacenamiento,
@@ -53,6 +55,8 @@ public sealed class EmitirOfertaBecaHandler
         _reloj = reloj ?? throw new ArgumentNullException(nameof(reloj));
         _postulaciones = postulaciones ?? throw new ArgumentNullException(nameof(postulaciones));
         _proyecciones = proyecciones ?? throw new ArgumentNullException(nameof(proyecciones));
+        _metricaConfiguracion = metricaConfiguracion
+            ?? throw new ArgumentNullException(nameof(metricaConfiguracion));
         _programas = programas ?? throw new ArgumentNullException(nameof(programas));
         _generadorCarta = generadorCarta ?? throw new ArgumentNullException(nameof(generadorCarta));
         _almacenamiento = almacenamiento ?? throw new ArgumentNullException(nameof(almacenamiento));
@@ -93,6 +97,7 @@ public sealed class EmitirOfertaBecaHandler
 
         if (proyeccion is null)
         {
+            _metricaConfiguracion.Registrar(IMetricaConfiguracionFaltante.RecursoPrograma);
             throw new ConfiguracionProgramaNoDisponibleException(
                 adjudicacion.ProgramaBecaId,
                 "No existe configuración local de programa, costo de matrícula y convenio para la postulación.");
@@ -106,6 +111,7 @@ public sealed class EmitirOfertaBecaHandler
 
         if (montoPorPeriodo <= 0m)
         {
+            _metricaConfiguracion.Registrar(IMetricaConfiguracionFaltante.RecursoPrograma);
             throw new ConfiguracionProgramaNoDisponibleException(
                 adjudicacion.ProgramaBecaId,
                 "El monto calculado de la oferta debe ser mayor que cero.");
@@ -414,7 +420,7 @@ public sealed class EmitirOfertaBecaHandler
     {
         foreach (var evento in beca.EventosDominio)
         {
-            await _outbox.EncolarAsync(evento, cancellationToken);
+            await _outbox.EncolarAsync(evento, beca.Version, cancellationToken);
         }
     }
 
@@ -478,7 +484,7 @@ public sealed class EmitirOfertaBecaHandler
         }
     }
 
-    private static void ValidarProyeccion(
+    private void ValidarProyeccion(
         ProyeccionOtorgamiento proyeccion,
         DateOnly fechaOperacion)
     {
@@ -487,6 +493,7 @@ public sealed class EmitirOfertaBecaHandler
         if (!string.Equals(programa.Estado, "ACTIVO", StringComparison.OrdinalIgnoreCase)
             && !string.Equals(programa.Estado, "CONFIGURADO", StringComparison.OrdinalIgnoreCase))
         {
+            _metricaConfiguracion.Registrar(IMetricaConfiguracionFaltante.RecursoPrograma);
             throw new ConfiguracionProgramaNoDisponibleException(
                 programa.ProgramaBecaId,
                 "El programa de becas no está activo para emitir ofertas.");
@@ -494,6 +501,7 @@ public sealed class EmitirOfertaBecaHandler
 
         if (programa.DuracionPeriodos <= 0)
         {
+            _metricaConfiguracion.Registrar(IMetricaConfiguracionFaltante.RecursoPrograma);
             throw new ConfiguracionProgramaNoDisponibleException(
                 programa.ProgramaBecaId,
                 "La duración del programa debe ser mayor que cero.");
@@ -505,6 +513,8 @@ public sealed class EmitirOfertaBecaHandler
             || costo.FechaVigenciaDesde > fechaOperacion
             || (costo.FechaVigenciaHasta is { } hasta && hasta < fechaOperacion))
         {
+            _metricaConfiguracion.Registrar(
+                IMetricaConfiguracionFaltante.RecursoCostoMatricula);
             throw new ConfiguracionProgramaNoDisponibleException(
                 programa.ProgramaBecaId,
                 "No existe un costo de matrícula vigente para la carrera y el periodo.");
@@ -513,6 +523,7 @@ public sealed class EmitirOfertaBecaHandler
         if (!string.Equals(proyeccion.Convenio.Estado, "VIGENTE", StringComparison.OrdinalIgnoreCase)
             || proyeccion.Convenio.FechaFin < fechaOperacion)
         {
+            _metricaConfiguracion.Registrar(IMetricaConfiguracionFaltante.RecursoConvenio);
             throw new ConfiguracionProgramaNoDisponibleException(
                 programa.ProgramaBecaId,
                 "El convenio con la universidad no está vigente.");
