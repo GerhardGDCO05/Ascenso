@@ -38,6 +38,9 @@ var cadenaConexionBecas = builder.Configuration.GetConnectionString("Becas")
     ?? throw new InvalidOperationException("Falta la cadena de conexión 'Becas'.");
 
 builder.Services.AgregarPersistencia(cadenaConexionBecas);
+builder.Services.AgregarMetricas();
+builder.Services.AgregarClientes(builder.Configuration);
+builder.Services.AgregarMensajeria(builder.Configuration);
 builder.Services.AgregarHangfire(cadenaConexionBecas);
 builder.Services.AddHangfireServer(opciones => opciones.Queues = ["critical", "default"]);
 

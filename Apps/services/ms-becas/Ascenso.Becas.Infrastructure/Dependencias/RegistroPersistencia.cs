@@ -38,6 +38,7 @@ public static class RegistroPersistencia
         servicios.AddScoped<IUnitOfWork, UnidadDeTrabajo>();
         servicios.AddScoped<IProyeccionesOtorgamiento, ProyeccionesOtorgamiento>();
         servicios.AddScoped<IConsultasBeca, ConsultasBeca>();
+        servicios.AddScoped<ActualizadorProyeccionesRef>();
         servicios.AddSingleton<IClock, RelojSistema>();
 
         return servicios;
