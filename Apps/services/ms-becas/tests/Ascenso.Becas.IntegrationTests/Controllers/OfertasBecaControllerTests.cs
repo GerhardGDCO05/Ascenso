@@ -700,18 +700,26 @@ public sealed class OfertasBecaApiFactory : WebApplicationFactory<Program>
 
     private static void EliminarServidoresHangfire(IServiceCollection servicios)
     {
+        // Hangfire registra BackgroundJobServerHostedService con una factoría,
+        // por lo que ImplementationType es null y el filtro por tipo no lo
+        // detecta. Se revisa también el tipo que declara la factoría.
         var descriptores = servicios
             .Where(descriptor =>
                 descriptor.ServiceType == typeof(IHostedService)
-                && descriptor.ImplementationType?.FullName?.Contains(
-                    "Hangfire",
-                    StringComparison.OrdinalIgnoreCase) == true)
+                && (EsDeHangfire(descriptor.ImplementationType)
+                    || EsDeHangfire(
+                        descriptor.ImplementationFactory?.Method.DeclaringType)))
             .ToList();
 
         foreach (var descriptor in descriptores)
         {
             servicios.Remove(descriptor);
         }
+
+        static bool EsDeHangfire(Type? tipo)
+            => tipo?.FullName?.Contains(
+                "Hangfire",
+                StringComparison.OrdinalIgnoreCase) == true;
     }
 
     private sealed class ManejadorAutenticacionPrueba
