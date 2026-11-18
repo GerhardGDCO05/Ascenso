@@ -1,6 +1,14 @@
 # Workflow general: descubre todas las soluciones bajo Apps/services/.
-# Al agregar un microservicio con su .sln/.slnx, se prueba automáticamente.
-# No está atado a ms-becas ni a un microservicio específico.
+# Al agregar un microservicio con su .sln/.slnx se prueba automáticamente.
+# Si además tiene un proyecto *IntegrationTests, se ejecuta en un job aparte.
+#
+# Filtrado por rutas:
+# - El workflow se dispara en cada push/pull_request para que los checks
+#   requeridos por Branch Protection siempre existan.
+# - El job "changes" calcula qué microservicios cambiaron con dorny/paths-filter.
+# - Los jobs de build e integración se ejecutan siempre, pero omiten sus pasos
+#   pesados cuando el servicio no cambió. Así el check queda en verde (success)
+#   en lugar de desaparecer.
 name: CI - Microservicios Ascenso
 
 on:
@@ -12,6 +20,9 @@ on:
 
 permissions:
   contents: read
+  # dorny/paths-filter consulta la API de GitHub para listar los archivos
+  # modificados en los pull_request.
+  pull-requests: read
 
 concurrency:
   group: ci-${{ github.workflow }}-${{ github.ref }}
@@ -21,19 +32,30 @@ env:
   DOTNET_NOLOGO: 'true'
   DOTNET_CLI_TELEMETRY_OPTOUT: 'true'
   CONFIGURATION: Release
+  # Job 1: unitarias y arquitectura. Excluye cualquier proyecto de integración.
+  UNIT_TEST_FILTER: 'FullyQualifiedName!~IntegrationTests'
 
 jobs:
-  discover:
+  changes:
+    # Se conserva el nombre del job original para no perder un posible check
+    # requerido por Branch Protection; ahora también detecta cambios por rutas.
     name: Descubrir microservicios
     runs-on: ubuntu-latest
+    timeout-minutes: 10
     outputs:
-      solutions: ${{ steps.find.outputs.solutions }}
+      services: ${{ steps.discover.outputs.services }}
+      integration_services: ${{ steps.discover.outputs.integration_services }}
+      changed: ${{ steps.changed.outputs.changed }}
     steps:
       - name: Checkout del código
         uses: actions/checkout@v4
+        with:
+          # Necesario para que dorny/paths-filter pueda comparar contra el
+          # commit anterior de la rama en los eventos push.
+          fetch-depth: 0
 
-      - name: Buscar soluciones bajo Apps/services
-        id: find
+      - name: Descubrir soluciones y proyectos de integración
+        id: discover
         shell: bash
         run: |
           set -euo pipefail
@@ -48,39 +70,151 @@ jobs:
 
           if [ ${#solutions[@]} -eq 0 ]; then
             echo 'No se encontraron soluciones .sln/.slnx en Apps/services.'
-            echo 'solutions=[]' >> "$GITHUB_OUTPUT"
+            {
+              echo 'services=[]'
+              echo 'integration_services=[]'
+              echo 'filters={}'
+            } >> "$GITHUB_OUTPUT"
             exit 0
           fi
 
           printf 'Soluciones encontradas:\n'
           printf '  - %s\n' "${solutions[@]}"
 
-          json=$(printf '%s\n' "${solutions[@]}" | jq -R -s -c '
-            split("\n")
-            | map(select(length > 0))
-            | map({
-                solution: .,
-                name: (gsub("/"; "-") | sub("\\.slnx?$"; ""))
-              })
-          ')
-          echo "solutions=$json" >> "$GITHUB_OUTPUT"
+          # Archivos de la raíz que afectan a todos los microservicios.
+          shared_patterns=$(jq -n -c '[
+            ".github/workflows/**",
+            "global.json",
+            "Directory.Build.props",
+            "Directory.Build.targets",
+            "Directory.Packages.props",
+            "NuGet.config",
+            "nuget.config",
+            ".editorconfig",
+            "Apps/Directory.Build.props",
+            "Apps/Directory.Build.targets",
+            "Apps/Directory.Packages.props"
+          ]')
+
+          services_json='[]'
+          integration_services_json='[]'
+          filters_json='{}'
+
+          for solution in "${solutions[@]}"; do
+            # Apps/services/<servicio>/... -> <servicio>
+            relative=${solution#Apps/services/}
+            service=${relative%%/*}
+            name=${solution//\//-}
+            name=${name%.slnx}
+            name=${name%.sln}
+
+            services_json=$(jq -c \
+              --arg service "$service" \
+              --arg solution "$solution" \
+              --arg name "$name" \
+              '. + [{service: $service, solution: $solution, name: $name}]' \
+              <<< "$services_json")
+
+            mapfile -t integration_projects < <(
+              find "Apps/services/$service/tests" -type f \
+                -name '*IntegrationTests*.csproj' \
+                -not -path '*/bin/*' \
+                -not -path '*/obj/*' 2>/dev/null \
+                | sort
+            )
+
+            if [ ${#integration_projects[@]} -gt 0 ]; then
+              projects_json=$(printf '%s\n' "${integration_projects[@]}" \
+                | jq -R -s -c 'split("\n") | map(select(length > 0))')
+              integration_services_json=$(jq -c \
+                --arg service "$service" \
+                --arg name "$name" \
+                --argjson projects "$projects_json" \
+                '. + [{service: $service, name: $name, integrationProjectsJson: ($projects | tojson)}]' \
+                <<< "$integration_services_json")
+              printf '  Proyecto(s) de integración de %s: %s\n' "$service" "$projects_json"
+            fi
+
+            filters_json=$(jq -c \
+              --arg service "$service" \
+              --argjson shared "$shared_patterns" \
+              '.[$service] = (["Apps/services/\($service)/**"] + $shared)' \
+              <<< "$filters_json")
+          done
+
+          {
+            echo "services=$services_json"
+            echo "integration_services=$integration_services_json"
+            echo "filters=$filters_json"
+          } >> "$GITHUB_OUTPUT"
+
+      - name: Filtrar por rutas modificadas
+        id: filter
+        if: github.event_name != 'workflow_dispatch' && steps.discover.outputs.services != '[]'
+        uses: dorny/paths-filter@v3
+        with:
+          # Las rutas se generan a partir de los servicios descubiertos:
+          # Apps/services/<servicio>/** + archivos compartidos de la raíz.
+          filters: ${{ steps.discover.outputs.filters }}
+          # En push compara contra el commit anterior de la misma rama; en
+          # pull_request se deja vacío para que use la rama base del PR.
+          base: ${{ github.event_name == 'push' && github.ref || '' }}
+
+      - name: Calcular microservicios modificados
+        id: changed
+        shell: bash
+        env:
+          EVENT_NAME: ${{ github.event_name }}
+          SERVICES: ${{ steps.discover.outputs.services }}
+          FILTER_CHANGES: ${{ steps.filter.outputs.changes }}
+        run: |
+          set -euo pipefail
+
+          if [ "$SERVICES" = '[]' ]; then
+            changed='[]'
+          elif [ "$EVENT_NAME" = 'workflow_dispatch' ]; then
+            # Una ejecución manual no tiene diff: se ejecutan todos.
+            changed=$(jq -c '[.[].service]' <<< "$SERVICES")
+          else
+            changed=${FILTER_CHANGES:-[]}
+          fi
+
+          echo "changed=$changed" >> "$GITHUB_OUTPUT"
+          printf 'Microservicios modificados: %s\n' "$changed"
 
   build-and-test:
     name: Build & Test - ${{ matrix.name }}
-    needs: discover
-    if: needs.discover.outputs.solutions != '[]'
+    needs: changes
+    if: needs.changes.outputs.services != '[]'
     runs-on: ubuntu-latest
     timeout-minutes: 30
     strategy:
       fail-fast: false
       matrix:
-        include: ${{ fromJson(needs.discover.outputs.solutions) }}
+        include: ${{ fromJson(needs.changes.outputs.services) }}
 
     steps:
+      - name: Comprobar si el microservicio cambió
+        id: gate
+        shell: bash
+        env:
+          CHANGED: ${{ needs.changes.outputs.changed }}
+          SERVICE: ${{ matrix.service }}
+        run: |
+          set -euo pipefail
+          if jq -e --arg service "$SERVICE" 'index($service) != null' <<< "$CHANGED" > /dev/null; then
+            echo 'changed=true' >> "$GITHUB_OUTPUT"
+          else
+            echo 'changed=false' >> "$GITHUB_OUTPUT"
+            echo "Sin cambios en $SERVICE; se omiten compilación y pruebas."
+          fi
+
       - name: Checkout del código
+        if: steps.gate.outputs.changed == 'true'
         uses: actions/checkout@v4
 
       - name: Configurar .NET SDK según global.json
+        if: steps.gate.outputs.changed == 'true'
         uses: actions/setup-dotnet@v4
         with:
           global-json-file: global.json
@@ -92,32 +226,139 @@ jobs:
             **/Directory.Packages.props
 
       - name: Verificar SDK instalado
+        if: steps.gate.outputs.changed == 'true'
         run: dotnet --info
 
       - name: Restaurar dependencias con lock files
+        if: steps.gate.outputs.changed == 'true'
         run: dotnet restore "${{ matrix.solution }}" --locked-mode
 
       - name: Compilar solución en Release
+        if: steps.gate.outputs.changed == 'true'
         run: dotnet build "${{ matrix.solution }}" --no-restore --configuration "$CONFIGURATION" --warnaserror
 
       - name: Verificar formato
+        if: steps.gate.outputs.changed == 'true'
         run: dotnet format "${{ matrix.solution }}" --verify-no-changes --no-restore --verbosity minimal
 
+      # Los proyectos *IntegrationTests se ejecutan en el job integration-tests.
       - name: Ejecutar pruebas unitarias y de arquitectura
-        run: >
-          dotnet test "${{ matrix.solution }}"
-          --no-build
-          --no-restore
-          --configuration "$CONFIGURATION"
-          --verbosity normal
-          --logger "trx;LogFileName=test-results.trx"
-          --results-directory "$RUNNER_TEMP/test-results"
+        if: steps.gate.outputs.changed == 'true'
+        run: |
+          dotnet test "${{ matrix.solution }}" \
+            --no-build \
+            --no-restore \
+            --configuration "$CONFIGURATION" \
+            --filter "$UNIT_TEST_FILTER" \
+            --verbosity normal \
+            --logger "trx;LogFileName=test-results.trx" \
+            --results-directory "$RUNNER_TEMP/test-results"
 
       - name: Publicar resultados de pruebas
-        if: always()
+        if: always() && steps.gate.outputs.changed == 'true'
         uses: actions/upload-artifact@v4
         with:
           name: test-results-${{ matrix.name }}
           path: ${{ runner.temp }}/test-results
           if-no-files-found: warn
           retention-days: 7
+
+      - name: Job omitido por falta de cambios
+        if: steps.gate.outputs.changed != 'true'
+        run: echo "Sin cambios en ${{ matrix.service }}; no se ejecutó compilación ni pruebas."
+
+  # Job independiente para Testcontainers (PostgreSQL, RabbitMQ, WireMock...).
+  # Corre en paralelo al job build-and-test y no lo bloquea.
+  integration-tests:
+    name: Integration Tests - ${{ matrix.name }}
+    needs: changes
+    if: needs.changes.outputs.integration_services != '[]'
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    strategy:
+      fail-fast: false
+      matrix:
+        include: ${{ fromJson(needs.changes.outputs.integration_services) }}
+
+    steps:
+      - name: Comprobar si el microservicio cambió
+        id: gate
+        shell: bash
+        env:
+          CHANGED: ${{ needs.changes.outputs.changed }}
+          SERVICE: ${{ matrix.service }}
+        run: |
+          set -euo pipefail
+          if jq -e --arg service "$SERVICE" 'index($service) != null' <<< "$CHANGED" > /dev/null; then
+            echo 'changed=true' >> "$GITHUB_OUTPUT"
+          else
+            echo 'changed=false' >> "$GITHUB_OUTPUT"
+            echo "Sin cambios en $SERVICE; se omiten las pruebas de integración."
+          fi
+
+      - name: Checkout del código
+        if: steps.gate.outputs.changed == 'true'
+        uses: actions/checkout@v4
+
+      - name: Configurar .NET SDK según global.json
+        if: steps.gate.outputs.changed == 'true'
+        uses: actions/setup-dotnet@v4
+        with:
+          global-json-file: global.json
+          cache: true
+          cache-dependency-path: |
+            global.json
+            **/*.csproj
+            **/packages.lock.json
+            **/Directory.Packages.props
+
+      - name: Restaurar dependencias de los proyectos de integración
+        if: steps.gate.outputs.changed == 'true'
+        shell: bash
+        env:
+          PROJECTS: ${{ matrix.integrationProjectsJson }}
+        run: |
+          set -euo pipefail
+          while IFS= read -r project; do
+            echo "Restaurando $project"
+            dotnet restore "$project" --locked-mode
+          done < <(jq -r '.[]' <<< "$PROJECTS")
+
+      - name: Ejecutar pruebas de integración
+        if: steps.gate.outputs.changed == 'true'
+        shell: bash
+        env:
+          PROJECTS: ${{ matrix.integrationProjectsJson }}
+          # Los WebApplicationFactory de las pruebas no deben levantar
+          # MassTransit contra el RabbitMQ por defecto (localhost:5672).
+          # Las pruebas de mensajería que sí lo necesitan pasan su propia
+          # configuración explícita con Mensajeria:Habilitada=true.
+          Mensajeria__Habilitada: 'false'
+        run: |
+          set -euo pipefail
+          mkdir -p "$RUNNER_TEMP/integration-results"
+          while IFS= read -r project; do
+            echo "Ejecutando pruebas de integración de $project"
+            dotnet test "$project" \
+              --configuration "$CONFIGURATION" \
+              --no-restore \
+              --verbosity normal \
+              --blame-hang \
+              --blame-hang-timeout 5m \
+              --blame-hang-dump-type none \
+              --logger "trx;LogFileName=$(basename "$project" .csproj).trx" \
+              --results-directory "$RUNNER_TEMP/integration-results"
+          done < <(jq -r '.[]' <<< "$PROJECTS")
+
+      - name: Publicar resultados de pruebas de integración
+        if: always() && steps.gate.outputs.changed == 'true'
+        uses: actions/upload-artifact@v4
+        with:
+          name: integration-results-${{ matrix.name }}
+          path: ${{ runner.temp }}/integration-results
+          if-no-files-found: warn
+          retention-days: 7
+
+      - name: Job omitido por falta de cambios
+        if: steps.gate.outputs.changed != 'true'
+        run: echo "Sin cambios en ${{ matrix.service }}; no se ejecutaron pruebas de integración."
