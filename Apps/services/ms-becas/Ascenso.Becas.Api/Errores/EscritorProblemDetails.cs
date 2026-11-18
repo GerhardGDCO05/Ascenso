@@ -31,6 +31,28 @@ public static class EscritorProblemDetails
         contexto.Response.StatusCode = estadoHttp;
         contexto.Response.ContentType = "application/problem+json";
 
+        var problema = Crear(contexto, estadoHttp, codigo, mensaje, errores);
+
+        return contexto.Response.WriteAsync(
+            JsonSerializer.Serialize(problema, _opciones),
+            contexto.RequestAborted);
+    }
+
+    /// <summary>
+    /// Construye el <c>ProblemDetails</c> homogéneo con código de error,
+    /// correlación y errores de validación cuando corresponda.
+    /// </summary>
+    public static Microsoft.AspNetCore.Mvc.ProblemDetails Crear(
+        HttpContext contexto,
+        int estadoHttp,
+        string codigo,
+        string mensaje,
+        IReadOnlyDictionary<string, string[]>? errores = null)
+    {
+        ArgumentNullException.ThrowIfNull(contexto);
+        ArgumentException.ThrowIfNullOrWhiteSpace(codigo);
+        ArgumentException.ThrowIfNullOrWhiteSpace(mensaje);
+
         var problema = new Microsoft.AspNetCore.Mvc.ProblemDetails
         {
             Status = estadoHttp,
@@ -47,9 +69,7 @@ public static class EscritorProblemDetails
             problema.Extensions["errors"] = errores;
         }
 
-        return contexto.Response.WriteAsync(
-            JsonSerializer.Serialize(problema, _opciones),
-            contexto.RequestAborted);
+        return problema;
     }
 
     private static string Titulo(int estadoHttp) => estadoHttp switch

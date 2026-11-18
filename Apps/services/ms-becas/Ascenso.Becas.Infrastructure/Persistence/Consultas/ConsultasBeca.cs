@@ -62,6 +62,48 @@ public sealed class ConsultasBeca : IConsultasBeca
             nombrePrograma);
     }
 
+    public async Task<RecursoOfertaDto?> ObtenerRecursoOfertaAsync(
+        Guid ofertaId,
+        CancellationToken cancellationToken = default)
+        => await (
+                from oferta in _contexto.OfertasBeca.AsNoTracking()
+                join beca in _contexto.Becas.AsNoTracking()
+                    on oferta.BecaId equals beca.Id
+                where oferta.Id == ofertaId
+                select new RecursoOfertaDto(
+                    oferta.Id,
+                    beca.Id,
+                    beca.ProgramaBecaId,
+                    beca.PostulanteEstudianteId))
+            .SingleOrDefaultAsync(cancellationToken);
+
+    public async Task<RecursoBecaDto?> ObtenerRecursoBecaAsync(
+        Guid becaId,
+        CancellationToken cancellationToken = default)
+        => await _contexto.Becas
+            .AsNoTracking()
+            .Where(beca => beca.Id == becaId)
+            .Select(beca => new RecursoBecaDto(
+                beca.Id,
+                beca.ProgramaBecaId,
+                beca.PostulanteEstudianteId))
+            .SingleOrDefaultAsync(cancellationToken);
+
+    public async Task<RecursoCompromisoDto?> ObtenerRecursoCompromisoAsync(
+        Guid compromisoId,
+        CancellationToken cancellationToken = default)
+        => await (
+                from compromiso in _contexto.CompromisosBecarios.AsNoTracking()
+                join beca in _contexto.Becas.AsNoTracking()
+                    on compromiso.BecaId equals beca.Id
+                where compromiso.Id == compromisoId
+                select new RecursoCompromisoDto(
+                    compromiso.Id,
+                    beca.Id,
+                    beca.ProgramaBecaId,
+                    beca.PostulanteEstudianteId))
+            .SingleOrDefaultAsync(cancellationToken);
+
     public async Task<BecaDto?> ObtenerBecaAsync(
         Guid becaId,
         CancellationToken cancellationToken = default)

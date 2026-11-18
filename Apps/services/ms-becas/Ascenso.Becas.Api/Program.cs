@@ -4,6 +4,8 @@ using Ascenso.Becas.Api.Correlacion;
 using Ascenso.Becas.Api.Errores;
 using Ascenso.Becas.Api.Idempotencia;
 using Ascenso.Becas.Api.Logging;
+using Ascenso.Becas.Api.OpenApi;
+using Ascenso.Becas.Api.Salud;
 using Ascenso.Becas.Api.Seguridad;
 using Ascenso.Becas.Application;
 using Ascenso.Becas.Application.Comun;
@@ -22,10 +24,17 @@ builder.Host.UseSerilog((_, configuracion) => configuracion
     .Destructure.With<RedaccionDestructuringPolicy>()
     .WriteTo.Console(formatProvider: CultureInfo.InvariantCulture));
 
-builder.Services.AddControllers();
-builder.Services.AddOpenApi();
+builder.Services.AddControllers()
+    .AgregarProblemDetailsDeValidacion();
+builder.Services.AddOpenApi(opciones =>
+{
+    opciones.AddDocumentTransformer<DocumentoOpenApiTransformer>();
+    opciones.AddOperationTransformer<OperacionOpenApiTransformer>();
+    opciones.AddSchemaTransformer<EjemplosEsquemasOpenApiTransformer>();
+});
 builder.Services.AddProblemDetails();
 builder.Services.AddExceptionHandler<ManejadorExcepcionesApi>();
+builder.Services.AgregarChequeosDeSalud();
 builder.Services.AddHttpContextAccessor();
 builder.Services.AddScoped<ICorrelacionContexto, CorrelacionContexto>();
 builder.Services.AddScoped<IContextoOperacionActual, ContextoOperacionHttp>();
@@ -63,6 +72,7 @@ var app = builder.Build();
 if (app.Environment.IsDevelopment())
 {
     app.MapOpenApi();
+    app.MapOpenApi("/swagger/{documentName}/swagger.json");
 }
 
 app.UseMiddleware<CorrelacionMiddleware>();
@@ -73,5 +83,14 @@ app.UseAuthorization();
 app.UseMiddleware<IdempotenciaMiddleware>();
 
 app.MapControllers();
+app.MapearSalud();
 
 app.Run();
+
+/// <summary>
+/// Punto de entrada de la API, expuesto para las pruebas de integración con
+/// <c>WebApplicationFactory</c>.
+/// </summary>
+public partial class Program
+{
+}
