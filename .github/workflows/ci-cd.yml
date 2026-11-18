@@ -343,6 +343,9 @@ jobs:
               --configuration "$CONFIGURATION" \
               --no-restore \
               --verbosity normal \
+              --blame-hang \
+              --blame-hang-timeout 5m \
+              --blame-hang-dump-type none \
               --logger "trx;LogFileName=$(basename "$project" .csproj).trx" \
               --results-directory "$RUNNER_TEMP/integration-results"
           done < <(jq -r '.[]' <<< "$PROJECTS")
