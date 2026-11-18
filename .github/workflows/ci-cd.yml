@@ -329,6 +329,11 @@ jobs:
         shell: bash
         env:
           PROJECTS: ${{ matrix.integrationProjectsJson }}
+          # Los WebApplicationFactory de las pruebas no deben levantar
+          # MassTransit contra el RabbitMQ por defecto (localhost:5672).
+          # Las pruebas de mensajería que sí lo necesitan pasan su propia
+          # configuración explícita con Mensajeria:Habilitada=true.
+          Mensajeria__Habilitada: 'false'
         run: |
           set -euo pipefail
           mkdir -p "$RUNNER_TEMP/integration-results"
