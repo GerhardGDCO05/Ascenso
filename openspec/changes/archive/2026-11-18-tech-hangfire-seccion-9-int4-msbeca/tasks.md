@@ -8,4 +8,5 @@
 - [x] Verificar build con `--warnaserror`, `dotnet format --verify-no-changes`, suite completa, migraciones sin cambios pendientes y `openspec validate --all --strict`.
 - [x] Corregir la concurrencia de las filas nuevas de `HistorialEstadoBeca` con `ValueGeneratedNever()` y verificar la expiración idempotente.
 - [x] Corregir la configuración de `DashboardApiFactory` para usar la base Testcontainers en CI (`UseSetting`) y verificar los 3 tests del dashboard.
+- [x] Reducir el tiempo de las pruebas de API desactivando MassTransit y el dashboard de Hangfire en `OfertasBecaApiFactory`; verificar que el arranque baja de 31 s a menos de 1 s.
 - [x] Registrar este histórico de sesión sin mover ni archivar el cambio activo `tech-bootstrap-int4-msbeca`.

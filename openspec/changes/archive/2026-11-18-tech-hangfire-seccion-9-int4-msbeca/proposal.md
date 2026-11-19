@@ -27,6 +27,6 @@ Este histórico documenta y conserva el trabajo de la sección 9 **sin archivar 
 
 - Código afectado: `Apps/services/ms-becas/Ascenso.Becas.Infrastructure/Trabajos/`, `Dependencias/RegistroHangfire.cs`, `Dependencias/RegistroPersistencia.cs`, `Persistence/Repositorios/OfertaBecaRepository.cs`, `Persistence/Configuraciones/HistorialEstadoBecaConfiguracion.cs`, `Ascenso.Becas.Api/Trabajos/`, `Program.cs` y `appsettings.json`.
 - Base de datos: Hangfire crea y mantiene su propio esquema `hangfire`; no se agregan migraciones de la aplicación. La corrección de `HistorialEstadoBeca` no cambia el esquema SQL.
-- Configuración: nueva sección `Hangfire:Trabajos` con intervalo de reconciliación, retenciones y límite de ofertas.
-- Pruebas: 11 pruebas de integración nuevas; la suite completa quedó en 546/546 (Domain 136, Application 95, Architecture 8, Integration 307).
+- Configuración: nueva sección `Hangfire:Trabajos` con intervalo de reconciliación, retenciones y límite de ofertas; el dashboard se puede deshabilitar con `Hangfire:Dashboard:Habilitado=false`.
+- Pruebas: 11 pruebas de integración nuevas; la suite completa quedó en 546/546 (Domain 136, Application 95, Architecture 8, Integration 307). Las pruebas de API desactivan MassTransit y el dashboard para evitar timeouts de 30 s por host cuando no hay PostgreSQL/RabbitMQ.
 - Fuera de alcance: secciones 10–14 del cambio activo, adaptadores reales de PDF/almacenamiento, sincronización de specs principales y commit.

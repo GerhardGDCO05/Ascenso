@@ -84,7 +84,13 @@ app.UseExceptionHandler();
 app.UseCors("Frontend");
 app.UseAuthentication();
 app.UseAuthorization();
-app.MapearDashboardHangfire();
+if (!string.Equals(
+        builder.Configuration["Hangfire:Dashboard:Habilitado"],
+        "false",
+        StringComparison.OrdinalIgnoreCase))
+{
+    app.MapearDashboardHangfire();
+}
 app.UseMiddleware<IdempotenciaMiddleware>();
 
 app.MapControllers();

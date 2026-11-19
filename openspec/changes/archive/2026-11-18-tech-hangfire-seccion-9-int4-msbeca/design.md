@@ -36,6 +36,7 @@ La sección 9 se implementó sobre la fundación de las secciones 1–8. Su obje
 - `/hangfire` se expone con `UseHangfireDashboard` y `FiltroAutorizacionDashboard`.
 - El filtro exige autenticación, rol administrativo (`COORDINADOR_PROGRAMA` o `DIRECCION`) y segundo factor por `acr` o `amr`.
 - Sin autenticación el middleware responde `401`; autenticado sin permiso responde `403`; administrador con 2FA recibe `200`.
+- El dashboard se puede desactivar con `Hangfire:Dashboard:Habilitado=false`; el valor por defecto es habilitado. Las pruebas de API que no lo usan lo desactivan porque `UseHangfireDashboard` resuelve el `JobStorage` al construir el pipeline y `PrepareSchemaIfNecessary` intenta conectar a PostgreSQL.
 
 ### Configuración y validación
 
@@ -53,6 +54,7 @@ La sección 9 se implementó sobre la fundación de las secciones 1–8. Su obje
 - `EntornoTrabajos` compone persistencia real con Testcontainers PostgreSQL, aplicación, jobs, opciones y un Outbox falso que registra eventos.
 - `PersistenciaTrabajosTests` programa un job, desecha el proveedor y arranca un host nuevo con el mismo almacenamiento para comprobar que la oferta expira tras el reinicio.
 - `HangfireDashboardTests` usa un esquema de autenticación de prueba y encabezados `X-Test-*`; la factory sustituye `ICartaOfertaPdfGenerator` e `IAlmacenamientoArchivos`, que se implementarán en la sección 10.
+- `OfertasBecaApiFactory` desactiva MassTransit y el dashboard con `UseSetting`, elimina los servidores de Hangfire y el publicador de health checks para que los hosts de prueba no dependan de PostgreSQL ni RabbitMQ.
 
 ## Risks / Trade-offs
 

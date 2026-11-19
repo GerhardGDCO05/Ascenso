@@ -2,6 +2,7 @@
 
 - **Fecha y hora de ejecución:** 18 de noviembre de 2026, 22:16 (UTC-4)
 - **Actualización:** 18 de noviembre de 2026, 22:45 (UTC-4), corrección del arranque del dashboard en CI.
+- **Actualización:** 18 de noviembre de 2026, 23:18 (UTC-4), reducción del tiempo de las pruebas de API.
 - **Rama:** `Gerhard`
 - **Commit de la sección:** ninguno; los cambios de la sección 9 están sin commit. El último commit de la rama es `9115b35` (merge del PR #27).
 - **Alcance:** tareas `9.1` a `9.5` del cambio `tech-bootstrap-int4-msbeca`.
@@ -72,6 +73,13 @@ Incorporar Hangfire como motor persistente de trabajos en segundo plano para `MS
 - `EntornoTrabajos` compone persistencia real con Testcontainers PostgreSQL, aplicación, jobs, opciones y un Outbox falso que registra eventos.
 - `RegistroPersistencia` registra `IdempotencyRepository` como scoped para que el job de limpieza pueda resolverlo.
 
+### 2.9 Arranque rápido de las pruebas de API
+
+- La suite de integración de CI tardaba ~11 minutos porque cada host de `OfertasBecaApiFactory` pagaba un timeout de 30 s. La causa era `app.MapearDashboardHangfire()`: al construir el pipeline, Hangfire resuelve el `JobStorage` y `PrepareSchemaIfNecessary` intenta crear el esquema en PostgreSQL; sin base accesible, el arranque esperaba el timeout.
+- `OfertasBecaApiFactory` usa `UseSetting` para deshabilitar MassTransit (`Mensajeria:Habilitada=false`) y el dashboard (`Hangfire:Dashboard:Habilitado=false`). También elimina el `HealthCheckPublisherHostedService` para que los chequeos no se ejecuten en segundo plano durante las pruebas.
+- `Program.cs` mapea `/hangfire` solo si `Hangfire:Dashboard:Habilitado` no es `false`; el valor por defecto sigue habilitado. `HangfireDashboardTests` no define la bandera y sigue verificando `401/403/200` contra la base Testcontainers.
+- Medición local: el mismo test de controller con PostgreSQL inalcanzable bajó de 31 s a 0.55 s; la suite de integración completa quedó en 13 s de ejecución (18 s de proceso).
+
 ## 3. Archivos principales
 
 - `Apps/services/ms-becas/Ascenso.Becas.Infrastructure/Trabajos/`: `OpcionesTrabajosHangfire.cs`, `ActivadorHangfire.cs`, `ExpirarOfertaBecaJob.cs`, `ReconciliarOfertasPendientesJob.cs`, `LimpiarIdempotenciaJob.cs`, `LimpiarOutboxJob.cs`, `ProgramadorExpiracionHangfire.cs`, `ProgramadorTrabajosHangfireRecurrentes.cs` y `RegistroTrabajosHangfire.cs`.
@@ -104,6 +112,7 @@ Incorporar Hangfire como motor persistente de trabajos en segundo plano para `MS
 - `dotnet format Apps/services/ms-becas/Ascenso.Becas.sln --verify-no-changes --no-restore`: limpio.
 - `dotnet test` sobre Domain, Application, Architecture e Integration: 136/136, 95/95, 8/8 y 307/307 correctas.
 - Se corrigió el fallo de CI de los 3 tests de `HangfireDashboardTests`: el host intentaba conectar a `127.0.0.1:5432` porque `ConfigureAppConfiguration` no llegaba a la lectura temprana de `Program.cs`. Con `UseSetting` la suite de integración quedó 307/307.
+- Se corrigió el tiempo de arranque de las pruebas de API: el dashboard de Hangfire resolvía el `JobStorage` en el pipeline y esperaba 30 s a PostgreSQL en cada host. Con el dashboard y MassTransit desactivados en `OfertasBecaApiFactory`, la suite de integración bajó de ~10.8 min en CI a 13 s de ejecución local (307/307).
 - `dotnet ef migrations has-pending-model-changes --project Ascenso.Becas.Infrastructure --no-build`: sin cambios pendientes.
 - `openspec validate --all --strict`: 7/7 elementos correctos.
 - `git diff --check`: sin errores de espacio.
@@ -127,6 +136,7 @@ Los RF permanecen pendientes hasta cerrar las secciones 10–12.
 - El dashboard depende de Keycloak y de los claims de rol/2FA; en local sin autenticación no es accesible, lo cual es intencional.
 - Las pruebas de integración requieren Docker/Testcontainers y una base PostgreSQL real.
 - En pruebas con `WebApplicationBuilder`, `ConfigureAppConfiguration` no reemplaza la configuración leída durante el registro de servicios; para `ConnectionStrings` y `Mensajeria:Habilitada` se usa `UseSetting`.
+- El dashboard de Hangfire es desactivable con `Hangfire:Dashboard:Habilitado=false`; las pruebas de API que no lo usan lo desactivan para no depender de PostgreSQL en el arranque.
 - La API todavía no puede arrancar en `Development` sin los adaptadores de PDF/almacenamiento de la sección 10; es una brecha previa y las pruebas los sustituyen.
 - La corrección de `HistorialEstadoBeca` es metadata de EF y no altera el esquema SQL.
 - Los cambios de la sección 9 no se comprometieron en git; este histórico también queda sin commit.
