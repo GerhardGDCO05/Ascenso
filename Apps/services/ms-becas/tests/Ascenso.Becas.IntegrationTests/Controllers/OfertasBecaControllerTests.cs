@@ -18,7 +18,6 @@ using Microsoft.AspNetCore.Authentication;
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.Mvc.Testing;
 using Microsoft.AspNetCore.TestHost;
-using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.DependencyInjection.Extensions;
 using Microsoft.Extensions.Hosting;
@@ -649,20 +648,20 @@ public sealed class OfertasBecaApiFactory : WebApplicationFactory<Program>
 
         builder.UseEnvironment("Development");
 
-        builder.ConfigureAppConfiguration((_, configuracion) =>
-        {
-            configuracion.AddInMemoryCollection(
-                new Dictionary<string, string?>
-                {
-                    ["ConnectionStrings:Becas"] =
-                        "Host=localhost;Port=5432;Database=ascenso_becas_tests;Username=postgres;Password=postgres",
-                    ["Mensajeria:Habilitada"] = "false"
-                });
-        });
+        // Program.cs lee la configuración antes de que se apliquen las
+        // fuentes de ConfigureAppConfiguration; UseSetting sí está
+        // disponible en ese momento y evita registrar MassTransit en las
+        // pruebas que no lo necesitan.
+        builder.UseSetting(
+            "ConnectionStrings:Becas",
+            "Host=localhost;Port=5432;Database=ascenso_becas_tests;Username=postgres;Password=postgres");
+        builder.UseSetting("Mensajeria:Habilitada", "false");
+        builder.UseSetting("Hangfire:Dashboard:Habilitado", "false");
 
         builder.ConfigureTestServices(servicios =>
         {
             EliminarServidoresHangfire(servicios);
+            EliminarPublicadorSalud(servicios);
 
             servicios
                 .AddAuthentication(opciones =>
@@ -719,6 +718,30 @@ public sealed class OfertasBecaApiFactory : WebApplicationFactory<Program>
         static bool EsDeHangfire(Type? tipo)
             => tipo?.FullName?.Contains(
                 "Hangfire",
+                StringComparison.OrdinalIgnoreCase) == true;
+    }
+
+    private static void EliminarPublicadorSalud(IServiceCollection servicios)
+    {
+        // El publicador ejecuta los chequeos al arrancar y, sin PostgreSQL
+        // accesible, bloquea el host hasta el timeout. Los endpoints de salud
+        // siguen disponibles porque HealthCheckService no se elimina.
+        var descriptores = servicios
+            .Where(descriptor =>
+                descriptor.ServiceType == typeof(IHostedService)
+                && (EsDeSalud(descriptor.ImplementationType)
+                    || EsDeSalud(
+                        descriptor.ImplementationFactory?.Method.DeclaringType)))
+            .ToList();
+
+        foreach (var descriptor in descriptores)
+        {
+            servicios.Remove(descriptor);
+        }
+
+        static bool EsDeSalud(Type? tipo)
+            => tipo?.FullName?.Contains(
+                "HealthCheck",
                 StringComparison.OrdinalIgnoreCase) == true;
     }
 

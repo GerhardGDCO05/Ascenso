@@ -51,4 +51,33 @@ public sealed class OfertaBecaRepository : IOfertaBecaRepository
                 oferta => oferta.Id == ofertaId
                     && oferta.Estado == EstadoOferta.PendienteRespuesta,
                 cancellationToken);
+
+    public Task<IReadOnlyList<Guid>> ObtenerPendientesVencidasAsync(
+        DateTimeOffset ahora,
+        int limite = 500,
+        CancellationToken cancellationToken = default)
+    {
+        if (limite <= 0)
+        {
+            throw new ArgumentOutOfRangeException(
+                nameof(limite),
+                "El límite de ofertas debe ser mayor que cero.");
+        }
+
+        return ObtenerPendientesVencidasInternoAsync(ahora, limite, cancellationToken);
+    }
+
+    private async Task<IReadOnlyList<Guid>> ObtenerPendientesVencidasInternoAsync(
+        DateTimeOffset ahora,
+        int limite,
+        CancellationToken cancellationToken)
+        => await _contexto.OfertasBeca
+            .AsNoTracking()
+            .Where(oferta =>
+                oferta.Estado == EstadoOferta.PendienteRespuesta
+                && oferta.FechaVencimientoAceptacion <= ahora)
+            .OrderBy(oferta => oferta.FechaVencimientoAceptacion)
+            .Take(limite)
+            .Select(oferta => oferta.Id)
+            .ToListAsync(cancellationToken);
 }
