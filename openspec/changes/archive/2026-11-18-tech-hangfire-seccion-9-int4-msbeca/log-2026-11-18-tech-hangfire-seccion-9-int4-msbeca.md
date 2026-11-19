@@ -1,6 +1,7 @@
 # Registro de Auditoría — Sección 9: Hangfire y trabajos en segundo plano
 
 - **Fecha y hora de ejecución:** 18 de noviembre de 2026, 22:16 (UTC-4)
+- **Actualización:** 18 de noviembre de 2026, 22:45 (UTC-4), corrección del arranque del dashboard en CI.
 - **Rama:** `Gerhard`
 - **Commit de la sección:** ninguno; los cambios de la sección 9 están sin commit. El último commit de la rama es `9115b35` (merge del PR #27).
 - **Alcance:** tareas `9.1` a `9.5` del cambio `tech-bootstrap-int4-msbeca`.
@@ -27,6 +28,7 @@ Incorporar Hangfire como motor persistente de trabajos en segundo plano para `MS
 - `FiltroAutorizacionDashboard` exige autenticación, rol administrativo (`COORDINADOR_PROGRAMA` o `DIRECCION`) y segundo factor por `acr` o `amr`.
 - Comportamiento verificado: `401` sin autenticación, `403` autenticado sin permiso y `200` administrador con 2FA.
 - `HangfireDashboardTests` usa un esquema de autenticación de prueba con encabezados `X-Test-Roles` y `X-Test-Acr`, mensajería deshabilitada y dobles de `ICartaOfertaPdfGenerator` e `IAlmacenamientoArchivos`; estos adaptadores pertenecen a la sección 10.
+- `DashboardApiFactory` configura la cadena con `UseSetting`, porque `Program.cs` lee `builder.Configuration` antes de que se apliquen las fuentes de `ConfigureAppConfiguration`. La prueba `200` verifica además que el `BecasDbContext` usa la cadena del contenedor y no la de `appsettings.json`.
 
 ### 2.3 Expiración de ofertas (9.2)
 
@@ -101,6 +103,7 @@ Incorporar Hangfire como motor persistente de trabajos en segundo plano para `MS
 - `dotnet build Apps/services/ms-becas/Ascenso.Becas.sln -warnaserror --no-restore`: 0 errores. Solo se emitieron avisos `NU1900` por la imposibilidad de consultar `https://api.nuget.org/v3/index.json` durante un restore anterior.
 - `dotnet format Apps/services/ms-becas/Ascenso.Becas.sln --verify-no-changes --no-restore`: limpio.
 - `dotnet test` sobre Domain, Application, Architecture e Integration: 136/136, 95/95, 8/8 y 307/307 correctas.
+- Se corrigió el fallo de CI de los 3 tests de `HangfireDashboardTests`: el host intentaba conectar a `127.0.0.1:5432` porque `ConfigureAppConfiguration` no llegaba a la lectura temprana de `Program.cs`. Con `UseSetting` la suite de integración quedó 307/307.
 - `dotnet ef migrations has-pending-model-changes --project Ascenso.Becas.Infrastructure --no-build`: sin cambios pendientes.
 - `openspec validate --all --strict`: 7/7 elementos correctos.
 - `git diff --check`: sin errores de espacio.
@@ -123,6 +126,7 @@ Los RF permanecen pendientes hasta cerrar las secciones 10–12.
 - La limpieza del Outbox elimina solo mensajes enviados y estados huérfanos; un mensaje pendiente no se borra aunque supere la retención.
 - El dashboard depende de Keycloak y de los claims de rol/2FA; en local sin autenticación no es accesible, lo cual es intencional.
 - Las pruebas de integración requieren Docker/Testcontainers y una base PostgreSQL real.
+- En pruebas con `WebApplicationBuilder`, `ConfigureAppConfiguration` no reemplaza la configuración leída durante el registro de servicios; para `ConnectionStrings` y `Mensajeria:Habilitada` se usa `UseSetting`.
 - La API todavía no puede arrancar en `Development` sin los adaptadores de PDF/almacenamiento de la sección 10; es una brecha previa y las pruebas los sustituyen.
 - La corrección de `HistorialEstadoBeca` es metadata de EF y no altera el esquema SQL.
 - Los cambios de la sección 9 no se comprometieron en git; este histórico también queda sin commit.

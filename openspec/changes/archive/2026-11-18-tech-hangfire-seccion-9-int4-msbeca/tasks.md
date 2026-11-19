@@ -7,4 +7,5 @@
 - [x] 9.5 Verificar la persistencia de jobs tras reiniciar el contenedor de la API; comprobar que la oferta sigue expirando después del reinicio.
 - [x] Verificar build con `--warnaserror`, `dotnet format --verify-no-changes`, suite completa, migraciones sin cambios pendientes y `openspec validate --all --strict`.
 - [x] Corregir la concurrencia de las filas nuevas de `HistorialEstadoBeca` con `ValueGeneratedNever()` y verificar la expiración idempotente.
+- [x] Corregir la configuración de `DashboardApiFactory` para usar la base Testcontainers en CI (`UseSetting`) y verificar los 3 tests del dashboard.
 - [x] Registrar este histórico de sesión sin mover ni archivar el cambio activo `tech-bootstrap-int4-msbeca`.

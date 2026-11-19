@@ -2,13 +2,14 @@ using System.Net;
 using System.Security.Claims;
 using System.Text.Encodings.Web;
 using Ascenso.Becas.Domain.Ports;
+using Ascenso.Becas.Infrastructure.Persistence;
 using Ascenso.Becas.IntegrationTests.Persistencia;
 using FluentAssertions;
 using Microsoft.AspNetCore.Authentication;
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.Mvc.Testing;
 using Microsoft.AspNetCore.TestHost;
-using Microsoft.Extensions.Configuration;
+using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.DependencyInjection.Extensions;
 using Microsoft.Extensions.Logging;
@@ -61,6 +62,11 @@ public sealed class HangfireDashboardTests
         cliente.DefaultRequestHeaders.Add(EncabezadoRoles, "DIRECCION");
         cliente.DefaultRequestHeaders.Add(EncabezadoAcr, "urn:ascenso:loa:2fa");
 
+        // El host debe usar la base del contenedor y no la de appsettings.
+        using var alcance = fabrica.Services.CreateScope();
+        var contexto = alcance.ServiceProvider.GetRequiredService<BecasDbContext>();
+        contexto.Database.GetConnectionString().Should().Be(_fixture.CadenaConexion);
+
         var respuesta = await cliente.GetAsync("/hangfire");
 
         respuesta.StatusCode.Should().Be(HttpStatusCode.OK);
@@ -83,15 +89,11 @@ public sealed class HangfireDashboardTests
 
             builder.UseEnvironment("Development");
 
-            builder.ConfigureAppConfiguration((_, configuracion) =>
-            {
-                configuracion.AddInMemoryCollection(
-                    new Dictionary<string, string?>
-                    {
-                        ["ConnectionStrings:Becas"] = _cadenaConexion,
-                        ["Mensajeria:Habilitada"] = "false"
-                    });
-            });
+            // Program.cs lee la configuración antes de que se apliquen las
+            // fuentes de ConfigureAppConfiguration; UseSetting sí está
+            // disponible en ese momento.
+            builder.UseSetting("ConnectionStrings:Becas", _cadenaConexion);
+            builder.UseSetting("Mensajeria:Habilitada", "false");
 
             builder.ConfigureTestServices(servicios =>
             {
