@@ -39,7 +39,8 @@ internal sealed class HistorialEstadoBecaConfiguracion : IEntityTypeConfiguratio
 
         builder.Property(historial => historial.Id)
             .HasColumnName("id")
-            .HasColumnType("uuid");
+            .HasColumnType("uuid")
+            .ValueGeneratedNever();
 
         builder.Property(historial => historial.BecaId)
             .HasColumnName("beca_id")

@@ -46,6 +46,10 @@ public sealed class EmitirOfertaBecaHandlerTests
         escenario.Programador.Programadas[0].FechaVencimiento.Should().Be(
             resultado.FechaVencimientoAceptacion);
 
+        escenario.Repositorio.Becas.Should().ContainSingle()
+            .Which.Oferta!.ReferenciaJobExpiracionHangfireId.Should()
+            .Be(escenario.Programador.Referencia);
+
         escenario.Unidad.NivelesSolicitados.Should().ContainSingle()
             .Which.Should().Be(NivelAislamientoTransaccion.ReadCommitted);
         escenario.Unidad.Confirmaciones.Should().Be(1);
