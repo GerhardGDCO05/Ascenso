@@ -36,6 +36,7 @@ public static class RegistroPersistencia
         servicios.AddScoped<IOfertaBecaRepository, OfertaBecaRepository>();
         servicios.AddScoped<ICompromisoBecarioRepository, CompromisoBecarioRepository>();
         servicios.AddScoped<IUnitOfWork, UnidadDeTrabajo>();
+        servicios.AddScoped<IdempotencyRepository>();
         servicios.AddScoped<IProyeccionesOtorgamiento, ProyeccionesOtorgamiento>();
         servicios.AddScoped<IConsultasBeca, ConsultasBeca>();
         servicios.AddScoped<ActualizadorProyeccionesRef>();

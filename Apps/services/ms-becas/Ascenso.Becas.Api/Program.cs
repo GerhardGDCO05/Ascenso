@@ -7,11 +7,13 @@ using Ascenso.Becas.Api.Logging;
 using Ascenso.Becas.Api.OpenApi;
 using Ascenso.Becas.Api.Salud;
 using Ascenso.Becas.Api.Seguridad;
+using Ascenso.Becas.Api.Trabajos;
 using Ascenso.Becas.Application;
 using Ascenso.Becas.Application.Comun;
 using Ascenso.Becas.Application.Correlacion;
 using Ascenso.Becas.Infrastructure.Clientes;
 using Ascenso.Becas.Infrastructure.Dependencias;
+using Ascenso.Becas.Infrastructure.Trabajos;
 using Hangfire;
 using Serilog;
 
@@ -51,7 +53,9 @@ builder.Services.AgregarMetricas();
 builder.Services.AgregarClientes(builder.Configuration);
 builder.Services.AgregarMensajeria(builder.Configuration);
 builder.Services.AgregarHangfire(cadenaConexionBecas);
-builder.Services.AddHangfireServer(opciones => opciones.Queues = ["critical", "default"]);
+builder.Services.AddHangfireServer(opciones => opciones.Queues =
+    [RegistroHangfire.ColaCritica, RegistroHangfire.ColaPorDefecto]);
+builder.Services.AgregarTrabajosHangfire(builder.Configuration);
 
 var allowedOrigins = builder.Configuration
     .GetSection("Cors:AllowedOrigins")
@@ -80,6 +84,7 @@ app.UseExceptionHandler();
 app.UseCors("Frontend");
 app.UseAuthentication();
 app.UseAuthorization();
+app.MapearDashboardHangfire();
 app.UseMiddleware<IdempotenciaMiddleware>();
 
 app.MapControllers();

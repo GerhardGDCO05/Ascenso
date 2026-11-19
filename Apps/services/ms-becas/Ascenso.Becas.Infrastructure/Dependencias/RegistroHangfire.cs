@@ -1,3 +1,4 @@
+using Ascenso.Becas.Infrastructure.Trabajos;
 using Hangfire;
 using Hangfire.PostgreSql;
 using Microsoft.Extensions.DependencyInjection;
@@ -11,6 +12,10 @@ namespace Ascenso.Becas.Infrastructure.Dependencias;
 public static class RegistroHangfire
 {
     public const string Esquema = "hangfire";
+
+    public const string ColaCritica = "critical";
+
+    public const string ColaPorDefecto = "default";
 
     public static IServiceCollection AgregarHangfire(
         this IServiceCollection servicios,
@@ -29,6 +34,8 @@ public static class RegistroHangfire
                     SchemaName = Esquema,
                     PrepareSchemaIfNecessary = true
                 }));
+
+        servicios.AddSingleton<JobActivator, ActivadorHangfire>();
 
         return servicios;
     }
