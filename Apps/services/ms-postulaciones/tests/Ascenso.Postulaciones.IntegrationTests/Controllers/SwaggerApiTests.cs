@@ -1,8 +1,13 @@
 using System.Net;
 using System.Text.Json;
+using Ascenso.Postulaciones.Application.Interfaces;
+using Ascenso.Postulaciones.Domain.Interfaces;
 using FluentAssertions;
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.Mvc.Testing;
+using Microsoft.AspNetCore.TestHost;
+using Microsoft.Extensions.DependencyInjection;
+using NSubstitute;
 
 namespace Ascenso.Postulaciones.IntegrationTests.Controllers;
 
@@ -19,7 +24,18 @@ public sealed class SwaggerApiTests : IClassFixture<WebApplicationFactory<Progra
     public async Task Debe_DocumentarPutSocioeconomicoYSusEsquemas_Cuando_EntornoEsDevelopment()
     {
         using var fabrica = _fabricaBase.WithWebHostBuilder(constructor =>
-            constructor.UseEnvironment("Development"));
+        {
+            constructor.UseEnvironment("Development");
+            constructor.ConfigureTestServices(servicios =>
+            {
+                servicios.AddSingleton(Substitute.For<IUsuarioActual>());
+                servicios.AddSingleton(Substitute.For<IPostulanteRepository>());
+                servicios.AddSingleton(Substitute.For<IPeriodoAcademicoClient>());
+                servicios.AddSingleton(Substitute.For<ICatalogoAcademicoClient>());
+                servicios.AddSingleton(Substitute.For<IUnitOfWork>());
+                servicios.AddSingleton(TimeProvider.System);
+            });
+        });
         using var cliente = fabrica.CreateClient();
 
         var respuesta = await cliente.GetAsync("/swagger/v1/swagger.json");
