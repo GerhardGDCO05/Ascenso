@@ -1,8 +1,9 @@
 # Roadmap y Asignación de RFs
 
 ## 👤 Integrante 1 (Admisión, Registro y Convocatorias)
-- [ ] **RF-01**: Registro de postulantes y perfil socioeconómico (Microservicio POS)
+- [x] **RF-01**: Registro de postulantes y perfil socioeconómico (Microservicio POS)
   - [x] HU 1.1: Registro de datos personales y académicos base (2026-11-15)
+  - [x] HU 1.2: Registro del perfil socioeconómico y grupo familiar (2026-11-19)
 - [ ] **RF-02**: Publicación de convocatorias (Microservicio PRG / POS)
 - [ ] **RF-03**: Carga de documentos de soporte (Microservicio POS)
 - [ ] **RF-04**: Verificación automática de elegibilidad básica (Microservicio POS)

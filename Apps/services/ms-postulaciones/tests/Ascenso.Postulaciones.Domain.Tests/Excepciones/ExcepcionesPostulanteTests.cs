@@ -18,7 +18,11 @@ public sealed class ExcepcionesPostulanteTests
             (new CarreraNoElegibleException(), CarreraNoElegibleException.CodigoError, 422),
             (new PeriodoAcademicoInvalidoException(), PeriodoAcademicoInvalidoException.CodigoError, 422),
             (new DependenciaNoDisponibleException(), DependenciaNoDisponibleException.CodigoError, 503),
-            (new NoAutenticadoException(), NoAutenticadoException.CodigoError, 401)
+            (new NoAutenticadoException(), NoAutenticadoException.CodigoError, 401),
+            (new CatalogoInvalidoException("parentesco"), CatalogoInvalidoException.CodigoError, 422),
+            (new DatosSocioeconomicosInvalidosException("Datos inválidos."), DatosSocioeconomicosInvalidosException.CodigoError, 400),
+            (new MiembroFamiliarInvalidoException("Familiar inválido."), MiembroFamiliarInvalidoException.CodigoError, 400),
+            (new CondicionLaboralIncoherenteException("Combinación inválida."), CondicionLaboralIncoherenteException.CodigoError, 422)
         };
 
         foreach (var (excepcion, codigo, estadoHttp) in casos)

@@ -32,6 +32,37 @@ internal sealed class PostulanteConfiguracion : IEntityTypeConfiguration<Postula
                 AND char_length(trim(nombres)) >= 2
                 AND char_length(trim(apellidos)) >= 2
                 """);
+            tabla.HasCheckConstraint(
+                "ck_postulante_estado_civil_valido",
+                $"estado_civil IS NULL OR estado_civil IN ({ConfiguracionPersistencia.ValoresSql<EstadoCivil>()})");
+            tabla.HasCheckConstraint(
+                "ck_postulante_ocupacion_valida",
+                $"ocupacion IS NULL OR ocupacion IN ({ConfiguracionPersistencia.ValoresSql<Ocupacion>()})");
+            tabla.HasCheckConstraint(
+                "ck_postulante_promedio_actual_rango",
+                "promedio_actual IS NULL OR (promedio_actual >= 0 AND promedio_actual <= 20)");
+            tabla.HasCheckConstraint(
+                "ck_postulante_ingreso_mensual_no_negativo",
+                "ingreso_mensual_postulante IS NULL OR ingreso_mensual_postulante >= 0");
+            tabla.HasCheckConstraint(
+                "ck_postulante_ingreso_familiar_total_no_negativo",
+                "ingreso_familiar_mensual_total IS NULL OR ingreso_familiar_mensual_total >= 0");
+            tabla.HasCheckConstraint(
+                "ck_postulante_numero_integrantes_familia",
+                "numero_integrantes_familia IS NULL OR numero_integrantes_familia >= 1");
+            tabla.HasCheckConstraint(
+                "ck_postulante_perfil_completo_campos_requeridos",
+                """
+                estado_perfil <> 'COMPLETO' OR (
+                    estado_civil IS NOT NULL
+                    AND promedio_actual IS NOT NULL
+                    AND trabaja IS NOT NULL
+                    AND ocupacion IS NOT NULL
+                    AND ingreso_mensual_postulante IS NOT NULL
+                    AND numero_integrantes_familia IS NOT NULL
+                    AND ingreso_familiar_mensual_total IS NOT NULL
+                )
+                """);
         });
 
         builder.HasKey(postulante => postulante.Id)
@@ -117,6 +148,44 @@ internal sealed class PostulanteConfiguracion : IEntityTypeConfiguration<Postula
             .HasColumnName("fecha_registro")
             .HasColumnType("timestamptz")
             .IsRequired();
+
+        builder.Property(postulante => postulante.EstadoCivil)
+            .HasColumnName("estado_civil")
+            .ComoCodigoEnumOpcional()
+            .HasMaxLength(20);
+
+        builder.Property(postulante => postulante.PromedioActual)
+            .HasColumnName("promedio_actual")
+            .HasPrecision(5, 2);
+
+        builder.Property(postulante => postulante.Trabaja)
+            .HasColumnName("trabaja");
+
+        builder.Property(postulante => postulante.Ocupacion)
+            .HasColumnName("ocupacion")
+            .ComoCodigoEnumOpcional()
+            .HasMaxLength(30);
+
+        builder.Property(postulante => postulante.IngresoMensualPostulante)
+            .HasColumnName("ingreso_mensual_postulante")
+            .HasPrecision(18, 2);
+
+        builder.Property(postulante => postulante.NumeroIntegrantesFamilia)
+            .HasColumnName("numero_integrantes_familia");
+
+        builder.Property(postulante => postulante.IngresoFamiliarMensualTotal)
+            .HasColumnName("ingreso_familiar_mensual_total")
+            .HasPrecision(18, 2);
+
+        builder.HasMany(postulante => postulante.MiembrosFamiliares)
+            .WithOne()
+            .HasForeignKey(miembro => miembro.PostulanteId)
+            .HasConstraintName("fk_miembros_familiares_postulantes")
+            .OnDelete(DeleteBehavior.Cascade);
+
+        builder.Navigation(postulante => postulante.MiembrosFamiliares)
+            .HasField("_miembrosFamiliares")
+            .UsePropertyAccessMode(PropertyAccessMode.Field);
 
         builder.HasIndex(postulante => postulante.NumeroDocumentoIdentidad)
             .IsUnique()

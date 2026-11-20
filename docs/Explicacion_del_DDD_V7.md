@@ -696,10 +696,13 @@ classDiagram
     +UUID carreraId
     +UUID periodoActualId
     +CondicionAcademicaIngreso condicionAcademica
-    +Decimal promedioActual
-    +String estadoCivil
-    +Integer numeroIntegrantesFamilia
-    +Decimal ingresoFamiliarMensualTotal
+    +EstadoCivil? estadoCivil
+    +Decimal? promedioActual
+    +Boolean? trabaja
+    +Ocupacion? ocupacion
+    +Decimal? ingresoMensualPostulante
+    +Integer? numeroIntegrantesFamilia
+    +Decimal? ingresoFamiliarMensualTotal
     +EstadoPerfil estadoPerfil
     +Boolean aceptaTratamientoDatos
     +DateTimeOffset fechaRegistro
@@ -711,13 +714,21 @@ classDiagram
     +String telefono
   }
 
+  class DatosMiembroFamiliar {
+    <<ValueObject>>
+    +Parentesco parentesco
+    +Integer edad
+    +Ocupacion ocupacion
+    +Decimal ingresoMensual
+  }
+
   class MiembroFamiliar {
     <<Entity>>
     +UUID id
     +UUID postulanteId
     +Parentesco parentesco
     +Integer edad
-    +String ocupacion
+    +Ocupacion ocupacion
     +Decimal ingresoMensual
   }
 
@@ -822,7 +833,8 @@ classDiagram
   }
 
   Postulante "1" *-- "1" DatosContacto : compone
-  Postulante "1" *-- "1..*" MiembroFamiliar : declara composición
+  Postulante "1" *-- "0..*" MiembroFamiliar : declara composición
+  MiembroFamiliar ..> DatosMiembroFamiliar : valida
   Postulante "1" --> "0..*" BorradorPostulacion : prepara en
   BorradorPostulacion "1" ..> "0..1" Postulacion : al enviar promueve mismo UUID a
   BorradorPostulacion "1" *-- "0..*" DocumentoPostulacion : adjunta previo al envío
@@ -833,7 +845,10 @@ classDiagram
   Postulacion "1" *-- "1..*" HistorialEstadoPostulacion : audita transiciones
 ```
 
-* **Perfil base de la HU 1.1 (`INCOMPLETO`):** al registrar sus datos personales y académicos base, `Postulante` nace con `estadoPerfil = INCOMPLETO` (código `INCOMPLETO`). En este alcance solo se crea y consulta el perfil propio; no existe transición a `COMPLETO`, que quedará reservada a la HU 1.2 cuando se cumpla `RN-POS-01` (datos académicos válidos y al menos un `MiembroFamiliar`). `personaId` es opcional (`UUID?`), mientras que `usuarioId` proviene del claim `sub` del token JWT y es obligatorio. Los datos de contacto no se modelan como columnas sueltas en el agregado: se encapsulan en el objeto de valor `DatosContacto`, que normaliza y valida `correoElectronico` y `telefono` antes de construir el `Postulante`.
+* **Perfil base de la HU 1.1 (`INCOMPLETO`):** al registrar sus datos personales y académicos base, `Postulante` nace con `estadoPerfil = INCOMPLETO` (código `INCOMPLETO`). `personaId` es opcional (`UUID?`), mientras que `usuarioId` proviene del claim `sub` del token JWT y es obligatorio. Los datos de contacto no se modelan como columnas sueltas en el agregado: se encapsulan en el objeto de valor `DatosContacto`, que normaliza y valida `correoElectronico` y `telefono` antes de construir el `Postulante`.
+* **Perfil socioeconómico de la HU 1.2:** el postulante registra `estadoCivil`, `promedioActual` (`0.00–20.00`), `trabaja`, `ocupacion` e `ingresoMensualPostulante` (mayor o igual a cero, máximo dos decimales). La ocupación debe ser coherente con `trabaja`: si trabaja, solo `EMPLEADO`, `INDEPENDIENTE` u `OTRO`; si no trabaja, solo `ESTUDIANTE`, `LABORES_HOGAR`, `JUBILADO`, `NO_TRABAJA` u `OTRO`. El ingreso no se fuerza a cero, porque se admiten pensiones, rentas o apoyo económico. Un guardado válido reemplaza la sección completa y transiciona el perfil a `COMPLETO`.
+* **Composición familiar opcional:** `Postulante` compone cero o más `MiembroFamiliar`; la lista vacía representa a quien vive solo o es foráneo. Cada familiar declara `parentesco`, `edad` (`0–120`), `ocupacion` e `ingresoMensual` (mayor o igual a cero, máximo dos decimales), sin almacenar nombres. `DatosMiembroFamiliar` es el objeto de valor inmutable que valida esos datos antes de construir la entidad. El servidor calcula `numeroIntegrantesFamilia = miembrosFamiliares.Count + 1` e `ingresoFamiliarMensualTotal = ingresoMensualPostulante + Σ ingresoMensual de familiares`, sin aceptar totales enviados por el cliente.
+* **Catálogos socioeconómicos cerrados:** `EstadoCivil` (`SOLTERO`, `CASADO`, `DIVORCIADO`, `VIUDO`), `Parentesco` (`PADRE`, `MADRE`, `HERMANO`, `HIJO`, `PAREJA`, `OTRO`) y `Ocupacion` (`EMPLEADO`, `INDEPENDIENTE`, `ESTUDIANTE`, `LABORES_HOGAR`, `JUBILADO`, `NO_TRABAJA`, `OTRO`). Los valores fuera de catálogo se rechazan con `422 CATALOGO_INVALIDO`.
 
 #### 2.3.B Sub-modelo de Comité, Rúbrica, Evaluación Ciega, Ranking y Lista de Espera (Contexto 4)
 * **Entidad Intermedia `AsignacionEvaluacion`:** Separa la responsabilidad administrativa de asignar y balancear la carga de al menos 2 evaluadores independientes (o reasignar por `ConflictoInteres`) del acto de calificación ciega (`Evaluacion`).
@@ -1667,7 +1682,7 @@ Cada regla `RN-xxx` se traduce directamente en una prueba unitaria o de integrac
 - **`RN-PRG-05` 🔒 (Protección de Becarios ante Vencimiento de Convenio y Fotografías de Costos de Matrícula):** Si un `Convenio` pasa a `VENCIDO`, las becas en estado `ACTIVA` de esa universidad continúan sin interrupción, pero se rechaza cualquier nueva postulación u oferta de beca (`422 CONVENIO_VENCIDO`). Al actualizar `CostoMatriculaReferencia` (`monto > 0`), la versión anterior pasa a `HISTORICO` inmutable y se crea la versión `N+1` como `VIGENTE`. Siguiendo el principio de **Fotografías de Configuración (Snapshots)**, los contratos y becas en curso mantienen intacto el monto con el que se instanciaron (`costoMatriculaReferenciaSnapshotId`), y el nuevo arancel `VIGENTE` se utiliza únicamente al emitir nuevas ofertas o al instanciarse una nueva fila de `Beca` sucesora en una renovación (`RF-14` / `RF-26`).
 
 #### C. Reglas de Postulación, Documentación, Elegibilidad, Comité y Ranking (`MS-POS`)
-- **`RN-POS-01` 🔒 (Unicidad y Completitud de Perfil):** `Postulante.numeroDocumentoIdentidad` es único (`409 IDENTIDAD_DUPLICADA`). El perfil pasa a `COMPLETO` solo cuando tiene datos académicos válidos en universidad aliada (`ADMITIDO` o `MATRICULADO`) y al menos 1 `MiembroFamiliar` registrado; `ingresoFamiliarMensualTotal` se calcula automáticamente como $\sum \text{ingresoMensual}$.
+- **`RN-POS-01` 🔒 (Unicidad y Completitud de Perfil):** `Postulante.numeroDocumentoIdentidad` es único (`409 IDENTIDAD_DUPLICADA`). El perfil pasa a `COMPLETO` solo cuando tiene datos académicos válidos en universidad aliada (`ADMITIDO` o `MATRICULADO`) y registra una sección socioeconómica válida: `estadoCivil` del catálogo, `promedioActual` en `[0.00, 20.00]`, `trabaja` coherente con `ocupacion` del catálogo e `ingresoMensualPostulante >= 0` con máximo dos decimales. La composición familiar puede ser vacía (`0..*`), pues declarar que vive solo o es foráneo es una respuesta válida. El servidor calcula `numeroIntegrantesFamilia = miembrosFamiliares.Count + 1` e `ingresoFamiliarMensualTotal = ingresoMensualPostulante + \sum \text{ingresoMensual de familiares}`; los totales enviados por el cliente se ignoran. Las ocupaciones válidas son `EMPLEADO`, `INDEPENDIENTE`, `ESTUDIANTE`, `LABORES_HOGAR`, `JUBILADO`, `NO_TRABAJA` y `OTRO`; si `trabaja = true`, solo se admiten `EMPLEADO`, `INDEPENDIENTE` u `OTRO` (`422 CONDICION_LABORAL_INCOHERENTE` en caso contrario).
 - **`RN-POS-02` 🔒 (Envío Formal y Congelamiento):** Solo se permite 1 postulación por postulante y convocatoria (`409 POSTULACION_DUPLICADA`). El envío exige que la convocatoria esté `PUBLICADA` antes de `fechaCierre` y que el 100% de `DocumentoRequerido` obligatorios tengan archivo cargado en Firebase (PDF/PNG/JPG $\le 5\text{ MB}$), congelando el formulario y creando `Postulacion` en `RECIBIDA` (`422 DOCUMENTOS_INCOMPLETOS`).
 - **`RN-POS-03` 🔒 (Subsanación Documental con Plazo Estricto):** Rechazar un `DocumentoPostulacion` exige `motivoRechazo`. El postulante solo puede resubir el archivo rechazado mientras `ahora <= fechaLimiteCorreccion`; si el plazo venció, la carga se bloquea (`409 PLAZO_SUBSANACION_VENCIDO`), salvo que un coordinador ejecute `ReabrirSubsanacionDocumental` con una nueva fecha límite (`DEC-09`).
 - **`RN-POS-04` 🔒 (Doble Evaluación, Evaluación Ciega y Excepción Única):** Toda postulación en `EN_EVALUACION` requiere mínimo 2 evaluadores independientes asignados sin `ConflictoInteres`, salvo que un Coordinador sin conflicto registre una `excepcionEvaluadorUnico` con justificación obligatoria (`422 EVALUACIONES_INSUFICIENTES`). El envío definitivo de `Evaluacion` exige puntuar el 100% de criterios dentro de `[puntajeMinimo, puntajeMaximo]` antes del cierre de revisión.
@@ -1718,8 +1733,8 @@ Cada regla `RN-xxx` se traduce directamente en una prueba unitaria o de integrac
 
 | RF | Prioridad PRD | Microservicio | Agregados Raíces y Entidades que lo Resuelven | Reglas de Negocio Asociadas |
 | :--- | :---: | :---: | :--- | :--- |
-| **RF-01** Registro de postulantes | Debe tener | `MS-POS` (+`MS-BEC`) | `Postulante`, `MiembroFamiliar`, `BorradorPostulacion` | `RN-POS-01`, `DEC-05`, `RN-BEC-01` |
-| **RF-02** Publicación de convocatorias | Debe tener | `MS-PRG` / `MS-POS` | `Convocatoria`, `ReglaElegibilidad` | `RN-PRG-01`, `RN-POS-02` |
+| **RF-01** Registro de postulantes | Debe tener | `MS-POS` | `Postulante`, `MiembroFamiliar` | `RN-POS-01` |
+| **RF-02** Publicación de convocatorias | Debe tener | `MS-PRG` / `MS-POS` | `Convocatoria`, `ReglaElegibilidad`, `BorradorPostulacion` | `RN-PRG-01`, `RN-POS-02`, `DEC-05` |
 | **RF-03** Carga de documentos de soporte | Debe tener | `MS-PRG` / `MS-POS` | `DocumentoRequerido`, `DocumentoPostulacion`, `HistorialDocumentoPostulacion` | `RN-POS-02`, `RN-POS-03`, `RN-POS-08`, `DEC-02`, `DEC-09` |
 | **RF-04** Verificación automática elegibilidad | Debe tener | `MS-POS` | `VerificacionElegibilidad`, `DetalleReglaEvaluada`, `Postulacion` | `DEC-02`, `DEC-05`, `DEC-09`, `RN-POS-06`, `RN-POS-08` |
 | **RF-05** Retiro voluntario de postulación | Debería tener | `MS-POS` | `Postulacion`, `HistorialEstadoPostulacion` | Tabla 3.1 (`RECIBIDA/EN_VERIFICACION → RETIRADA`) |
@@ -1783,7 +1798,7 @@ Las rutas de integración síncrona bajo `/internal/v1/...` son internas (no exp
 4. **`MS-BEC → MS-PRG`** (`GET /internal/v1/programas/{id}/condiciones?carreraId=&periodoId=`): Consulta cobertura, arancel vigente (`CostoMatriculaReferencia`), vigencia del convenio universitario y condiciones de permanencia al emitir ofertas o renovaciones (`RF-14`, `RF-15`, `RF-26`).
 
 #### B. Validaciones Bloqueantes y Operaciones Transaccionales (`GET` / `POST` con `Idempotency-Key`)
-5. **`MS-POS → MS-BEC`** (`GET /internal/v1/becas/activas?postulanteId=&periodoId=`): Pre-valida la regla de No Doble Beneficio al postular (`RF-01`, `RF-02`).
+5. **`MS-POS → MS-BEC`** (`GET /internal/v1/becas/activas?postulanteId=&periodoId=`): Pre-valida la regla de No Doble Beneficio al postular (`RF-02`, `RF-04`).
 6. **`MS-POS → MS-PRG`** (`GET /internal/v1/programas/{id}/disponibilidad`): Verifica cupos y presupuesto disponible al consolidar el ranking o promover desde lista de espera (`RF-09`, `RF-10`).
 7. **`MS-BEC → MS-POS`** (`GET /internal/v1/postulaciones/{id}/adjudicable`): Confirma que el postulante está en ranking confirmado o promovido de lista de espera antes de emitir oferta (`RF-15`).
 8. **`MS-BEC → MS-POS`** (`POST /internal/v1/postulaciones/{id}/otorgar` con `Idempotency-Key`): Transiciona la postulación de `EN_EVALUACION → OTORGADA` al emitirse la `OfertaBeca` (`RF-15`, Tabla 3.1).

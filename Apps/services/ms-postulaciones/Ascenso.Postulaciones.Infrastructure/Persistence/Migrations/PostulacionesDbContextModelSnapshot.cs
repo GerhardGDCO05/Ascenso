@@ -49,6 +49,11 @@ namespace Ascenso.Postulaciones.Infrastructure.Persistence.Migrations
                         .HasColumnType("varchar")
                         .HasColumnName("condicion_academica");
 
+                    b.Property<string>("EstadoCivil")
+                        .HasMaxLength(20)
+                        .HasColumnType("varchar")
+                        .HasColumnName("estado_civil");
+
                     b.Property<string>("EstadoPerfil")
                         .IsRequired()
                         .HasMaxLength(20)
@@ -67,6 +72,16 @@ namespace Ascenso.Postulaciones.Infrastructure.Persistence.Migrations
                         .HasColumnType("timestamptz")
                         .HasColumnName("fecha_ultima_modificacion");
 
+                    b.Property<decimal?>("IngresoFamiliarMensualTotal")
+                        .HasPrecision(18, 2)
+                        .HasColumnType("numeric(18,2)")
+                        .HasColumnName("ingreso_familiar_mensual_total");
+
+                    b.Property<decimal?>("IngresoMensualPostulante")
+                        .HasPrecision(18, 2)
+                        .HasColumnType("numeric(18,2)")
+                        .HasColumnName("ingreso_mensual_postulante");
+
                     b.Property<string>("Nombres")
                         .IsRequired()
                         .HasMaxLength(100)
@@ -79,6 +94,15 @@ namespace Ascenso.Postulaciones.Infrastructure.Persistence.Migrations
                         .HasColumnType("character varying(30)")
                         .HasColumnName("numero_documento_identidad");
 
+                    b.Property<int?>("NumeroIntegrantesFamilia")
+                        .HasColumnType("integer")
+                        .HasColumnName("numero_integrantes_familia");
+
+                    b.Property<string>("Ocupacion")
+                        .HasMaxLength(30)
+                        .HasColumnType("varchar")
+                        .HasColumnName("ocupacion");
+
                     b.Property<Guid>("PeriodoActualId")
                         .HasColumnType("uuid")
                         .HasColumnName("periodo_actual_id");
@@ -86,6 +110,15 @@ namespace Ascenso.Postulaciones.Infrastructure.Persistence.Migrations
                     b.Property<Guid?>("PersonaId")
                         .HasColumnType("uuid")
                         .HasColumnName("persona_id");
+
+                    b.Property<decimal?>("PromedioActual")
+                        .HasPrecision(5, 2)
+                        .HasColumnType("numeric(5,2)")
+                        .HasColumnName("promedio_actual");
+
+                    b.Property<bool?>("Trabaja")
+                        .HasColumnType("boolean")
+                        .HasColumnName("trabaja");
 
                     b.Property<Guid>("UniversidadAliadaId")
                         .HasColumnType("uuid")
@@ -125,9 +158,93 @@ namespace Ascenso.Postulaciones.Infrastructure.Persistence.Migrations
 
                             t.HasCheckConstraint("ck_postulante_condicion_academica_valida", "condicion_academica IN ('ADMITIDO', 'MATRICULADO')");
 
+                            t.HasCheckConstraint("ck_postulante_estado_civil_valido", "estado_civil IS NULL OR estado_civil IN ('SOLTERO', 'CASADO', 'DIVORCIADO', 'VIUDO')");
+
                             t.HasCheckConstraint("ck_postulante_estado_perfil_valido", "estado_perfil IN ('INCOMPLETO', 'COMPLETO')");
 
-                            t.HasCheckConstraint("ck_postulante_longitudes_minimas", "char_length(trim(numero_documento_identidad)) >= 5\nAND char_length(trim(nombres)) >= 2\nAND char_length(trim(apellidos)) >= 2");
+                            t.HasCheckConstraint("ck_postulante_ingreso_familiar_total_no_negativo", "ingreso_familiar_mensual_total IS NULL OR ingreso_familiar_mensual_total >= 0");
+
+                            t.HasCheckConstraint("ck_postulante_ingreso_mensual_no_negativo", "ingreso_mensual_postulante IS NULL OR ingreso_mensual_postulante >= 0");
+
+                            t.HasCheckConstraint("ck_postulante_longitudes_minimas", "char_length(trim(numero_documento_identidad)) >= 5\r\nAND char_length(trim(nombres)) >= 2\r\nAND char_length(trim(apellidos)) >= 2");
+
+                            t.HasCheckConstraint("ck_postulante_numero_integrantes_familia", "numero_integrantes_familia IS NULL OR numero_integrantes_familia >= 1");
+
+                            t.HasCheckConstraint("ck_postulante_ocupacion_valida", "ocupacion IS NULL OR ocupacion IN ('EMPLEADO', 'INDEPENDIENTE', 'ESTUDIANTE', 'LABORES_HOGAR', 'JUBILADO', 'NO_TRABAJA', 'OTRO')");
+
+                            t.HasCheckConstraint("ck_postulante_perfil_completo_campos_requeridos", "estado_perfil <> 'COMPLETO' OR (\r\n    estado_civil IS NOT NULL\r\n    AND promedio_actual IS NOT NULL\r\n    AND trabaja IS NOT NULL\r\n    AND ocupacion IS NOT NULL\r\n    AND ingreso_mensual_postulante IS NOT NULL\r\n    AND numero_integrantes_familia IS NOT NULL\r\n    AND ingreso_familiar_mensual_total IS NOT NULL\r\n)");
+
+                            t.HasCheckConstraint("ck_postulante_promedio_actual_rango", "promedio_actual IS NULL OR (promedio_actual >= 0 AND promedio_actual <= 20)");
+                        });
+                });
+
+            modelBuilder.Entity("Ascenso.Postulaciones.Domain.Postulantes.Entidades.MiembroFamiliar", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .HasColumnType("uuid")
+                        .HasColumnName("id");
+
+                    b.Property<int>("Edad")
+                        .HasColumnType("integer")
+                        .HasColumnName("edad");
+
+                    b.Property<DateTimeOffset>("FechaCreacion")
+                        .HasColumnType("timestamptz")
+                        .HasColumnName("fecha_creacion");
+
+                    b.Property<DateTimeOffset>("FechaUltimaModificacion")
+                        .HasColumnType("timestamptz")
+                        .HasColumnName("fecha_ultima_modificacion");
+
+                    b.Property<decimal>("IngresoMensual")
+                        .HasPrecision(18, 2)
+                        .HasColumnType("numeric(18,2)")
+                        .HasColumnName("ingreso_mensual");
+
+                    b.Property<string>("Ocupacion")
+                        .IsRequired()
+                        .HasMaxLength(30)
+                        .HasColumnType("varchar")
+                        .HasColumnName("ocupacion");
+
+                    b.Property<string>("Parentesco")
+                        .IsRequired()
+                        .HasMaxLength(20)
+                        .HasColumnType("varchar")
+                        .HasColumnName("parentesco");
+
+                    b.Property<Guid>("PostulanteId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("postulante_id");
+
+                    b.Property<Guid>("UsuarioCreacionId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("usuario_creacion_id");
+
+                    b.Property<Guid>("UsuarioModificacionId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("usuario_modificacion_id");
+
+                    b.Property<int>("Version")
+                        .IsConcurrencyToken()
+                        .HasColumnType("integer")
+                        .HasColumnName("version");
+
+                    b.HasKey("Id")
+                        .HasName("pk_miembros_familiares");
+
+                    b.HasIndex("PostulanteId")
+                        .HasDatabaseName("ix_miembros_familiares_postulante_id");
+
+                    b.ToTable("miembros_familiares", "postulaciones", t =>
+                        {
+                            t.HasCheckConstraint("ck_miembro_familiar_edad_rango", "edad >= 0 AND edad <= 120");
+
+                            t.HasCheckConstraint("ck_miembro_familiar_ingreso_no_negativo", "ingreso_mensual >= 0");
+
+                            t.HasCheckConstraint("ck_miembro_familiar_ocupacion_valida", "ocupacion IN ('EMPLEADO', 'INDEPENDIENTE', 'ESTUDIANTE', 'LABORES_HOGAR', 'JUBILADO', 'NO_TRABAJA', 'OTRO')");
+
+                            t.HasCheckConstraint("ck_miembro_familiar_parentesco_valido", "parentesco IN ('PADRE', 'MADRE', 'HERMANO', 'HIJO', 'PAREJA', 'OTRO')");
                         });
                 });
 
@@ -160,6 +277,21 @@ namespace Ascenso.Postulaciones.Infrastructure.Persistence.Migrations
 
                     b.Navigation("DatosContacto")
                         .IsRequired();
+                });
+
+            modelBuilder.Entity("Ascenso.Postulaciones.Domain.Postulantes.Entidades.MiembroFamiliar", b =>
+                {
+                    b.HasOne("Ascenso.Postulaciones.Domain.Postulantes.Agregados.Postulante", null)
+                        .WithMany("MiembrosFamiliares")
+                        .HasForeignKey("PostulanteId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired()
+                        .HasConstraintName("fk_miembros_familiares_postulantes");
+                });
+
+            modelBuilder.Entity("Ascenso.Postulaciones.Domain.Postulantes.Agregados.Postulante", b =>
+                {
+                    b.Navigation("MiembrosFamiliares");
                 });
 #pragma warning restore 612, 618
         }

@@ -54,6 +54,45 @@ public sealed class ObtenerMiPerfilQueryHandlerTests
     }
 
     [Fact]
+    public async Task Debe_DevolverLosDatosSocioeconomicosYFamiliares_Cuando_ElPerfilEstaCompleto()
+    {
+        var postulante = CrearPostulante();
+        postulante.RegistrarPerfilSocioeconomico(
+            EstadoCivil.Casado,
+            17.25m,
+            true,
+            Ocupacion.Empleado,
+            1500.50m,
+            [
+                new DatosMiembroFamiliar(Parentesco.Pareja, 40, Ocupacion.Independiente, 800.25m),
+                new DatosMiembroFamiliar(Parentesco.Hijo, 10, Ocupacion.Estudiante, 0m)
+            ],
+            _usuarioId,
+            _fechaRegistro.AddDays(1));
+
+        _postulanteRepository
+            .ObtenerPorUsuarioIdAsync(_usuarioId, Arg.Any<CancellationToken>())
+            .Returns(Task.FromResult<Postulante?>(postulante));
+
+        var resultado = await _handler.HandleAsync(new ObtenerMiPerfilQuery(), CancellationToken.None);
+
+        resultado.EstadoCivil.Should().Be("CASADO");
+        resultado.PromedioActual.Should().Be(17.25m);
+        resultado.Trabaja.Should().BeTrue();
+        resultado.Ocupacion.Should().Be("EMPLEADO");
+        resultado.IngresoMensualPostulante.Should().Be(1500.50m);
+        resultado.NumeroIntegrantesFamilia.Should().Be(3);
+        resultado.IngresoFamiliarMensualTotal.Should().Be(2300.75m);
+        resultado.MiembrosFamiliares.Should().HaveCount(2);
+        resultado.MiembrosFamiliares[0].Parentesco.Should().Be("PAREJA");
+        resultado.MiembrosFamiliares[0].Edad.Should().Be(40);
+        resultado.MiembrosFamiliares[0].Ocupacion.Should().Be("INDEPENDIENTE");
+        resultado.MiembrosFamiliares[0].IngresoMensual.Should().Be(800.25m);
+        resultado.MiembrosFamiliares[1].Parentesco.Should().Be("HIJO");
+        resultado.EstadoPerfil.Should().Be("COMPLETO");
+    }
+
+    [Fact]
     public async Task Debe_RechazarCon404_Cuando_ElPerfilNoExiste()
     {
         _postulanteRepository
