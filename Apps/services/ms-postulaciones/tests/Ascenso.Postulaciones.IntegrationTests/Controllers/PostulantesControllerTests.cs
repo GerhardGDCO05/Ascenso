@@ -107,6 +107,277 @@ public sealed class PostulantesControllerTests : IClassFixture<WebApplicationFac
     }
 
     [Fact]
+    public async Task Debe_Retornar200OkConDatosSocioeconomicosYFamiliares_Cuando_PerfilEstaCompleto()
+    {
+        var usuarioId = Guid.NewGuid();
+        var postulante = CrearPostulante(usuarioId);
+        postulante.RegistrarPerfilSocioeconomico(
+            EstadoCivil.Casado,
+            17.5m,
+            trabaja: true,
+            Ocupacion.Empleado,
+            1500m,
+            [
+                new DatosMiembroFamiliar(Parentesco.Pareja, 40, Ocupacion.Independiente, 800.25m),
+                new DatosMiembroFamiliar(Parentesco.Hijo, 10, Ocupacion.Estudiante, 0m)
+            ],
+            usuarioId,
+            DateTimeOffset.UtcNow);
+
+        var repo = Substitute.For<IPostulanteRepository>();
+        repo.ObtenerPorUsuarioIdAsync(usuarioId, Arg.Any<CancellationToken>())
+            .Returns(postulante);
+
+        using var fabrica = CrearFabrica(repo: repo);
+        using var cliente = fabrica.CreateClient();
+        cliente.DefaultRequestHeaders.Add(HeaderSub, usuarioId.ToString());
+
+        var respuesta = await cliente.GetAsync("/api/v1/postulantes/mio");
+
+        respuesta.StatusCode.Should().Be(HttpStatusCode.OK);
+        var dto = await respuesta.Content.ReadFromJsonAsync<PostulanteDto>();
+        dto.Should().NotBeNull();
+        dto!.EstadoCivil.Should().Be("CASADO");
+        dto.PromedioActual.Should().Be(17.5m);
+        dto.Trabaja.Should().BeTrue();
+        dto.Ocupacion.Should().Be("EMPLEADO");
+        dto.IngresoMensualPostulante.Should().Be(1500m);
+        dto.NumeroIntegrantesFamilia.Should().Be(3);
+        dto.IngresoFamiliarMensualTotal.Should().Be(2300.25m);
+        dto.MiembrosFamiliares.Should().HaveCount(2);
+        dto.MiembrosFamiliares[0].Parentesco.Should().Be("PAREJA");
+        dto.MiembrosFamiliares[0].Edad.Should().Be(40);
+        dto.MiembrosFamiliares[0].Ocupacion.Should().Be("INDEPENDIENTE");
+        dto.MiembrosFamiliares[0].IngresoMensual.Should().Be(800.25m);
+        dto.MiembrosFamiliares[1].Parentesco.Should().Be("HIJO");
+        dto.EstadoPerfil.Should().Be("COMPLETO");
+    }
+
+    [Fact]
+    public async Task Debe_Retornar200OkConListaFamiliarVacia_Cuando_NoDeclaraFamiliares()
+    {
+        var usuarioId = Guid.NewGuid();
+        var postulante = CrearPostulante(usuarioId);
+        postulante.RegistrarPerfilSocioeconomico(
+            EstadoCivil.Soltero,
+            15m,
+            trabaja: false,
+            Ocupacion.Estudiante,
+            0m,
+            [],
+            usuarioId,
+            DateTimeOffset.UtcNow);
+
+        var repo = Substitute.For<IPostulanteRepository>();
+        repo.ObtenerPorUsuarioIdAsync(usuarioId, Arg.Any<CancellationToken>())
+            .Returns(postulante);
+
+        using var fabrica = CrearFabrica(repo: repo);
+        using var cliente = fabrica.CreateClient();
+        cliente.DefaultRequestHeaders.Add(HeaderSub, usuarioId.ToString());
+
+        var respuesta = await cliente.GetAsync("/api/v1/postulantes/mio");
+
+        respuesta.StatusCode.Should().Be(HttpStatusCode.OK);
+        var dto = await respuesta.Content.ReadFromJsonAsync<PostulanteDto>();
+        dto.Should().NotBeNull();
+        dto!.MiembrosFamiliares.Should().BeEmpty();
+        dto.NumeroIntegrantesFamilia.Should().Be(1);
+        dto.IngresoFamiliarMensualTotal.Should().Be(0m);
+        dto.EstadoPerfil.Should().Be("COMPLETO");
+    }
+
+    [Fact]
+    public async Task Debe_Retornar200OkConPerfilIncompleto_Cuando_NoActualizoSocioeconomico()
+    {
+        var usuarioId = Guid.NewGuid();
+        var postulante = CrearPostulante(usuarioId);
+
+        var repo = Substitute.For<IPostulanteRepository>();
+        repo.ObtenerPorUsuarioIdAsync(usuarioId, Arg.Any<CancellationToken>())
+            .Returns(postulante);
+
+        using var fabrica = CrearFabrica(repo: repo);
+        using var cliente = fabrica.CreateClient();
+        cliente.DefaultRequestHeaders.Add(HeaderSub, usuarioId.ToString());
+
+        var respuesta = await cliente.GetAsync("/api/v1/postulantes/mio");
+
+        respuesta.StatusCode.Should().Be(HttpStatusCode.OK);
+        var dto = await respuesta.Content.ReadFromJsonAsync<PostulanteDto>();
+        dto.Should().NotBeNull();
+        dto!.EstadoCivil.Should().BeNull();
+        dto.PromedioActual.Should().BeNull();
+        dto.Trabaja.Should().BeNull();
+        dto.Ocupacion.Should().BeNull();
+        dto.IngresoMensualPostulante.Should().BeNull();
+        dto.NumeroIntegrantesFamilia.Should().BeNull();
+        dto.IngresoFamiliarMensualTotal.Should().BeNull();
+        dto.MiembrosFamiliares.Should().BeEmpty();
+        dto.EstadoPerfil.Should().Be("INCOMPLETO");
+    }
+
+    [Fact]
+    public async Task Debe_Retornar200OkYActualizarPerfil_Cuando_PutEsValido()
+    {
+        var usuarioId = Guid.NewGuid();
+        var postulante = CrearPostulante(usuarioId);
+        var repo = Substitute.For<IPostulanteRepository>();
+        var uow = Substitute.For<IUnitOfWork>();
+        repo.ObtenerParaActualizarPorUsuarioIdAsync(usuarioId, Arg.Any<CancellationToken>())
+            .Returns(postulante);
+        uow.GuardarCambiosAsync(Arg.Any<CancellationToken>()).Returns(1);
+
+        using var fabrica = CrearFabrica(repo: repo, uow: uow);
+        using var cliente = fabrica.CreateClient();
+        cliente.DefaultRequestHeaders.Add(HeaderSub, usuarioId.ToString());
+
+        var respuesta = await cliente.PutAsJsonAsync(
+            "/api/v1/postulantes/mio/socioeconomico",
+            CrearPayloadSocioeconomico(
+                miembros:
+                [
+                    new { parentesco = "PAREJA", edad = 40, ocupacion = "INDEPENDIENTE", ingresoMensual = 800.25m },
+                    new { parentesco = "HIJO", edad = 10, ocupacion = "ESTUDIANTE", ingresoMensual = 0m }
+                ]));
+
+        respuesta.StatusCode.Should().Be(HttpStatusCode.OK);
+        var dto = await respuesta.Content.ReadFromJsonAsync<PostulanteDto>();
+        dto.Should().NotBeNull();
+        dto!.EstadoCivil.Should().Be("CASADO");
+        dto.PromedioActual.Should().Be(17.5m);
+        dto.Trabaja.Should().BeTrue();
+        dto.Ocupacion.Should().Be("EMPLEADO");
+        dto.IngresoMensualPostulante.Should().Be(1500m);
+        dto.NumeroIntegrantesFamilia.Should().Be(3);
+        dto.IngresoFamiliarMensualTotal.Should().Be(2300.25m);
+        dto.MiembrosFamiliares.Should().HaveCount(2);
+        dto.EstadoPerfil.Should().Be("COMPLETO");
+        await uow.Received(1).GuardarCambiosAsync(Arg.Any<CancellationToken>());
+    }
+
+    [Fact]
+    public async Task Debe_Retornar400BadRequest_Cuando_PutNoSuperaValidacion()
+    {
+        using var fabrica = CrearFabrica();
+        using var cliente = fabrica.CreateClient();
+        cliente.DefaultRequestHeaders.Add(HeaderSub, Guid.NewGuid().ToString());
+
+        var respuesta = await cliente.PutAsJsonAsync(
+            "/api/v1/postulantes/mio/socioeconomico",
+            CrearPayloadSocioeconomico(promedioActual: 25m, miembros: []));
+
+        respuesta.StatusCode.Should().Be(HttpStatusCode.BadRequest);
+    }
+
+    [Fact]
+    public async Task Debe_Retornar404NotFound_Cuando_NoExistePerfilParaActualizar()
+    {
+        var repo = Substitute.For<IPostulanteRepository>();
+        repo.ObtenerParaActualizarPorUsuarioIdAsync(Arg.Any<Guid>(), Arg.Any<CancellationToken>())
+            .Returns((Postulante?)null);
+
+        using var fabrica = CrearFabrica(repo: repo);
+        using var cliente = fabrica.CreateClient();
+        cliente.DefaultRequestHeaders.Add(HeaderSub, Guid.NewGuid().ToString());
+
+        var respuesta = await cliente.PutAsJsonAsync(
+            "/api/v1/postulantes/mio/socioeconomico",
+            CrearPayloadSocioeconomico());
+
+        respuesta.StatusCode.Should().Be(HttpStatusCode.NotFound);
+    }
+
+    [Fact]
+    public async Task Debe_Retornar409Conflict_Cuando_HayConflictoDeConcurrencia()
+    {
+        var usuarioId = Guid.NewGuid();
+        var repo = Substitute.For<IPostulanteRepository>();
+        var uow = Substitute.For<IUnitOfWork>();
+        repo.ObtenerParaActualizarPorUsuarioIdAsync(usuarioId, Arg.Any<CancellationToken>())
+            .Returns(CrearPostulante(usuarioId));
+        uow.GuardarCambiosAsync(Arg.Any<CancellationToken>())
+            .ThrowsAsync(new ExcepcionConflictoConcurrencia());
+
+        using var fabrica = CrearFabrica(repo: repo, uow: uow);
+        using var cliente = fabrica.CreateClient();
+        cliente.DefaultRequestHeaders.Add(HeaderSub, usuarioId.ToString());
+
+        var respuesta = await cliente.PutAsJsonAsync(
+            "/api/v1/postulantes/mio/socioeconomico",
+            CrearPayloadSocioeconomico());
+
+        respuesta.StatusCode.Should().Be(HttpStatusCode.Conflict);
+        using var documento = JsonDocument.Parse(await respuesta.Content.ReadAsStringAsync());
+        documento.RootElement.GetProperty("codigo").GetString()
+            .Should().Be(ExcepcionConflictoConcurrencia.CodigoError);
+    }
+
+    [Fact]
+    public async Task Debe_Retornar422UnprocessableEntity_Cuando_PersistenciaRechazaReglaDeNegocio()
+    {
+        var usuarioId = Guid.NewGuid();
+        var repo = Substitute.For<IPostulanteRepository>();
+        var uow = Substitute.For<IUnitOfWork>();
+        repo.ObtenerParaActualizarPorUsuarioIdAsync(usuarioId, Arg.Any<CancellationToken>())
+            .Returns(CrearPostulante(usuarioId));
+        uow.GuardarCambiosAsync(Arg.Any<CancellationToken>())
+            .ThrowsAsync(new CondicionLaboralIncoherenteException("La condición laboral no es válida."));
+
+        using var fabrica = CrearFabrica(repo: repo, uow: uow);
+        using var cliente = fabrica.CreateClient();
+        cliente.DefaultRequestHeaders.Add(HeaderSub, usuarioId.ToString());
+
+        var respuesta = await cliente.PutAsJsonAsync(
+            "/api/v1/postulantes/mio/socioeconomico",
+            CrearPayloadSocioeconomico());
+
+        respuesta.StatusCode.Should().Be(HttpStatusCode.UnprocessableEntity);
+        using var documento = JsonDocument.Parse(await respuesta.Content.ReadAsStringAsync());
+        documento.RootElement.GetProperty("codigo").GetString()
+            .Should().Be(CondicionLaboralIncoherenteException.CodigoError);
+    }
+
+    [Fact]
+    public async Task Debe_UsarElUsuarioDelTokenEIgnorarElDelCuerpo_Cuando_ActualizaPerfil()
+    {
+        var usuarioAutenticadoId = Guid.NewGuid();
+        var usuarioSuplantadoId = Guid.NewGuid();
+        var postulante = CrearPostulante(usuarioAutenticadoId);
+        var repo = Substitute.For<IPostulanteRepository>();
+        var uow = Substitute.For<IUnitOfWork>();
+        repo.ObtenerParaActualizarPorUsuarioIdAsync(usuarioAutenticadoId, Arg.Any<CancellationToken>())
+            .Returns(postulante);
+        uow.GuardarCambiosAsync(Arg.Any<CancellationToken>()).Returns(1);
+
+        using var fabrica = CrearFabrica(repo: repo, uow: uow);
+        using var cliente = fabrica.CreateClient();
+        cliente.DefaultRequestHeaders.Add(HeaderSub, usuarioAutenticadoId.ToString());
+
+        var json = JsonSerializer.Serialize(new
+        {
+            usuarioId = usuarioSuplantadoId,
+            estadoCivil = "CASADO",
+            promedioActual = 17.5m,
+            trabaja = true,
+            ocupacion = "EMPLEADO",
+            ingresoMensualPostulante = 1500m,
+            miembrosFamiliares = Array.Empty<object>()
+        });
+
+        using var contenido = new StringContent(json, Encoding.UTF8, "application/json");
+        var respuesta = await cliente.PutAsync(
+            "/api/v1/postulantes/mio/socioeconomico",
+            contenido);
+
+        respuesta.StatusCode.Should().Be(HttpStatusCode.OK);
+        await repo.Received(1)
+            .ObtenerParaActualizarPorUsuarioIdAsync(usuarioAutenticadoId, Arg.Any<CancellationToken>());
+        await repo.DidNotReceive()
+            .ObtenerParaActualizarPorUsuarioIdAsync(usuarioSuplantadoId, Arg.Any<CancellationToken>());
+    }
+
+    [Fact]
     public async Task Debe_Retornar400BadRequest_Cuando_SolicitudNoSuperaValidacion()
     {
         using var fabrica = CrearFabrica();
@@ -141,9 +412,13 @@ public sealed class PostulantesControllerTests : IClassFixture<WebApplicationFac
             "/api/v1/postulantes",
             CrearPayloadValido(Guid.NewGuid(), Guid.NewGuid(), Guid.NewGuid()));
         var respuestaGet = await cliente.GetAsync("/api/v1/postulantes/mio");
+        var respuestaPut = await cliente.PutAsJsonAsync(
+            "/api/v1/postulantes/mio/socioeconomico",
+            CrearPayloadSocioeconomico());
 
         respuestaPost.StatusCode.Should().Be(HttpStatusCode.Unauthorized);
         respuestaGet.StatusCode.Should().Be(HttpStatusCode.Unauthorized);
+        respuestaPut.StatusCode.Should().Be(HttpStatusCode.Unauthorized);
     }
 
     [Fact]
@@ -370,6 +645,34 @@ public sealed class PostulantesControllerTests : IClassFixture<WebApplicationFac
             condicionAcademica = "ADMITIDO",
             aceptaTratamientoDatos = true
         };
+
+    private static object CrearPayloadSocioeconomico(
+        decimal? promedioActual = 17.5m,
+        object[]? miembros = null)
+        => new
+        {
+            estadoCivil = "CASADO",
+            promedioActual,
+            trabaja = true,
+            ocupacion = "EMPLEADO",
+            ingresoMensualPostulante = 1500m,
+            miembrosFamiliares = miembros ?? []
+        };
+
+    private static Postulante CrearPostulante(Guid usuarioId)
+        => Postulante.Crear(
+            personaId: null,
+            usuarioId,
+            numeroDocumentoIdentidad: "V-20202020",
+            nombres: "Luis",
+            apellidos: "Gómez",
+            datosContacto: new DatosContacto("luis@correo.com", "+584121234567"),
+            universidadAliadaId: Guid.NewGuid(),
+            carreraId: Guid.NewGuid(),
+            periodoActualId: Guid.NewGuid(),
+            condicionAcademica: CondicionAcademicaIngreso.Matriculado,
+            aceptaTratamientoDatos: true,
+            fechaRegistro: DateTimeOffset.UtcNow);
 
     private sealed class ManejadorAutenticacionPrueba : AuthenticationHandler<AuthenticationSchemeOptions>
     {

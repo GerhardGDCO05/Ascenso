@@ -1,4 +1,5 @@
 using Ascenso.Postulaciones.Application.Interfaces;
+using Ascenso.Postulaciones.Application.Postulantes.Comandos.ActualizarPerfilSocioeconomico;
 using Ascenso.Postulaciones.Application.Postulantes.Comandos.RegistrarPostulante;
 using Ascenso.Postulaciones.Application.Postulantes.Consultas.ObtenerMiPerfil;
 using Ascenso.Postulaciones.Domain.Interfaces;
@@ -30,13 +31,27 @@ public sealed class InyeccionDependenciasTests
 
         alcance.ServiceProvider.GetRequiredService<RegistrarPostulanteCommandHandler>()
             .Should().NotBeNull();
+        alcance.ServiceProvider.GetRequiredService<ActualizarPerfilSocioeconomicoCommandHandler>()
+            .Should().NotBeNull();
         alcance.ServiceProvider.GetRequiredService<ObtenerMiPerfilQueryHandler>()
             .Should().NotBeNull();
 
-        var validadores = alcance.ServiceProvider
+        var validadoresRegistro = alcance.ServiceProvider
             .GetServices<IValidator<RegistrarPostulanteCommand>>();
 
-        validadores.Should().ContainSingle(
+        validadoresRegistro.Should().ContainSingle(
             validador => validador is RegistrarPostulanteCommandValidator);
+
+        var validadoresSocioeconomicos = alcance.ServiceProvider
+            .GetServices<IValidator<ActualizarPerfilSocioeconomicoCommand>>();
+
+        validadoresSocioeconomicos.Should().ContainSingle(
+            validador => validador is ActualizarPerfilSocioeconomicoCommandValidator);
+
+        var validadoresFamiliares = alcance.ServiceProvider
+            .GetServices<IValidator<DatosMiembroFamiliarCommand>>();
+
+        validadoresFamiliares.Should().ContainSingle(
+            validador => validador is DatosMiembroFamiliarCommandValidator);
     }
 }

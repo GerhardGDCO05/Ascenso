@@ -11,6 +11,10 @@ public interface IPostulanteRepository
 
     Task<Postulante?> ObtenerPorUsuarioIdAsync(Guid usuarioId, CancellationToken cancellationToken = default);
 
+    Task<Postulante?> ObtenerParaActualizarPorUsuarioIdAsync(
+        Guid usuarioId,
+        CancellationToken cancellationToken = default);
+
     Task<bool> ExistePorNumeroDocumentoAsync(
         string numeroDocumentoIdentidad,
         CancellationToken cancellationToken = default);
