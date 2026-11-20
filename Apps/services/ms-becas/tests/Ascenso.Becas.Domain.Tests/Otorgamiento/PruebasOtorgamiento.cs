@@ -10,6 +10,10 @@ namespace Ascenso.Becas.Domain.Tests.Otorgamiento;
 
 internal static class PruebasOtorgamiento
 {
+    public const string TipoMimePdf = "application/pdf";
+
+    public const long TamanioPdf = 1024;
+
     public static readonly DateTimeOffset FechaBase =
         new(2026, 11, 10, 12, 0, 0, TimeSpan.Zero);
 
@@ -60,7 +64,10 @@ internal static class PruebasOtorgamiento
             montoComprometido,
             permiteAcumulacion,
             requiereCompromiso,
-            "BEC-2026-0001");
+            "BEC-2026-0001",
+            requiereCompromiso
+                ? "https://storage.example/becas/plantilla-compromiso.pdf"
+                : null);
 
     public static DatosOfertaBeca DatosOferta(
         Guid postulacionId,
@@ -78,6 +85,8 @@ internal static class PruebasOtorgamiento
             Condiciones(),
             "https://storage.example/becas/carta.pdf",
             hash ?? new string('a', 64),
+            "application/pdf",
+            1024,
             "hangfire-job-oferta-1",
             autorizacionOtpEmisionId);
 

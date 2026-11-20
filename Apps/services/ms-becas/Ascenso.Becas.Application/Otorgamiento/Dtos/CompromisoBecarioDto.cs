@@ -8,6 +8,7 @@ public sealed record CompromisoBecarioDto(
     Guid BecaId,
     string Estado,
     int NumeroIntentoCarga,
+    string? UrlPlantillaGenerada,
     string? UrlPdfFirmado,
     DateTimeOffset? FechaCargaFirma,
     string? ObservacionesRevision,

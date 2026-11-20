@@ -14,5 +14,7 @@ public sealed record class DatosOfertaBeca(
     CondicionesPermanencia CondicionesSnapshot,
     string UrlCartaPdfFirebase,
     string HashCartaSha256,
+    string TipoMimeCartaPdf,
+    long TamanioCartaPdfBytes,
     string ReferenciaJobExpiracionHangfireId,
     Guid? AutorizacionOtpEmisionId = null);

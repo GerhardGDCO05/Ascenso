@@ -21,6 +21,10 @@ public sealed class AlmacenamientoArchivosFalso : IAlmacenamientoArchivos
 
     public Exception? ErrorEliminacion { get; set; }
 
+    public Dictionary<string, ArchivoAlmacenado> ResultadosPorRuta { get; } = [];
+
+    public Dictionary<string, Exception> ErroresSubidaPorRuta { get; } = [];
+
     public List<string> RutasSubidas { get; } = [];
 
     public List<string> UrlsEliminadas { get; } = [];
@@ -34,6 +38,11 @@ public sealed class AlmacenamientoArchivosFalso : IAlmacenamientoArchivos
         cancellationToken.ThrowIfCancellationRequested();
         ArgumentNullException.ThrowIfNull(contenido);
 
+        if (ErroresSubidaPorRuta.TryGetValue(rutaLogica, out var errorPorRuta))
+        {
+            throw errorPorRuta;
+        }
+
         if (ErrorSubida is not null)
         {
             throw ErrorSubida;
@@ -41,16 +50,24 @@ public sealed class AlmacenamientoArchivosFalso : IAlmacenamientoArchivos
 
         RutasSubidas.Add(rutaLogica);
 
+        var resultado = ResultadosPorRuta.TryGetValue(rutaLogica, out var configurado)
+            ? configurado
+            : Resultado;
+
         if (!CalcularHash)
         {
-            return Resultado;
+            return resultado;
         }
 
+        var tamanio = contenido.CanSeek
+            ? contenido.Length
+            : resultado.TamanioBytes;
         var hash = await SHA256.HashDataAsync(contenido, cancellationToken);
 
-        return Resultado with
+        return resultado with
         {
-            HashSha256 = Convert.ToHexString(hash).ToLowerInvariant()
+            HashSha256 = Convert.ToHexString(hash).ToLowerInvariant(),
+            TamanioBytes = tamanio
         };
     }
 

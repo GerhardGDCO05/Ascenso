@@ -30,9 +30,9 @@
 - [x] **RF-12**: Gestión de presupuesto y disponibilidad de cupos (Microservicio PRG)
 - [x] **RF-13**: Alta y gestión de donantes / aportes (Microservicio PRG)
 - [x] **RF-14**: Convenios con universidades aliadas y aranceles (Microservicio PRG)
-- [ ] **RF-15**: Emisión de carta de otorgamiento / Oferta (Microservicio BEC)
-- [ ] **RF-16**: Aceptación o rechazo formal de la beca (Microservicio BEC)
-- [ ] **RF-17**: Firma de compromiso del becario (Microservicio BEC)
+- [x] **RF-15**: Emisión de carta de otorgamiento / Oferta (Microservicio BEC)
+- [x] **RF-16**: Aceptación o rechazo formal de la beca (Microservicio BEC)
+- [x] **RF-17**: Firma de compromiso del becario (Microservicio BEC)
 - [ ] **RF-18**: Historial de becas por persona (Microservicio AUD / BEC)
 
 ---

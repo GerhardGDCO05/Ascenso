@@ -138,7 +138,17 @@ public sealed class Beca : AggregateRoot
 
         if (datos.RequiereCompromisoFirmado)
         {
-            beca.Compromiso = CompromisoBecario.Crear(becaId, contexto);
+            if (string.IsNullOrWhiteSpace(datos.UrlPlantillaCompromiso))
+            {
+                throw new ArgumentException(
+                    "La plantilla del compromiso es obligatoria cuando el programa exige compromiso firmado.",
+                    nameof(datos));
+            }
+
+            beca.Compromiso = CompromisoBecario.Crear(
+                becaId,
+                datos.UrlPlantillaCompromiso,
+                contexto);
         }
 
         beca.RegistrarHistorialBeca(
@@ -481,6 +491,8 @@ public sealed class Beca : AggregateRoot
     public void CargarCompromiso(
         string urlPdfFirmadoFirebase,
         string hashDocumentoSha256,
+        long tamanioDocumentoBytes,
+        string tipoMimeDocumento,
         string ipCargaFirma,
         ContextoOperacion contexto)
     {
@@ -488,7 +500,13 @@ public sealed class Beca : AggregateRoot
         var compromiso = ObtenerCompromiso();
         var estadoAnterior = compromiso.Estado;
 
-        compromiso.Cargar(urlPdfFirmadoFirebase, hashDocumentoSha256, ipCargaFirma, contexto);
+        compromiso.Cargar(
+            urlPdfFirmadoFirebase,
+            hashDocumentoSha256,
+            tamanioDocumentoBytes,
+            tipoMimeDocumento,
+            ipCargaFirma,
+            contexto);
         CompromisoFirmadoAprobado = false;
         HabilitadaParaDesembolso = false;
         ActualizarAuditoria(contexto.UsuarioAutorId, contexto.Fecha);

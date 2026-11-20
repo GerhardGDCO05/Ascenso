@@ -18,6 +18,13 @@
   </ItemGroup>
 
   <ItemGroup>
+    <EmbeddedResource Include="Archivos\Recursos\LiberationSans-Regular.ttf">
+      <LogicalName>Ascenso.Becas.Infrastructure.Archivos.Recursos.LiberationSans-Regular.ttf</LogicalName>
+    </EmbeddedResource>
+    <None Include="Archivos\Recursos\LiberationSans-LICENSE.txt" CopyToOutputDirectory="PreserveNewest" />
+  </ItemGroup>
+
+  <ItemGroup>
     <ProjectReference Include="..\Ascenso.Becas.Application\Ascenso.Becas.Application.csproj" />
     <ProjectReference Include="..\Ascenso.Becas.Domain\Ascenso.Becas.Domain.csproj" />
   </ItemGroup>

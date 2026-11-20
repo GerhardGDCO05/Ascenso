@@ -1,3 +1,5 @@
+using System.Security.Cryptography;
+using System.Text;
 using Ascenso.Becas.Application.Excepciones;
 using Ascenso.Becas.Application.Otorgamiento.Comandos.EmitirOfertaBeca;
 using Ascenso.Becas.Domain.Enums;
@@ -32,6 +34,12 @@ public sealed class EmitirOfertaBecaHandlerTests
         beca.Oferta.Should().NotBeNull();
         beca.Oferta!.Estado.Should().Be(EstadoOferta.PendienteRespuesta);
         beca.Oferta.Id.Should().Be(resultado.OfertaId);
+        beca.Oferta.UrlCartaPdfFirebase.Should().Be(escenario.Almacenamiento.Resultado.Url);
+        var contenidoCarta = Encoding.UTF8.GetBytes(escenario.Generador.Contenido);
+        beca.Oferta.HashCartaSha256.Should().Be(
+            Convert.ToHexString(SHA256.HashData(contenidoCarta)).ToLowerInvariant());
+        beca.Oferta.TipoMimeCartaPdf.Should().Be("application/pdf");
+        beca.Oferta.TamanioCartaPdfBytes.Should().Be(contenidoCarta.Length);
 
         escenario.Generador.Datos.Should().NotBeNull();
         escenario.Generador.Datos!.NombreEstudiante.Should().Be("Ana Pérez");

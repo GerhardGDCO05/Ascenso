@@ -17,6 +17,8 @@ public sealed class CompromisoBecarioTests
         beca.CargarCompromiso(
             "https://storage.example/becas/compromiso-1.pdf",
             PruebasOtorgamiento.Hash('b'),
+            PruebasOtorgamiento.TamanioPdf,
+            PruebasOtorgamiento.TipoMimePdf,
             "190.85.12.34",
             contexto);
 
@@ -25,6 +27,8 @@ public sealed class CompromisoBecarioTests
         Assert.Equal(1, compromiso.NumeroIntentoCarga);
         Assert.Equal("https://storage.example/becas/compromiso-1.pdf", compromiso.UrlPdfFirmadoFirebase);
         Assert.Equal(PruebasOtorgamiento.Hash('b'), compromiso.HashDocumentoSha256);
+        Assert.Equal(PruebasOtorgamiento.TipoMimePdf, compromiso.TipoMimeDocumento);
+        Assert.Equal(PruebasOtorgamiento.TamanioPdf, compromiso.TamanioDocumentoBytes);
         Assert.Equal("190.85.12.34", compromiso.IpCargaFirma);
         Assert.Equal(contexto.Fecha, compromiso.FechaCargaFirma);
         Assert.Null(compromiso.RevisadoPorCoordinadorId);
@@ -76,6 +80,8 @@ public sealed class CompromisoBecarioTests
         beca.CargarCompromiso(
             "https://storage.example/becas/compromiso-2.pdf",
             PruebasOtorgamiento.Hash('e'),
+            PruebasOtorgamiento.TamanioPdf,
+            PruebasOtorgamiento.TipoMimePdf,
             "190.85.12.35",
             nuevaCarga);
 
@@ -108,6 +114,8 @@ public sealed class CompromisoBecarioTests
             () => beca.CargarCompromiso(
                 "https://storage.example/becas/compromiso-3.pdf",
                 PruebasOtorgamiento.Hash('f'),
+            PruebasOtorgamiento.TamanioPdf,
+            PruebasOtorgamiento.TipoMimePdf,
                 "190.85.12.36",
                 PruebasOtorgamiento.Contexto(PruebasOtorgamiento.FechaBase.AddDays(4))));
 
@@ -132,6 +140,8 @@ public sealed class CompromisoBecarioTests
             () => beca.CargarCompromiso(
                 "https://storage.example/becas/compromiso-4.pdf",
                 PruebasOtorgamiento.Hash('h'),
+            PruebasOtorgamiento.TamanioPdf,
+            PruebasOtorgamiento.TipoMimePdf,
                 "190.85.12.37",
                 contexto));
 
@@ -147,6 +157,8 @@ public sealed class CompromisoBecarioTests
             () => beca.CargarCompromiso(
                 "https://storage.example/becas/compromiso.pdf",
                 PruebasOtorgamiento.Hash('i'),
+            PruebasOtorgamiento.TamanioPdf,
+            PruebasOtorgamiento.TipoMimePdf,
                 "190.85.12.38",
                 PruebasOtorgamiento.Contexto()));
     }
@@ -161,6 +173,8 @@ public sealed class CompromisoBecarioTests
             () => beca.CargarCompromiso(
                 "https://storage.example/becas/compromiso.pdf",
                 PruebasOtorgamiento.Hash('j'),
+                PruebasOtorgamiento.TamanioPdf,
+                PruebasOtorgamiento.TipoMimePdf,
                 "no-es-una-ip",
                 PruebasOtorgamiento.Contexto()));
     }
@@ -169,6 +183,8 @@ public sealed class CompromisoBecarioTests
         => beca.CargarCompromiso(
             "https://storage.example/becas/compromiso.pdf",
             PruebasOtorgamiento.Hash(hash),
+            PruebasOtorgamiento.TamanioPdf,
+            PruebasOtorgamiento.TipoMimePdf,
             "190.85.12.34",
             PruebasOtorgamiento.Contexto(
                 PruebasOtorgamiento.FechaBase.AddDays(2),

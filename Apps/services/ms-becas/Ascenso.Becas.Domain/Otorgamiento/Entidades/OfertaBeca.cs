@@ -36,6 +36,8 @@ public sealed class OfertaBeca : EntidadAuditable
         CondicionesSnapshot = datos.CondicionesSnapshot;
         UrlCartaPdfFirebase = datos.UrlCartaPdfFirebase;
         HashCartaSha256 = datos.HashCartaSha256;
+        TipoMimeCartaPdf = datos.TipoMimeCartaPdf;
+        TamanioCartaPdfBytes = datos.TamanioCartaPdfBytes;
         FechaEmision = fechaEmision.ToUniversalTime();
         FechaVencimientoAceptacion = fechaVencimientoAceptacion.ToUniversalTime();
         Estado = EstadoOferta.PendienteRespuesta;
@@ -61,6 +63,10 @@ public sealed class OfertaBeca : EntidadAuditable
     public string UrlCartaPdfFirebase { get; private set; } = string.Empty;
 
     public string HashCartaSha256 { get; private set; } = string.Empty;
+
+    public string TipoMimeCartaPdf { get; private set; } = string.Empty;
+
+    public long TamanioCartaPdfBytes { get; private set; }
 
     public DateTimeOffset FechaEmision { get; private set; }
 
@@ -136,6 +142,20 @@ public sealed class OfertaBeca : EntidadAuditable
             throw new ArgumentException(
                 "El hash de la carta debe ser un SHA-256 hexadecimal de 64 caracteres.",
                 nameof(datos));
+        }
+
+        if (string.IsNullOrWhiteSpace(datos.TipoMimeCartaPdf))
+        {
+            throw new ArgumentException(
+                "El tipo MIME de la carta es obligatorio.",
+                nameof(datos));
+        }
+
+        if (datos.TamanioCartaPdfBytes <= 0)
+        {
+            throw new ArgumentOutOfRangeException(
+                nameof(datos),
+                "El tamaño de la carta debe ser mayor que cero.");
         }
 
         if (string.IsNullOrWhiteSpace(datos.ReferenciaJobExpiracionHangfireId))

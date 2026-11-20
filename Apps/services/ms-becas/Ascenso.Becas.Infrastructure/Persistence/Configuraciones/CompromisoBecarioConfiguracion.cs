@@ -17,6 +17,9 @@ internal sealed class CompromisoBecarioConfiguracion : IEntityTypeConfiguration<
             tabla.HasCheckConstraint(
                 "ck_compromiso_becario_intento_valido",
                 "numero_intento_carga >= 0");
+            tabla.HasCheckConstraint(
+                "ck_compromiso_becario_tamanio_valido",
+                "tamanio_documento_bytes IS NULL OR tamanio_documento_bytes > 0");
         });
 
         builder.HasKey(compromiso => compromiso.Id).HasName("pk_compromiso_becario");
@@ -39,6 +42,13 @@ internal sealed class CompromisoBecarioConfiguracion : IEntityTypeConfiguration<
             .HasColumnName("hash_documento_sha256")
             .HasMaxLength(64)
             .IsFixedLength();
+
+        builder.Property(compromiso => compromiso.TipoMimeDocumento)
+            .HasColumnName("tipo_mime_documento")
+            .HasMaxLength(100);
+
+        builder.Property(compromiso => compromiso.TamanioDocumentoBytes)
+            .HasColumnName("tamanio_documento_bytes");
 
         builder.Property(compromiso => compromiso.NumeroIntentoCarga)
             .HasColumnName("numero_intento_carga");
