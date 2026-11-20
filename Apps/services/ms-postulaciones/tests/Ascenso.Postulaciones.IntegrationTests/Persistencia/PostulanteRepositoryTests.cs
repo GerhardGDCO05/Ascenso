@@ -49,10 +49,12 @@ public sealed class PostulanteRepositoryTests
 
         var porId = () => repositorio.ObtenerPorIdAsync(Guid.Empty);
         var porUsuario = () => repositorio.ObtenerPorUsuarioIdAsync(Guid.Empty);
+        var paraActualizar = () => repositorio.ObtenerParaActualizarPorUsuarioIdAsync(Guid.Empty);
         var porDocumento = () => repositorio.ExistePorNumeroDocumentoAsync("   ");
 
         await porId.Should().ThrowAsync<ArgumentException>();
         await porUsuario.Should().ThrowAsync<ArgumentException>();
+        await paraActualizar.Should().ThrowAsync<ArgumentException>();
         await porDocumento.Should().ThrowAsync<ArgumentException>();
     }
 
@@ -82,6 +84,30 @@ public sealed class PostulanteRepositoryTests
         sqlPorId.Should().Contain("WHERE");
         sqlPorUsuario.Should().Contain("usuario_id");
         sqlPorDocumento.Should().Contain("numero_documento_identidad");
+    }
+
+    [Fact]
+    public void Debe_IncluirFamiliaresEnLasConsultasDeLecturaYActualizacion_Cuando_SeInspeccionanLasConsultas()
+    {
+        using var contexto = CrearContexto();
+        var repositorio = new PostulanteRepository(contexto);
+        var id = Guid.NewGuid();
+        var usuarioId = Guid.NewGuid();
+
+        var porId = repositorio.ConsultarPorId(id);
+        var porUsuario = repositorio.ConsultarPorUsuarioId(usuarioId);
+        var paraActualizar = repositorio.ConsultarParaActualizarPorUsuarioId(usuarioId);
+
+        porId.ToQueryString().Should().Contain("miembros_familiares");
+        porId.ToQueryString().Should().Contain("LEFT JOIN");
+        porUsuario.ToQueryString().Should().Contain("miembros_familiares");
+        porUsuario.ToQueryString().Should().Contain("LEFT JOIN");
+        paraActualizar.ToQueryString().Should().Contain("miembros_familiares");
+        paraActualizar.ToQueryString().Should().Contain("LEFT JOIN");
+
+        porId.Expression.ToString().Should().Contain("AsNoTracking");
+        porUsuario.Expression.ToString().Should().Contain("AsNoTracking");
+        paraActualizar.Expression.ToString().Should().NotContain("AsNoTracking");
     }
 
     [Fact]

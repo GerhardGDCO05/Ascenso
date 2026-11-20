@@ -1,7 +1,9 @@
 using Ascenso.Postulaciones.Domain.Comun;
 using Ascenso.Postulaciones.Domain.Enums;
 using Ascenso.Postulaciones.Domain.Excepciones;
+using Ascenso.Postulaciones.Domain.Postulantes.Entidades;
 using Ascenso.Postulaciones.Domain.Postulantes.ObjetosValor;
+using OcupacionEnum = Ascenso.Postulaciones.Domain.Enums.Ocupacion;
 
 namespace Ascenso.Postulaciones.Domain.Postulantes.Agregados;
 
@@ -15,6 +17,11 @@ public sealed class Postulante : AggregateRoot
     private const int LongitudMaximaDocumento = 30;
     private const int LongitudMinimaNombre = 2;
     private const int LongitudMaximaNombre = 100;
+    private const decimal PromedioMinimo = 0m;
+    private const decimal PromedioMaximo = 20m;
+    private const int DecimalesMaximos = 2;
+
+    private readonly List<MiembroFamiliar> _miembrosFamiliares = [];
 
     // Constructor requerido por los adaptadores de persistencia.
     private Postulante()
@@ -77,6 +84,22 @@ public sealed class Postulante : AggregateRoot
     public EstadoPerfil EstadoPerfil { get; private set; }
 
     public DateTimeOffset FechaRegistro { get; private set; }
+
+    public EstadoCivil? EstadoCivil { get; private set; }
+
+    public decimal? PromedioActual { get; private set; }
+
+    public bool? Trabaja { get; private set; }
+
+    public Ocupacion? Ocupacion { get; private set; }
+
+    public decimal? IngresoMensualPostulante { get; private set; }
+
+    public int? NumeroIntegrantesFamilia { get; private set; }
+
+    public decimal? IngresoFamiliarMensualTotal { get; private set; }
+
+    public IReadOnlyCollection<MiembroFamiliar> MiembrosFamiliares => _miembrosFamiliares.AsReadOnly();
 
     public static Postulante Crear(
         Guid? personaId,
@@ -147,6 +170,130 @@ public sealed class Postulante : AggregateRoot
             periodoActualId,
             condicionAcademica,
             fechaRegistro.ToUniversalTime());
+    }
+
+    public void RegistrarPerfilSocioeconomico(
+        EstadoCivil estadoCivil,
+        decimal promedioActual,
+        bool trabaja,
+        Ocupacion ocupacion,
+        decimal ingresoMensualPostulante,
+        IReadOnlyCollection<DatosMiembroFamiliar> miembrosFamiliares,
+        Guid usuarioModificacionId,
+        DateTimeOffset fechaModificacion)
+    {
+        if (!Enum.IsDefined(estadoCivil))
+        {
+            throw new CatalogoInvalidoException(nameof(estadoCivil));
+        }
+
+        if (!Enum.IsDefined(ocupacion))
+        {
+            throw new CatalogoInvalidoException(nameof(ocupacion));
+        }
+
+        ValidarPromedioActual(promedioActual);
+        ValidarIngresoMensual(ingresoMensualPostulante, "El ingreso mensual del postulante");
+        ValidarCondicionLaboral(trabaja, ocupacion);
+
+        if (miembrosFamiliares is null)
+        {
+            throw new MiembroFamiliarInvalidoException(
+                "La colección de miembros familiares es obligatoria.");
+        }
+
+        if (usuarioModificacionId == Guid.Empty)
+        {
+            throw new ArgumentException(
+                "El usuario de modificación es obligatorio.",
+                nameof(usuarioModificacionId));
+        }
+
+        if (fechaModificacion == default)
+        {
+            throw new ArgumentException(
+                "La fecha de modificación es obligatoria.",
+                nameof(fechaModificacion));
+        }
+
+        var nuevosMiembros = new List<MiembroFamiliar>(miembrosFamiliares.Count);
+
+        foreach (var datosMiembro in miembrosFamiliares)
+        {
+            if (datosMiembro is null)
+            {
+                throw new MiembroFamiliarInvalidoException(
+                    "Los datos de cada miembro familiar son obligatorios.");
+            }
+
+            nuevosMiembros.Add(
+                MiembroFamiliar.Crear(Id, datosMiembro, fechaModificacion, usuarioModificacionId));
+        }
+
+        EstadoCivil = estadoCivil;
+        PromedioActual = promedioActual;
+        Trabaja = trabaja;
+        Ocupacion = ocupacion;
+        IngresoMensualPostulante = ingresoMensualPostulante;
+
+        _miembrosFamiliares.Clear();
+        _miembrosFamiliares.AddRange(nuevosMiembros);
+
+        NumeroIntegrantesFamilia = _miembrosFamiliares.Count + 1;
+        IngresoFamiliarMensualTotal = decimal.Round(
+            ingresoMensualPostulante + nuevosMiembros.Sum(miembro => miembro.IngresoMensual),
+            DecimalesMaximos,
+            MidpointRounding.AwayFromZero);
+
+        ActualizarAuditoria(usuarioModificacionId, fechaModificacion);
+        EstadoPerfil = EstadoPerfil.Completo;
+    }
+
+    private static void ValidarPromedioActual(decimal promedioActual)
+    {
+        if (promedioActual is < PromedioMinimo or > PromedioMaximo)
+        {
+            throw new DatosSocioeconomicosInvalidosException(
+                $"El promedio actual debe estar entre {PromedioMinimo} y {PromedioMaximo}.");
+        }
+
+        if (decimal.Round(promedioActual, DecimalesMaximos) != promedioActual)
+        {
+            throw new DatosSocioeconomicosInvalidosException(
+                $"El promedio actual admite como máximo {DecimalesMaximos} decimales.");
+        }
+    }
+
+    private static void ValidarIngresoMensual(decimal ingresoMensual, string campo)
+    {
+        if (ingresoMensual < 0m)
+        {
+            throw new DatosSocioeconomicosInvalidosException(
+                $"{campo} no puede ser negativo.");
+        }
+
+        if (decimal.Round(ingresoMensual, DecimalesMaximos) != ingresoMensual)
+        {
+            throw new DatosSocioeconomicosInvalidosException(
+                $"{campo} admite como máximo {DecimalesMaximos} decimales.");
+        }
+    }
+
+    private static void ValidarCondicionLaboral(bool trabaja, Ocupacion ocupacion)
+    {
+        var esCoherente = trabaja
+            ? ocupacion is OcupacionEnum.Empleado or OcupacionEnum.Independiente or OcupacionEnum.Otro
+            : ocupacion is OcupacionEnum.Estudiante
+                or OcupacionEnum.LaboresHogar
+                or OcupacionEnum.Jubilado
+                or OcupacionEnum.NoTrabaja
+                or OcupacionEnum.Otro;
+
+        if (!esCoherente)
+        {
+            throw new CondicionLaboralIncoherenteException(
+                "La ocupación declarada no es coherente con la condición laboral.");
+        }
     }
 
     private static string NormalizarDocumento(string numeroDocumentoIdentidad)
