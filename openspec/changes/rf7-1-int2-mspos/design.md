@@ -25,7 +25,7 @@ Estado actual observado:
 
 ### D1. Agregado y entidad hija (patrón `Postulante` → `MiembroFamiliar`)
 
-`RubricaEvaluacion : AggregateRoot` (que ya extiende `EntidadAuditable`) en `Domain/Rubricas/Agregados/`; `CriterioEvaluacion : EntidadAuditable` en `Domain/Rubricas/Entidades/`, con `RubricaEvaluacionId`, constructor privado para EF, fábrica `Crear` y métodos de dominio `Actualizar`. Colección privada `_criterios` expuesta como `IReadOnlyCollection<CriterioEvaluacion>`; ninguna propiedad con setter público. Todas las mutaciones del agregado reciben `DateTimeOffset` y `usuarioId` (el dominio no usa reloj propio; el handler pasa `TimeProvider.GetUtcNow()`).
+`RubricaEvaluacion : AggregateRoot` (que ya extiende `EntidadAuditable`) en `Domain/Rubricas/Agregados/`; `CriterioEvaluacion : EntidadAuditable` en `Domain/Rubricas/Entidades/`, con `RubricaEvaluacionId`, constructor privado para EF, fábrica `Crear` y método de dominio `Actualizar` (`Actualizar` es `internal`). Colección privada `_criterios` expuesta como `IReadOnlyCollection<CriterioEvaluacion>`; ninguna propiedad con setter público. Todas las mutaciones del agregado reciben `DateTimeOffset` y `usuarioId` (el dominio no usa reloj propio; el handler pasa `TimeProvider.GetUtcNow()`).
 
 Operaciones del agregado: `Crear`, `AgregarCriterio`, `EditarCriterio`, `EliminarCriterio`, `Publicar`, y propiedades calculadas `SumaPesos` y `DiferenciaPara100`.
 

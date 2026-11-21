@@ -96,7 +96,7 @@ public sealed class CriterioEvaluacion : EntidadAuditable
             usuarioCreacionId);
     }
 
-    public void Actualizar(
+    internal void Actualizar(
         string nombre,
         string descripcion,
         decimal pesoPorcentual,

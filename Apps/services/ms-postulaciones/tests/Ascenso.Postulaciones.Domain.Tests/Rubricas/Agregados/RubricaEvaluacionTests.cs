@@ -3,6 +3,7 @@ using Ascenso.Postulaciones.Domain.Comun;
 using Ascenso.Postulaciones.Domain.Enums;
 using Ascenso.Postulaciones.Domain.Excepciones;
 using Ascenso.Postulaciones.Domain.Rubricas.Agregados;
+using Ascenso.Postulaciones.Domain.Rubricas.Entidades;
 
 namespace Ascenso.Postulaciones.Domain.Tests.Rubricas.Agregados;
 
@@ -472,6 +473,23 @@ public sealed class RubricaEvaluacionTests
         Assert.Equal(RubricaBloqueadaException.CodigoError, excepcion.Codigo);
         Assert.Equal(409, excepcion.EstadoHttp);
         Assert.Equal(estadoInmutable, rubrica.Estado);
+    }
+
+    [Fact]
+    public void Debe_OcultarActualizarEnCriterioEvaluacion_Cuando_SeInspeccionaLaSuperficiePublica()
+    {
+        var metodoPublico = typeof(CriterioEvaluacion).GetMethod(
+            nameof(CriterioEvaluacion.Actualizar),
+            BindingFlags.Public | BindingFlags.Instance | BindingFlags.Static);
+
+        var metodoInterno = typeof(CriterioEvaluacion).GetMethod(
+            nameof(CriterioEvaluacion.Actualizar),
+            BindingFlags.NonPublic | BindingFlags.Instance);
+
+        Assert.Null(metodoPublico);
+        Assert.NotNull(metodoInterno);
+        Assert.False(metodoInterno.IsPublic);
+        Assert.True(metodoInterno.IsAssembly);
     }
 
     private static (RubricaEvaluacion Rubrica, Guid CriterioId) CrearRubricaEnEstadoInmutable(
