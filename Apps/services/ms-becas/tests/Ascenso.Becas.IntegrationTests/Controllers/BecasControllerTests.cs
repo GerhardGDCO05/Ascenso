@@ -89,6 +89,9 @@ public sealed class BecasControllerTests : IClassFixture<OfertasBecaApiFactory>
         respuesta.StatusCode.Should().Be(HttpStatusCode.OK);
         var cuerpo = await respuesta.Content.ReadFromJsonAsync<BecaDto>();
         cuerpo.Should().BeEquivalentTo(beca);
+        cuerpo!.Compromiso.Should().NotBeNull();
+        cuerpo.Compromiso!.UrlPlantillaGenerada.Should().Be(
+            "https://storage.example/becas/plantilla-compromiso.pdf");
 
         await consultas.Received(1).ConsultarAsync<ObtenerBecaQuery, BecaDto>(
             Arg.Is<ObtenerBecaQuery>(consulta => consulta.BecaId == becaId),
@@ -279,7 +282,17 @@ public sealed class BecasControllerTests : IClassFixture<OfertasBecaApiFactory>
             null,
             null,
             null,
-            null,
+            new CompromisoBecarioDto(
+                Guid.NewGuid(),
+                becaId,
+                "PENDIENTE_CARGA",
+                0,
+                "https://storage.example/becas/plantilla-compromiso.pdf",
+                null,
+                null,
+                null,
+                null,
+                null),
             []);
 
     private static void AutenticarComoPostulante(

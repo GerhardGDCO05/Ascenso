@@ -25,6 +25,10 @@ public sealed class AlmacenamientoArchivosFalso : IAlmacenamientoArchivos
 
     public Dictionary<string, Exception> ErroresSubidaPorRuta { get; } = [];
 
+    public Func<string, ArchivoAlmacenado>? CrearResultado { get; set; }
+
+    public Func<string, Exception?>? ErrorSubidaSegunRuta { get; set; }
+
     public List<string> RutasSubidas { get; } = [];
 
     public List<string> UrlsEliminadas { get; } = [];
@@ -38,6 +42,12 @@ public sealed class AlmacenamientoArchivosFalso : IAlmacenamientoArchivos
         cancellationToken.ThrowIfCancellationRequested();
         ArgumentNullException.ThrowIfNull(contenido);
 
+        var errorSegunRuta = ErrorSubidaSegunRuta?.Invoke(rutaLogica);
+        if (errorSegunRuta is not null)
+        {
+            throw errorSegunRuta;
+        }
+
         if (ErroresSubidaPorRuta.TryGetValue(rutaLogica, out var errorPorRuta))
         {
             throw errorPorRuta;
@@ -50,9 +60,10 @@ public sealed class AlmacenamientoArchivosFalso : IAlmacenamientoArchivos
 
         RutasSubidas.Add(rutaLogica);
 
-        var resultado = ResultadosPorRuta.TryGetValue(rutaLogica, out var configurado)
-            ? configurado
-            : Resultado;
+        var resultado = CrearResultado?.Invoke(rutaLogica)
+            ?? (ResultadosPorRuta.TryGetValue(rutaLogica, out var configurado)
+                ? configurado
+                : Resultado);
 
         if (!CalcularHash)
         {

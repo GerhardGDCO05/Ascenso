@@ -4,44 +4,92 @@
 >
 > **Alcance del microservicio `MS-BEC`:** RF-15, RF-16, RF-17, RF-19, RF-20, RF-21, RF-22, RF-24, RF-25, RF-26 y RF-27, más las contribuciones de `MS-BEC` a RF-18, RF-28, RF-29 y RF-30 y los movimientos contables que alimentan RF-23 (cuyo dueño es `MS-PRG`/`MS-AUD`). Las secciones 15–22 completan el resto del ciclo de vida en cambios posteriores; **no están fuera del alcance de `MS-BEC`**, solo fuera del alcance de este cambio.
 
-> **Sobre las HUs:** el repositorio no versiona el catálogo de 83 HUs y el PRD indica que cada equipo debe derivarlo. Para que la trazabilidad sea verificable sin inventar identificadores, cada sección se relaciona con el RF y con el nombre de la historia funcional del PRD. Cuando el catálogo de HUs se incorpore, agregue el identificador oficial en la columna correspondiente sin cambiar la numeración de las secciones.
+> **Sobre las HUs:** los identificadores y títulos se transcriben del documento funcional `Doc General del Proyecto.pdf` (no versionado en Git). Ese documento asigna IDs explícitos a RF-15 a RF-18 y RF-27 a RF-30; para RF-19 a RF-26 usa “Historia funcional 1/2/3”, así que se referencian por RF + número de historia. No se inventan identificadores faltantes. Si el documento funcional cambia, actualice esta matriz sin renumerar las secciones.
 
-## Trazabilidad sección ↔ RF ↔ historia funcional
+## Trazabilidad sección ↔ RF ↔ HU
 
-| Sección | RF / colaboración | Historia funcional (HU) | Estado |
+| Sección | RF / colaboración | HUs cubiertas | Estado |
 | :--- | :--- | :--- | :--- |
-| 1. Preparación del entorno | Transversal | Como equipo, quiero una solución compilable y reproducible para construir las HUs de `MS-BEC`. | Completado |
-| 2. Shared kernel | Transversal | Como dominio, quiero invariantes y contratos reutilizables para todas las HUs de becas. | Completado |
-| 3. Dominio de otorgamiento | RF-15, RF-16, RF-17 | Emitir la oferta, aceptar/rechazar formalmente y firmar el compromiso del becario. | Completado |
-| 4. Persistencia y migraciones | RF-15, RF-16, RF-17 | Persistir el agregado de otorgamiento con sus invariantes y auditoría. | Completado |
-| 5. Seguridad e idempotencia | Transversal; OTP de RF-20/RF-22 | Proteger operaciones sensibles y hacer reintentos seguros. | Completado |
-| 6. Aplicación y casos de uso | RF-15, RF-16, RF-17 | Ejecutar la emisión, la respuesta a la oferta y el compromiso. | Completado |
-| 7. Clientes de integración | RF-15, RF-16, RF-17 | Coordinar con `MS-POS`, `MS-PRG` y `MS-PLT` sin estados parciales. | Completado con deuda de contrato (15.1–15.6) |
-| 8. API HTTP | RF-15, RF-16, RF-17 | Exponer los endpoints públicos e internos del otorgamiento. | Completado |
-| 9. Hangfire y trabajos | RF-15, RF-16; prepara RF-26 | Expirar ofertas y dejar la base para concluir becas. | Completado |
-| 10. Archivos, carta y compromiso | RF-15, RF-17 | Generar la carta, almacenar el compromiso y persistir solo metadatos. | Completado salvo 10.6 (plantilla del compromiso) |
-| 11. Observabilidad y operación | Transversal | Operar, trazar y auditar las HUs de becas. | Pendiente |
-| 12. Pruebas de integración y calidad | Todas | Verificar las HUs implementadas y la cobertura. | En curso |
-| 13. Entorno local, contenedores y CI | Transversal | Levantar y desplegar el servicio para todas las HUs. | Pendiente |
-| 14. Contratos y cierre del cambio | Contratos de RF-15/16/17 | Publicar contratos y cerrar este cambio. | Pendiente |
-| 15. Cierre de integraciones del otorgamiento | RF-15, RF-16, RF-17 | Cerrar los contratos con `MS-POS`, `MS-PRG` y `MS-PLT`. | Pendiente |
-| 16. Desembolsos y datos de pago | RF-19, RF-20; alimenta RF-23 | Programar cuotas, registrar ejecuciones y confirmar pagos con OTP. | Pendiente |
-| 17. Suspensión, reanudación y revocación | RF-21, RF-22 | Pausar desembolsos sin cancelar la beca y revocar definitivamente con OTP. | Pendiente |
-| 18. Seguimiento académico y permanencia | RF-24, RF-25 | Recibir reportes académicos y evaluar condiciones de permanencia. | Pendiente |
-| 19. Renovación y conclusión | RF-26 | Solicitar, evaluar y encadenar la renovación de la beca. | Pendiente |
-| 20. Pausa y aplazamiento | RF-27 | Solicitar una pausa temporal y reactivar la beca con validación académica. | Pendiente |
-| 21. Historial, auditoría y notificaciones | RF-18, RF-28, RF-29, RF-30 | Publicar la huella completa y los hitos para `MS-AUD` y `MS-PLT`. | Pendiente |
-| 22. Verificación integral del alcance | Todas | Verificar el ciclo completo antes de marcar los RF como listos. | Pendiente |
+| 1. Preparación del entorno | Transversal | Habilita todas las HUs de `MS-BEC`. | Completado |
+| 2. Shared kernel | Transversal | Contratos reutilizados por todas las HUs. | Completado |
+| 3. Dominio de otorgamiento | RF-15, RF-16, RF-17 | HU-15.1–HU-15.3, HU-16.1–HU-16.2, HU-17.1–HU-17.2 (núcleo). | Completado |
+| 4. Persistencia y migraciones | RF-15, RF-16, RF-17 | HU-15.1–HU-15.3, HU-16.1–HU-16.2, HU-17.1–HU-17.2. | Completado |
+| 5. Seguridad e idempotencia | Transversal; OTP de RF-20/RF-22 | HU-15.1, HU-15.3, HU-16.1; RF-20 Historia 3; RF-22 Historia 1. | Completado (base); el OTP se integra en 15.5 y secciones 16–17. |
+| 6. Aplicación y casos de uso | RF-15, RF-16, RF-17 | HU-15.1–HU-15.3, HU-16.1–HU-16.2, HU-17.1–HU-17.2. | Completado |
+| 7. Clientes de integración | RF-15, RF-16, RF-17 | HU-15.1–HU-15.3, HU-16.1–HU-16.2. | Completado con deuda de contrato (15.1–15.7) |
+| 8. API HTTP | RF-15, RF-16, RF-17 | HU-15.1–HU-15.3, HU-16.1–HU-16.2, HU-17.1–HU-17.2. | Completado |
+| 9. Hangfire y trabajos | RF-15, RF-16; prepara RF-26 | HU-15.2; base para RF-26 Historia 2. | Completado |
+| 10. Archivos, carta y compromiso | RF-15, RF-17 | HU-15.1 (carta), HU-17.1 (plantilla y carga). | Completado |
+| 11. Observabilidad y operación | Transversal | Todas las HUs; contribución a RF-18/RF-35. | Pendiente |
+| 12. Pruebas de integración y calidad | Todas | Verificación de las HUs implementadas en las secciones 3–10. | En curso |
+| 13. Entorno local, contenedores y CI | Transversal | Todas las HUs. | Pendiente |
+| 14. Contratos y cierre del cambio | Contratos de RF-15/16/17 | HU-15.1–HU-15.3, HU-16.1–HU-16.2, HU-17.1–HU-17.2. | Pendiente |
+| 15. Cierre de integraciones del otorgamiento | RF-15, RF-16, RF-17 | HU-15.1–HU-15.3, HU-16.1–HU-16.2. | Pendiente |
+| 16. Desembolsos y datos de pago | RF-19, RF-20; alimenta RF-23 | RF-19 Historia 1–2; RF-20 Historia 1–3. | Pendiente |
+| 17. Suspensión, reanudación y revocación | RF-21, RF-22 | RF-21 Historia 1–2; RF-22 Historia 1–2. | Pendiente |
+| 18. Seguimiento académico y permanencia | RF-24, RF-25 | RF-24 Historia 1–2; RF-25 Historia 1–2. | Pendiente |
+| 19. Renovación y conclusión | RF-26 | RF-26 Historia 1–2. | Pendiente |
+| 20. Pausa y aplazamiento | RF-27 | HU-27A, HU-27B. | Pendiente |
+| 21. Historial, auditoría y notificaciones | RF-18, RF-28, RF-29, RF-30 | HU-18.1, HU-28A/B, HU-29A/B, HU-30A/B. | Pendiente |
+| 22. Verificación integral del alcance | Todas | Todas las HUs de `MS-BEC`. | Pendiente |
+
+## Matriz de HUs de `MS-BEC`
+
+> **Criterio de estado (2026-11-20):** “Lista” = flujo y pruebas del servicio completos; “Lista (MS-BEC)” = flujo del servicio completo, la liberación o promoción depende de otro microservicio y solo quedan tareas de contrato o verificación; “Parcial” = falta al menos un criterio de la HU; “No lista” = sin implementación; “Contribución” = la HU pertenece a otro microservicio y `MS-BEC` solo aporta eventos, historial o plazos.
+
+### HUs propias y compartidas
+
+| HU | RF | Historia funcional | Dueño | Sección(es) | Estado actual |
+| :--- | :--- | :--- | :--- | :--- | :--- |
+| HU-15.1 | RF-15 | Generación y emisión de carta con OTP, reserva coordinada y Hangfire | `MS-BEC` | 3, 4, 6–10, 15 | Parcial: faltan las tareas 15.1–15.5. |
+| HU-15.2 | RF-15, RF-16 | Procesamiento asíncrono de expiración automática de ofertas vencidas | `MS-BEC` | 9, 15 | Lista (MS-BEC): el job y la reconciliación están listos; la liberación de cupo/presupuesto y la promoción son de `MS-PRG`/`MS-POS`. Deuda 15.4: documentar y probar el ciclo de reserva. |
+| HU-15.3 | RF-15 | Anulación expresa de oferta emitida por coordinación | `MS-BEC` | 6, 8, 15 | Parcial: faltan las tareas 15.4, 15.5, 15.7 y la liberación externa. |
+| HU-16.1 | RF-16 | Aceptación formal con OTP, transición a Activa y no doble beneficio | `MS-BEC` | 3, 4, 6, 8, 15 | Parcial: faltan las tareas 15.4, 15.5 y 15.7. |
+| HU-16.2 | RF-16 | Rechazo formal y disparo de lista de espera asistida | `MS-BEC` | 6, 8, 15 | Parcial: el rechazo y el evento están listos y la promoción es de `MS-POS`; faltan 15.4 (verificación del ciclo de reserva) y 15.7 (borrado del job). |
+| HU-17.1 | RF-17 | Carga del documento de compromiso firmado por el becario | `MS-BEC` | 3, 4, 6, 8, 10 | Lista. |
+| HU-17.2 | RF-17 | Revisión, validación y habilitación de la compuerta de desembolsos | `MS-BEC` | 3, 4, 6, 8 | Lista. |
+| RF-19 Historia 1 | RF-19 | Configuración de reglas de pago según el programa | `MS-BEC` | 16 | No lista: la cobertura del programa se consulta a `MS-PRG`; la regla de pago y su snapshot son de `MS-BEC`. |
+| RF-19 Historia 2 | RF-19 | Generación del calendario de desembolsos y validación de límites | `MS-BEC` | 16 | No lista. |
+| RF-20 Historia 1 | RF-20 | Registro operativo de la ejecución de desembolsos | `MS-BEC` | 16 | No lista. |
+| RF-20 Historia 2 | RF-20 | Gestión de incidencias por desembolsos fallidos o devueltos | `MS-BEC` | 16 | No lista. |
+| RF-20 Historia 3 | RF-20 | Confirmación segura de desembolsos mediante OTP | `MS-BEC` | 16 | No lista. |
+| RF-21 Historia 1 | RF-21 | Registro de suspensión temporal de desembolsos | `MS-BEC` | 17 | No lista. |
+| RF-21 Historia 2 | RF-21 | Notificación al becario de los requerimientos para resolver la suspensión | `MS-BEC` + `MS-PLT` | 17, 21 | No lista. |
+| RF-22 Historia 1 | RF-22 | Registro administrativo y justificación de la revocación de beca | `MS-BEC` | 17 | No lista. |
+| RF-22 Historia 2 | RF-22 | Reincorporación presupuestaria y liberación de cupo por revocación | `MS-BEC` + `MS-PRG` | 16, 17 | No lista. |
+| RF-24 Historia 1 | RF-24 | Carga y registro de reportes académicos por periodo | `MS-BEC` | 18 | No lista. |
+| RF-24 Historia 2 | RF-24 | Validación de fechas límite y alertas por retrasos académicos | `MS-BEC` + `MS-PLT` | 18, 21 | No lista. |
+| RF-25 Historia 1 | RF-25 | Evaluación del reporte académico contra los umbrales de permanencia | `MS-BEC` | 18 | No lista. |
+| RF-25 Historia 2 | RF-25 | Activación de consecuencias por incumplimiento y visibilidad de motivos | `MS-BEC` | 17, 18 | No lista. |
+| RF-26 Historia 1 | RF-26 | Solicitud de renovación de beca por el becario | `MS-BEC` | 19 | No lista. |
+| RF-26 Historia 2 | RF-26 | Evaluación, aprobación y conclusión automática por expiración de plazo | `MS-BEC` | 9, 19 | No lista. |
+| HU-27A | RF-27 | Solicitud de pausa temporal de beca | `MS-BEC` | 20 | No lista. |
+| HU-27B | RF-27 | Evaluación y gestión de pausa o aplazamiento | `MS-BEC` | 17, 20 | No lista. |
+
+### Contribuciones y HUs externas
+
+| HU | RF | Historia funcional | Dueño | Sección(es) | Estado actual |
+| :--- | :--- | :--- | :--- | :--- | :--- |
+| HU-18.1 | RF-18 | Consulta de historial unificado de becas por persona, programa o periodo | `MS-AUD` | 21 | Contribución pendiente: `MS-BEC` aporta `HistorialEstadoBeca` y eventos; no expone la consulta. |
+| HU-28A | RF-28 | Consulta personal del historial de beca | `MS-AUD` | 21 | Contribución pendiente. |
+| HU-28B | RF-28 | Auditoría del historial integral por la Fundación | `MS-AUD` | 21 | Contribución pendiente. |
+| HU-29A | RF-29 | Recepción de notificaciones automáticas por eventos clave | `MS-PLT` | 21 | Contribución pendiente: `MS-BEC` publica los hitos. |
+| HU-29B | RF-29 | Procesamiento masivo y asíncrono de notificaciones de ciclo | `MS-PLT` | 21 | Contribución pendiente. |
+| HU-30A | RF-30 | Configuración de parámetros y tiempos de recordatorio | `MS-PLT` | 21 | Contribución pendiente. |
+| HU-30B | RF-30 | Recepción de recordatorios proactivos de fechas límite | `MS-PLT` | 21 | Contribución pendiente: `MS-BEC` publica los plazos vigilados. |
+| RF-23 Historia 1–2 | RF-23 | Panel y exportación del estado financiero por programa | `MS-PRG`/`MS-AUD` | 16 | Externa: `MS-BEC` solo alimenta movimientos contables. |
+| RF-33/34/35/36/40 | RF-33, RF-34, RF-35, RF-36, RF-40 | Reportería, auditoría y panel de dirección | `MS-AUD` | — | Fuera de `MS-BEC`; no se planifican aquí. |
 
 ## Hallazgos de la auditoría
 
 1. **Contradicción de alcance corregida.** La frase anterior “fuera de alcance” mezclaba el alcance de este cambio con el alcance del microservicio. Se separaron ambos conceptos: desembolsos, seguimiento, renovación y revocación definitiva no están en este cambio, pero sí son responsabilidad de `MS-BEC`.
 2. **Cobertura incompleta.** No existían secciones para RF-19, RF-20, RF-21, RF-22, RF-24, RF-25, RF-26 ni RF-27. Se agregaron las secciones 16–20 y la sección 21 para las contribuciones a RF-18, RF-28, RF-29 y RF-30 y para los movimientos que alimentan RF-23.
-3. **Deudas de contrato en RF-15/16/17.** La rebanada funcional está entregada, pero el DDD exige `POST /internal/v1/postulaciones/{id}/otorgar`, la consulta de condiciones del programa, el periodo académico actual y el ciclo de vida de la reserva. También falta generar la plantilla del compromiso (`urlPlantillaGeneradaFirebase`) y propagar el OTP opcional de emisión/anulación. Se registran en 10.6 y 15.1–15.6.
+3. **Deudas de contrato en RF-15/16/17.** La rebanada funcional está entregada, pero el DDD exige `POST /internal/v1/postulaciones/{id}/otorgar`, la consulta de condiciones del programa, el periodo académico actual y el ciclo de vida de la reserva. También falta propagar el OTP de emisión/anulación y cancelar el job de expiración al responder o anular la oferta. Las deudas restantes se registran en 15.1–15.7; la plantilla del compromiso quedó resuelta en 10.6.
 4. **Transiciones de dominio ya existentes, pero incompletas.** `Beca.Suspender`, `Beca.Reactivar`, `Beca.Renovar`, `Beca.Concluir` y `Beca.Revocar` ya existen, al igual que `CadenaBecaId`, `BecaAnteriorId`, `PeriodosCursados`, `MontoDesembolsadoPeriodoActual` y `HabilitadaParaDesembolso`. Las secciones 16–20 los reutilizan y los completan; no se reescribe el agregado.
 5. **Puertos existentes sin uso completo.** `IOtpClient` está implementado y probado, pero ningún caso de uso lo consume todavía. `IProgramasClient` solo reserva cupo/presupuesto; faltan las condiciones, el ciclo de la reserva y los movimientos presupuestarios.
 6. **Modelo faltante.** No existen `CalendarioDesembolso`, `Desembolso`, `DatosPagoBecario`, `IncidenciaDesembolso`, `SuspensionDesembolso`, `ReporteAcademico`, `EvaluacionPermanencia`, `SolicitudRenovacion` ni `PausaAplazamiento`; las secciones 16–20 los incorporan con sus migraciones y pruebas.
-7. **Estado de los roadmaps.** RF-15, RF-16 y RF-17 están marcados por la rebanada funcional entregada; las deudas 15.1–15.6 deben completarse antes de declarar el RF cerrado. RF-21, RF-22 y RF-26 tienen solo la transición básica de dominio y no deben marcarse hasta completar las secciones 17 y 19. RF-18 sigue siendo responsabilidad principal de `MS-AUD`; la parte de `MS-BEC` se verifica en la sección 21.
+7. **Estado de los roadmaps.** RF-15, RF-16 y RF-17 están marcados por la rebanada funcional entregada; las deudas 15.1–15.7 deben completarse antes de declarar el RF cerrado. RF-21, RF-22 y RF-26 tienen solo la transición básica de dominio y no deben marcarse hasta completar las secciones 17 y 19. RF-18 sigue siendo responsabilidad principal de `MS-AUD`; la parte de `MS-BEC` se verifica en la sección 21.
+8. **Alineación HU ↔ RF ↔ tarea.** La matriz de HUs identifica que la anulación expresa (`HU-15.3`) no tenía una tarea propia de cierre y que el borrado del job de Hangfire al aceptar, rechazar o anular no estaba cubierto; se agrega la tarea 15.7. Las HUs de RF-19 a RF-27 se mapean a las secciones 16–20, y las contribuciones a RF-18/RF-28/RF-29/RF-30 a la sección 21.
 
 ---
 
@@ -73,7 +121,7 @@
 
 ## 3. Modelo de dominio de otorgamiento
 
-> **Trazabilidad:** RF-15 (emisión de la oferta y la carta), RF-16 (aceptación, rechazo, anulación y expiración), RF-17 (compromiso del becario). Historias funcionales: emitir oferta, aceptar/rechazar formalmente y firmar el compromiso.
+> **Trazabilidad:** RF-15 (emisión de la oferta y la carta), RF-16 (aceptación, rechazo, anulación y expiración), RF-17 (compromiso del becario). HUs: HU-15.1–HU-15.3, HU-16.1–HU-16.2 y HU-17.1–HU-17.2.
 
 - [x] 3.1 Implementar la creación de `Beca` en estado `OTORGADA` con `cadenaBecaId = id`, `becaAnteriorId = null`, `periodosCursados = 0`, `montoDesembolsadoPeriodoActual = 0`, `tieneRenovacionEnCurso = false`, `costoMatriculaReferenciaSnapshotId`, `montoComprometidoPeriodoActual` y snapshot de `PoliticaCobertura`; verificar con pruebas de fábrica y de campos iniciales.
 - [x] 3.2 Implementar `OfertaBeca` con `montoOfertaPorPeriodo`, `montoTotalEstimadoDuracion`, `duracionPeriodos`, `condicionesSnapshot`, `urlCartaPdfFirebase`, `hashCartaSha256`, `fechaVencimientoAceptacion`, `referenciaJobExpiracionHangfireId` y `version`; verificar con pruebas de creación y valores por defecto.
@@ -119,7 +167,7 @@
 
 ## 6. Capa de aplicación y casos de uso
 
-> **Trazabilidad:** RF-15, RF-16 y RF-17. Historias funcionales: emitir oferta, aceptar, rechazar, anular, expirar y revisar el compromiso.
+> **Trazabilidad:** RF-15, RF-16 y RF-17. HUs: HU-15.1–HU-15.3 (emitir, anular y expirar), HU-16.1–HU-16.2 (aceptar y rechazar) y HU-17.1–HU-17.2 (cargar y revisar el compromiso).
 
 - [x] 6.1 Implementar `ICommandDispatcher`/`IQueryDispatcher` y el registro por ensamblado de handlers; verificar que un comando de prueba se despacha y que un handler ausente produce un error claro.
 - [x] 6.2 Crear los DTOs y validadores de `EmitirOfertaBeca`, `AceptarOfertaBeca`, `RechazarOfertaBeca`, `AnularOfertaBeca`, `CargarCompromisoBecario`, `RevisarCompromisoBecario` y `ConsultarBecasActivas`; verificar con pruebas de validación de campos obligatorios, formatos y longitudes.
@@ -135,7 +183,7 @@
 
 ## 7. Clientes de integración y contratos
 
-> **Trazabilidad:** RF-15, RF-16 y RF-17. Historias funcionales: coordinación con `MS-POS` para adjudicabilidad, con `MS-PRG` para cupo/presupuesto y con `MS-PLT` para OTP. Las deudas de contrato detectadas se cierran en la sección 15.
+> **Trazabilidad:** RF-15, RF-16 y RF-17. HUs: HU-15.1–HU-15.3 (emisión, anulación y expiración) y HU-16.1–HU-16.2 (aceptación y rechazo). Coordinación con `MS-POS` para adjudicabilidad y postulación, con `MS-PRG` para cupo/presupuesto y con `MS-PLT` para OTP. Las deudas de contrato detectadas se cierran en la sección 15.
 
 - [x] 7.1 Implementar `PostulacionesClient` para `GET /internal/v1/postulaciones/{id}/adjudicable` con *Service Token*, timeout de 3 s, propagación de correlación y mapeo de `404`/`false`/timeout; verificar con WireMock.
 - [x] 7.2 Implementar `ProgramasClient` para `POST /internal/v1/programas/{id}/reservas` con `Idempotency-Key: oferta-{id}`, timeout de 3 s y mapeo de `409 SIN_CUPO_O_PRESUPUESTO` y `422 CONVENIO_VENCIDO`; verificar con WireMock que la reserva nace en `PENDIENTE`, que el reintento usa la misma clave y que los errores se mapean.
@@ -149,7 +197,7 @@
 
 ## 8. API HTTP
 
-> **Trazabilidad:** RF-15, RF-16 y RF-17. Expone las historias de emisión, consulta, respuesta y compromiso con autorización por rol y alcance.
+> **Trazabilidad:** RF-15, RF-16 y RF-17. HUs: HU-15.1–HU-15.3, HU-16.1–HU-16.2 y HU-17.1–HU-17.2. Expone las historias de emisión, consulta, respuesta, anulación y compromiso con autorización por rol y alcance.
 
 - [x] 8.1 Implementar `OfertasBecaController` con las rutas `POST /api/v1/becas/ofertas`, `GET /api/v1/becas/ofertas/{id}`, `POST .../aceptar`, `POST .../rechazar` y `POST .../anular`; verificar que OpenAPI las expone con los códigos de respuesta correctos.
 - [x] 8.2 Implementar `BecasController` con `GET /api/v1/becas/{id}` aplicando autorización de dueño o coordinador; verificar `200`, `403` y `404`.
@@ -161,7 +209,7 @@
 
 ## 9. Hangfire y trabajos en segundo plano
 
-> **Trazabilidad:** RF-15 y RF-16 (expiración de ofertas), y base para RF-26 (conclusión de becas). La conclusión y la reconciliación de renovaciones se completan en la sección 19.
+> **Trazabilidad:** RF-15 y RF-16. HU-15.2 (expiración de ofertas) y base para RF-26 Historia 2 (conclusión de becas). La conclusión y la reconciliación de renovaciones se completan en la sección 19.
 
 - [x] 9.1 Configurar Hangfire con PostgreSQL, esquema `hangfire`, cola `critical` y dashboard protegido; verificar que el dashboard responde `401/403` sin autorización y `200` con rol administrativo.
 - [x] 9.2 Implementar `ExpirarOfertaBecaJob` y programarlo al emitir la oferta, guardando el id en `referenciaJobExpiracionHangfireId`; verificar con una prueba de integración que una oferta pendiente expira y una aceptada no.
@@ -171,18 +219,18 @@
 
 ## 10. Archivos, carta y compromiso
 
-> **Trazabilidad:** RF-15 (carta de otorgamiento) y RF-17 (compromiso firmado). Ajuste pendiente 10.6: la plantilla del compromiso ya tiene columna en el modelo, pero aún no se genera ni se almacena.
+> **Trazabilidad:** RF-15 (carta de otorgamiento) y RF-17 (compromiso firmado). HUs: HU-15.1 (carta) y HU-17.1 (plantilla y carga). La plantilla del compromiso se genera al emitir la oferta, se almacena en una ruta inmutable por beca y se expone al becario; solo sus metadatos se persisten.
 
 - [x] 10.1 Implementar `IAlmacenamientoArchivos` con adaptador local para desarrollo y adaptador Firebase/Google Cloud Storage para producción; verificar que ambos calculan SHA-256 y devuelven URL, hash y tamaño.
 - [x] 10.2 Implementar `ICartaOfertaPdfGenerator` con PdfSharpCore y una plantilla que incluya fundación, estudiante, programa, periodo, cobertura, monto y vigencia; verificar que el PDF generado tiene cabecera `%PDF` y hash reproducible.
 - [x] 10.3 Integrar la generación y subida de la carta en la emisión; verificar que si la subida falla no se persiste la oferta y que si se persiste la URL/hash son los del archivo subido.
 - [x] 10.4 Implementar la validación de archivos de compromiso (PDF, 5 MB, hash, intento) y la ruta inmutable en Firebase; verificar con pruebas de archivo válido, tipo inválido, tamaño excedido y reintento tras rechazo.
 - [x] 10.5 Verificar que los binarios nunca se guardan en PostgreSQL y que solo se persisten `url`, `hash`, `tamaño` y `tipoMime`.
-- [ ] 10.6 Generar y almacenar la plantilla del compromiso (`urlPlantillaGeneradaFirebase`) con las condiciones del programa y de la beca; verificar que el becario descarga la plantilla correcta, que la ruta es inmutable y que el binario no se guarda en PostgreSQL.
+- [x] 10.6 Generar y almacenar la plantilla del compromiso (`urlPlantillaGeneradaFirebase`) con las condiciones del programa y de la beca; verificar que el becario descarga la plantilla correcta, que la ruta es inmutable y que el binario no se guarda en PostgreSQL.
 
 ## 11. Observabilidad y operación
 
-> **Trazabilidad:** transversal. Da soporte a todas las HUs y a la auditoría de RF-18/RF-35.
+> **Trazabilidad:** transversal. Da soporte a todas las HUs y a la contribución de `MS-BEC` a RF-18/RF-35.
 
 - [ ] 11.1 Configurar Serilog con salida JSON, enriquecedores de servicio, correlación y redacción; verificar que un log de prueba incluye `CorrelationId` y no incluye datos sensibles.
 - [ ] 11.2 Configurar OpenTelemetry para ASP.NET Core, HttpClient, Npgsql, MassTransit y Hangfire, con exportador OTLP configurable; verificar con un exportador de prueba que se generan trazas y métricas.
@@ -238,20 +286,25 @@
 
 ## 15. Cierre de integraciones del otorgamiento (RF-15, RF-16, RF-17)
 
-> **Trazabilidad:** RF-15 (emisión y transición de la postulación), RF-16 (respuesta formal), RF-17 (compromiso). Historias funcionales: emitir oferta, aceptar/rechazar y firmar el compromiso.
+> **Trazabilidad:** RF-15, RF-16 y RF-17. HUs: HU-15.1 (emisión, transición de la postulación y OTP), HU-15.2 (expiración y contrato de liberación de la reserva), HU-15.3 (anulación expresa y cancelación del job), HU-16.1 (aceptación con OTP y cancelación del job) y HU-16.2 (rechazo, cancelación del job y promoción externa).
+>
+> **Mapa de deudas:** tarea 15.1 → HU-15.1; 15.2 → HU-15.1 (condiciones de emisión; prepara RF-26); 15.3 → HU-15.1 (periodo de emisión; prepara RF-24, RF-26 y RF-27); 15.4 → HU-15.1, HU-15.2, HU-15.3, HU-16.1 y HU-16.2; 15.5 → HU-15.1, HU-15.3 y HU-16.1; 15.7 → HU-15.3, HU-16.1 y HU-16.2.
 >
 > **Adaptación de lo existente:** se reutilizan `EmitirOfertaBecaHandler`, `PostulacionesClient`, `ProgramasClient`, `OtpClient`, `CompromisoBecario` y las proyecciones locales. No se reescribe el flujo: se completan los contratos que el DDD exige y se documentan las equivalencias.
 
-- [ ] 15.1 Implementar `POST /internal/v1/postulaciones/{postulacionId}/otorgar` en `PostulacionesClient`, con `Idempotency-Key: otorgar-{ofertaId}`, timeout de 3 s, propagación de correlación y mapeo de `409`/`422`/`503`; invocarlo en `EmitirOfertaBecaHandler` dentro de la misma unidad de trabajo lógica que la emisión, con compensación o reintento idempotente si la llamada falla; verificar con WireMock que un fallo no deja una oferta persistida sin la postulación otorgada.
-- [ ] 15.2 Implementar `GET /internal/v1/programas/{id}/condiciones?carreraId=&periodoId=` en `ProgramasClient` y usarlo al emitir ofertas y renovaciones para obtener cobertura, arancel vigente, vigencia del convenio y condiciones de permanencia; mantener las proyecciones locales como caché y verificar con WireMock los casos de arancel vigente, convenio vencido y configuración faltante.
-- [ ] 15.3 Implementar `GET /internal/v1/periodos-academicos/actual` en un cliente de `MS-PLT` y resolver el periodo vigente para emisión, renovación, reportes y pausas; verificar el fallo cerrado `503` y la coherencia con `PeriodoVigenteActualId`.
-- [ ] 15.4 Cerrar el contrato del ciclo de vida de la reserva: implementar en `ProgramasClient` las operaciones `confirmar`, `activar` y `liberar`; si se mantiene la sustitución por los eventos `OfertaBecaEmitida`, `BecaActivada`, `OfertaBecaRechazada`, `OfertaBecaAnulada` y `OfertaBecaExpirada`, registrar la desviación en `design.md` y probar que el ciclo `PENDIENTE → CONFIRMADA → ACTIVADA → LIBERADA` no deja reservas huérfanas.
-- [ ] 15.5 Propagar y consumir la autorización OTP opcional de emisión y anulación según la política del programa: persistir `AutorizacionOtpEmisionId` y, si se adopta OTP de anulación, agregar el campo y la migración correspondientes en `OfertaBeca`; verificar que, cuando el OTP es obligatorio, sin código no hay cambio de estado.
-- [ ] 15.6 Agregar pruebas de contrato de las integraciones 15.1–15.5 y actualizar OpenAPI/`docs/`; verificar que `MS-POS` y `MS-PRG` validan los ejemplos y que `dotnet test` cubre los caminos de error.
+- [ ] 15.1 **[HU-15.1]** Implementar `POST /internal/v1/postulaciones/{postulacionId}/otorgar` en `PostulacionesClient`, con `Idempotency-Key: otorgar-{ofertaId}`, timeout de 3 s, propagación de correlación y mapeo de `409`/`422`/`503`; invocarlo en `EmitirOfertaBecaHandler` dentro de la misma unidad de trabajo lógica que la emisión, con compensación o reintento idempotente si la llamada falla; verificar con WireMock que un fallo no deja una oferta persistida sin la postulación otorgada.
+- [ ] 15.2 **[HU-15.1]** Implementar `GET /internal/v1/programas/{id}/condiciones?carreraId=&periodoId=` en `ProgramasClient` y usarlo al emitir ofertas y renovaciones para obtener cobertura, arancel vigente, vigencia del convenio y condiciones de permanencia; mantener las proyecciones locales como caché y verificar con WireMock los casos de arancel vigente, convenio vencido y configuración faltante.
+- [ ] 15.3 **[HU-15.1]** Implementar `GET /internal/v1/periodos-academicos/actual` en un cliente de `MS-PLT` y resolver el periodo vigente para emisión, renovación, reportes y pausas; verificar el fallo cerrado `503` y la coherencia con `PeriodoVigenteActualId`.
+- [ ] 15.4 **[HU-15.1, HU-15.2, HU-15.3, HU-16.1, HU-16.2]** Cerrar el contrato del ciclo de vida de la reserva: implementar en `ProgramasClient` las operaciones `confirmar`, `activar` y `liberar`; si se mantiene la sustitución por los eventos `OfertaBecaEmitida`, `BecaActivada`, `OfertaBecaRechazada`, `OfertaBecaAnulada` y `OfertaBecaExpirada`, registrar la desviación en `design.md` y probar que el ciclo `PENDIENTE → CONFIRMADA → ACTIVADA → LIBERADA` no deja reservas huérfanas.
+- [ ] 15.5 **[HU-15.1, HU-15.3, HU-16.1]** Propagar y consumir la autorización OTP de emisión y anulación según la política del programa: persistir `AutorizacionOtpEmisionId` y, si se adopta OTP de anulación, agregar el campo y la migración correspondientes en `OfertaBeca`; verificar que, cuando el OTP es obligatorio, sin código no hay cambio de estado.
+- [ ] 15.6 **[Todas las anteriores]** Agregar pruebas de contrato de las integraciones 15.1–15.5 y actualizar OpenAPI/`docs/`; verificar que `MS-POS`, `MS-PRG` y `MS-PLT` validan los ejemplos y que `dotnet test` cubre los caminos de error.
+- [ ] 15.7 **[HU-15.3, HU-16.1, HU-16.2]** Cancelar `referenciaJobExpiracionHangfireId` en `AceptarOfertaBecaHandler`, `RechazarOfertaBecaHandler` y `AnularOfertaBecaHandler`; verificar que no queda un job activo tras la respuesta o anulación y que el job sigue siendo idempotente como red de seguridad si la cancelación falla.
 
 ## 16. Desembolsos y datos de pago (RF-19, RF-20; alimenta RF-23)
 
-> **Trazabilidad:** RF-19 (programación de desembolsos), RF-20 (registro y confirmación de pagos con OTP) y los movimientos contables que alimentan el reporte financiero RF-23 de `MS-PRG`/`MS-AUD`. Historias funcionales: definir el calendario, registrar la ejecución, resolver incidencias y confirmar el pago.
+> **Trazabilidad:** RF-19 (programación de desembolsos), RF-20 (registro y confirmación de pagos con OTP) y los movimientos contables que alimentan el reporte financiero RF-23 de `MS-PRG`/`MS-AUD`. HUs: RF-19 Historia 1–2 y RF-20 Historia 1–3.
+>
+> **Cobertura de HUs:** RF-19 Historia 1 → 16.1–16.2 y 16.13 (regla de pago y snapshot de la cobertura consultada a `MS-PRG`). RF-19 Historia 2 → 16.1–16.3, 16.7–16.8, 16.11 y 16.13–16.14. RF-20 Historia 1 → 16.3, 16.8, 16.11 y 16.14. RF-20 Historia 2 → 16.5, 16.8, 16.11 y 16.14. RF-20 Historia 3 → 16.9, 16.11 y 16.14.
 >
 > **Adaptación de lo existente:** se reutilizan `Beca.MontoComprometidoPeriodoActual`, `Beca.MontoDesembolsadoPeriodoActual`, `Beca.HabilitadaParaDesembolso`, `OfertaBeca.MontoOfertaPorPeriodo`, `PoliticaCobertura`, `HistorialEstadoBeca`, `IAlmacenamientoArchivos`, `OtpClient`, `ProgramasClient` y el Outbox. Se agregan los agregados y entidades que faltan, sin duplicar el modelo de otorgamiento.
 
@@ -272,7 +325,9 @@
 
 ## 17. Suspensión, reanudación y revocación definitiva (RF-21, RF-22)
 
-> **Trazabilidad:** RF-21 (suspensión temporal sin cancelar la beca) y RF-22 (revocación definitiva con OTP y liberación de cupo/presupuesto). Historias funcionales: pausar desembolsos con motivo y fecha de revisión; reanudar; revocar definitivamente.
+> **Trazabilidad:** RF-21 (suspensión temporal sin cancelar la beca) y RF-22 (revocación definitiva con OTP y liberación de cupo/presupuesto). HUs: RF-21 Historia 1–2 y RF-22 Historia 1–2.
+>
+> **Cobertura de HUs:** RF-21 Historia 1 → 17.1–17.3, 17.5, 17.7 y 17.9. RF-21 Historia 2 → 17.2, 17.5 y 21.3–21.4. RF-22 Historia 1 → 17.4–17.7 y 17.9. RF-22 Historia 2 → 17.4, 17.6, 17.9 y 16.10. HU-27B reutiliza 17.2–17.3 para suspender y reactivar la pausa.
 >
 > **Adaptación de lo existente:** `Beca.Suspender`, `Beca.Reactivar` y `Beca.Revocar` ya existen con transiciones y justificación mínima. Se adaptan para crear `SuspensionDesembolso`, mover cuotas, exigir OTP en la revocación, liberar saldo y emitir los eventos que hoy faltan.
 
@@ -288,7 +343,9 @@
 
 ## 18. Seguimiento académico y permanencia (RF-24, RF-25)
 
-> **Trazabilidad:** RF-24 (reportes académicos periódicos) y RF-25 (evaluación de condiciones de permanencia). Historias funcionales: entregar el reporte, marcar entrega tardía, evaluar cada condición y aplicar la consecuencia aprobada.
+> **Trazabilidad:** RF-24 (reportes académicos periódicos) y RF-25 (evaluación de condiciones de permanencia). HUs: RF-24 Historia 1–2 y RF-25 Historia 1–2.
+>
+> **Cobertura de HUs:** RF-24 Historia 1 → 18.1–18.2, 18.4–18.6 y 18.9–18.11. RF-24 Historia 2 → 18.6–18.7, 18.11 y 21.3. RF-25 Historia 1 → 18.3–18.5, 18.8 y 18.10–18.11. RF-25 Historia 2 → 18.8 y 18.10–18.11.
 >
 > **Adaptación de lo existente:** `CondicionesPermanencia` y `ConsecuenciaPermanencia` ya existen en el dominio y `OfertaBeca` guarda el snapshot de condiciones. Se reutilizan para comparar el reporte contra la fotografía del programa y para recomendar la consecuencia.
 
@@ -306,7 +363,9 @@
 
 ## 19. Renovación y conclusión (RF-26)
 
-> **Trazabilidad:** RF-26 (solicitud y evaluación de renovación; cadena de becas) y la conclusión por vencimiento de la ventana. Historias funcionales: solicitar la renovación dentro de la ventana, evaluarla con rendimiento y presupuesto, crear la beca sucesora o concluir la beca.
+> **Trazabilidad:** RF-26 (solicitud y evaluación de renovación; cadena de becas) y la conclusión por vencimiento de la ventana. HUs: RF-26 Historia 1–2.
+>
+> **Cobertura de HUs:** RF-26 Historia 1 → 19.1–19.3 y 19.7–19.9. RF-26 Historia 2 → 19.2–19.6 y 19.8–19.9.
 >
 > **Adaptación de lo existente:** `Beca.Renovar`, `Beca.Concluir`, `CadenaBecaId`, `BecaAnteriorId` y `PeriodosCursados` ya existen. Se adaptan para crear la beca sucesora, reservar presupuesto, renovar el snapshot de costo y disparar la conclusión automática.
 
@@ -322,7 +381,9 @@
 
 ## 20. Pausa y aplazamiento (RF-27)
 
-> **Trazabilidad:** RF-27 (pausa o aplazamiento sin perder la beca). Historias funcionales: solicitar la pausa con soporte, aprobarla con duración máxima configurable, detener desembolsos y reactivar con validación académica.
+> **Trazabilidad:** RF-27 (pausa o aplazamiento sin perder la beca). HUs: HU-27A y HU-27B.
+>
+> **Cobertura de HUs:** HU-27A → 20.1–20.7. HU-27B → 20.3–20.7.
 >
 > **Adaptación de lo existente:** se reutilizan `Beca.Suspender`/`Beca.Reactivar` y la `SuspensionDesembolso` de la sección 17. La pausa agrega su propio agregado, documento de soporte, duración máxima y validación académica de reactivación.
 
@@ -336,7 +397,9 @@
 
 ## 21. Historial, auditoría y notificaciones (RF-18, RF-28, RF-29, RF-30)
 
-> **Trazabilidad:** RF-18 y RF-28 (historial por persona/programa/periodo y línea de tiempo completa, con `MS-AUD` como dueño principal), y RF-29/RF-30 (notificaciones y recordatorios, con `MS-PLT` como dueño). `MS-BEC` aporta el historial append-only, los eventos y los plazos.
+> **Trazabilidad:** RF-18 y RF-28 (historial por persona/programa/periodo y línea de tiempo completa, con `MS-AUD` como dueño principal), y RF-29/RF-30 (notificaciones y recordatorios, con `MS-PLT` como dueño). HUs: HU-18.1, HU-28A, HU-28B, HU-29A, HU-29B, HU-30A y HU-30B. `MS-BEC` aporta el historial append-only, los eventos y los plazos; no expone las consultas ni envía notificaciones.
+>
+> **Cobertura de HUs:** HU-18.1 → 21.1–21.2 y 21.5–21.6. HU-28A/HU-28B → 21.1–21.3 y 21.5–21.6. HU-29A/HU-29B → 21.3 y 21.6. HU-30A/HU-30B → 21.4 y 21.6.
 >
 > **Adaptación de lo existente:** `HistorialEstadoBeca`, `TipoEntidadHistorial`, el trigger de inmutabilidad, `EventoIntegracion<T>` y el Outbox ya existen. Se amplían para cubrir desembolsos, reportes, renovaciones, pausas y hitos de notificación.
 
@@ -355,29 +418,30 @@
 - [ ] 22.2 Verificar la cobertura ≥ 80% en `Domain` + `Application` y que cada RF de `MS-BEC` tiene al menos una prueba de camino feliz, una de error y una de contrato con sus microservicios colaboradores.
 - [ ] 22.3 Revisar seguridad y privacidad: OTP obligatorio en desembolso/revocación/cambio de datos de pago, 2FA en roles administrativos, autorización de propiedad del becario, cifrado AES-GCM y ausencia de PII/cuentas en logs y eventos.
 - [ ] 22.4 Actualizar `openspec/specs/ms-beca/spec_beca.md` con los escenarios de las HUs implementadas, publicar OpenAPI/AsyncAPI definitivos y actualizar `docs/`.
-- [ ] 22.5 Actualizar los checkboxes de `openspec/roadmaps/por_integrante.md` y `por_microservicio.md` solo para los RF con todas sus tareas en `[x]` y evidencia de pruebas; revalidar la marca provisional de RF-15/16/17 al cerrar 15.1–15.6 y dejar RF-18/RF-28 pendientes hasta que `MS-AUD` cierre su parte.
+- [ ] 22.5 Actualizar los checkboxes de `openspec/roadmaps/por_integrante.md` y `por_microservicio.md` solo para los RF con todas sus HUs cubiertas por tareas `[x]` y evidencia de pruebas; revalidar la marca provisional de RF-15/16/17 al cerrar 15.1–15.7 y dejar RF-18/RF-28 pendientes hasta que `MS-AUD` cierre su parte.
 - [ ] 22.6 Ejecutar `openspec validate --strict` sobre el cambio de cierre y archivar los cambios de continuidad ya completados.
 
 ## Plan de cambios posteriores
 
-| Cambio propuesto | Secciones | RF principales | Dependencias |
-| :--- | :--- | :--- | :--- |
-| `cerrar-integracion-otorgamiento-ms-beca` | 15 | RF-15, RF-16, RF-17 | `MS-POS`, `MS-PRG`, `MS-PLT` |
-| `implementar-desembolsos-ms-beca` | 16 | RF-19, RF-20; alimenta RF-23 | Sección 15, `MS-PRG`, `MS-PLT` (OTP) |
-| `implementar-suspension-revocacion-ms-beca` | 17 | RF-21, RF-22 | Sección 16, `MS-PRG` |
-| `implementar-seguimiento-academico-ms-beca` | 18 | RF-24, RF-25 | Sección 17, `MS-PRG`/`MS-PLT` |
-| `implementar-renovacion-ms-beca` | 19 | RF-26 | Sección 18, `MS-PRG` |
-| `implementar-pausa-ms-beca` | 20 | RF-27 | Secciones 17 y 18 |
-| `integrar-auditoria-notificaciones-ms-beca` | 21 | RF-18, RF-28, RF-29, RF-30 | Secciones 16–20, `MS-AUD`, `MS-PLT` |
-| `cerrar-alcance-ms-beca` | 22 | Todos | Todos los cambios anteriores |
+| Cambio propuesto | Secciones | RF principales | HUs principales | Dependencias |
+| :--- | :--- | :--- | :--- | :--- |
+| `cerrar-integracion-otorgamiento-ms-beca` | 15 | RF-15, RF-16, RF-17 | HU-15.1–HU-15.3, HU-16.1–HU-16.2 | `MS-POS`, `MS-PRG`, `MS-PLT` |
+| `implementar-desembolsos-ms-beca` | 16 | RF-19, RF-20; alimenta RF-23 | RF-19 Historia 1–2; RF-20 Historia 1–3 | Sección 15, `MS-PRG`, `MS-PLT` (OTP) |
+| `implementar-suspension-revocacion-ms-beca` | 17 | RF-21, RF-22 | RF-21 Historia 1–2; RF-22 Historia 1–2 | Sección 16, `MS-PRG` |
+| `implementar-seguimiento-academico-ms-beca` | 18 | RF-24, RF-25 | RF-24 Historia 1–2; RF-25 Historia 1–2 | Sección 17, `MS-PRG`/`MS-PLT` |
+| `implementar-renovacion-ms-beca` | 19 | RF-26 | RF-26 Historia 1–2 | Sección 18, `MS-PRG` |
+| `implementar-pausa-ms-beca` | 20 | RF-27 | HU-27A, HU-27B | Secciones 17 y 18 |
+| `integrar-auditoria-notificaciones-ms-beca` | 21 | RF-18, RF-28, RF-29, RF-30 | HU-18.1, HU-28A/B, HU-29A/B, HU-30A/B | Secciones 16–20, `MS-AUD`, `MS-PLT` |
+| `cerrar-alcance-ms-beca` | 22 | Todos | Todas las HUs | Todos los cambios anteriores |
 
 ## Criterio de cierre por RF
 
 Un RF de `MS-BEC` solo se marca `[x]` en los roadmaps cuando:
 
-1. Todas las tareas de sus secciones están `[x]`.
-2. Existe una prueba de dominio, una de aplicación y una de integración/contrato que cubra el camino feliz y los errores principales.
-3. Los eventos, endpoints y migraciones están documentados y son idempotentes.
-4. No quedan deudas de contrato con `MS-POS`, `MS-PRG`, `MS-PLT` o `MS-AUD` sin una decisión registrada.
+1. Todas las HUs del RF están cubiertas por tareas `[x]` y la matriz HU ↔ RF no tiene filas pendientes.
+2. Todas las tareas de sus secciones están `[x]`.
+3. Existe una prueba de dominio, una de aplicación y una de integración/contrato que cubra el camino feliz y los errores principales.
+4. Los eventos, endpoints y migraciones están documentados y son idempotentes.
+5. No quedan deudas de contrato con `MS-POS`, `MS-PRG`, `MS-PLT` o `MS-AUD` sin una decisión registrada.
 
-> **Estado de partida:** RF-15, RF-16 y RF-17 se mantienen marcados por la rebanada funcional ya entregada, pero las tareas 10.6 y 15.1–15.6 deben completarse antes de considerarlos cerrados. RF-21, RF-22 y RF-26 tienen solo la transición básica de dominio y no deben marcarse hasta completar las secciones 17 y 19. RF-18 y RF-28 siguen pendientes por su dependencia de `MS-AUD`.
+> **Estado de partida (2026-11-20):** RF-15, RF-16 y RF-17 están marcados en los roadmaps por la rebanada funcional entregada, pero a nivel de HU solo `HU-17.1` y `HU-17.2` están listas. `HU-15.2` está lista del lado `MS-BEC` con dependencias de `MS-PRG`/`MS-POS` y la deuda 15.4 de verificación; `HU-15.1`, `HU-15.3`, `HU-16.1` y `HU-16.2` siguen parciales por las deudas 15.1–15.5 y 15.7. RF-19 a RF-27 no tienen HUs implementadas. RF-18, RF-28, RF-29 y RF-30 son contribuciones a `MS-AUD`/`MS-PLT`, y RF-23 es de `MS-PRG`/`MS-AUD`. No marcar un RF como cerrado hasta que todas sus HUs estén cubiertas por tareas `[x]`.

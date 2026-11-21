@@ -215,6 +215,7 @@ public sealed class ModeloPersistenciaTests
     [InlineData(typeof(OfertaBeca), nameof(OfertaBeca.HashCartaSha256))]
     [InlineData(typeof(OfertaBeca), nameof(OfertaBeca.TamanioCartaPdfBytes))]
     [InlineData(typeof(OfertaBeca), nameof(OfertaBeca.TipoMimeCartaPdf))]
+    [InlineData(typeof(CompromisoBecario), nameof(CompromisoBecario.UrlPlantillaGeneradaFirebase))]
     [InlineData(typeof(CompromisoBecario), nameof(CompromisoBecario.UrlPdfFirmadoFirebase))]
     [InlineData(typeof(CompromisoBecario), nameof(CompromisoBecario.HashDocumentoSha256))]
     [InlineData(typeof(CompromisoBecario), nameof(CompromisoBecario.TamanioDocumentoBytes))]
