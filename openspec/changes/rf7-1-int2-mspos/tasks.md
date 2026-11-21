@@ -36,11 +36,11 @@
 
 ## 4. API
 
-- [ ] 4.1 Registrar la política de escritura `CoordinadorPrograma` y la política de lectura independiente `LecturaRubrica` (ambas por ahora con rol `COORDINADOR_PROGRAMA`, claim `roles`) y el `IAuthorizationMiddlewareResultHandler` que responde `403` con `ProblemDetails` y `codigo = PERMISO_DENEGADO` solo para esas políticas; probar con endpoint de prueba que Postulantes conserva su comportamiento y verificar con `dotnet test`.
-- [ ] 4.2 Crear `RubricasController` v1 con `POST /api/v1/rubricas` (201, `[Authorize(Policy = "CoordinadorPrograma")]`) y `GET /api/v1/rubricas/{id}` (200, `[Authorize(Policy = "LecturaRubrica")]`); probar con esquema de autenticación de prueba: 201, 200, 400, 401, 403 (`ADMIN_FINANCIERO` y `MIEMBRO_COMITE`, `PERMISO_DENEGADO`), 404 y 409; verificar con `dotnet test`.
-- [ ] 4.3 Agregar `POST /{id}/criterios` (201), `PUT /{id}/criterios/{criterioId}` (200) y `DELETE /{id}/criterios/{criterioId}` (200), cada acción con `[Authorize(Policy = "CoordinadorPrograma")]`; probar 201/200, 400, 401, 403 (`ADMIN_FINANCIERO` y `MIEMBRO_COMITE`), 404 y 409 `RUBRICA_BLOQUEADA`; verificar con `dotnet test`.
-- [ ] 4.4 Agregar `POST /{id}/publicar` (200) con `[Authorize(Policy = "CoordinadorPrograma")]`; probar 200, 401, 403 (`ADMIN_FINANCIERO` y `MIEMBRO_COMITE`), 404, 409 `RUBRICA_BLOQUEADA` y 422 `PESOS_INVALIDOS`; verificar con `dotnet test`.
-- [ ] 4.5 Verificar que Swagger documenta los endpoints y respuestas (`/swagger/v1/swagger.json`); ampliar `SwaggerApiTests` y verificar con `dotnet test`.
+- [x] 4.1 Registrar la política de escritura `CoordinadorPrograma` y la política de lectura independiente `LecturaRubrica` (ambas por ahora con rol `COORDINADOR_PROGRAMA`, claim `roles`) y el `IAuthorizationMiddlewareResultHandler` que responde `403` con `ProblemDetails` y `codigo = PERMISO_DENEGADO` solo para esas políticas; probar con endpoint de prueba que Postulantes conserva su comportamiento y verificar con `dotnet test`.
+- [x] 4.2 Crear `RubricasController` v1 con `POST /api/v1/rubricas` (201, `[Authorize(Policy = "CoordinadorPrograma")]`) y `GET /api/v1/rubricas/{id}` (200, `[Authorize(Policy = "LecturaRubrica")]`); probar con esquema de autenticación de prueba: 201, 200, 400, 401, 403 (`ADMIN_FINANCIERO` y `MIEMBRO_COMITE`, `PERMISO_DENEGADO`), 404 y 409; verificar con `dotnet test`.
+- [x] 4.3 Agregar `POST /{id}/criterios` (201), `PUT /{id}/criterios/{criterioId}` (200) y `DELETE /{id}/criterios/{criterioId}` (200), cada acción con `[Authorize(Policy = "CoordinadorPrograma")]`; probar 201/200, 400, 401, 403 (`ADMIN_FINANCIERO` y `MIEMBRO_COMITE`), 404 y 409 `RUBRICA_BLOQUEADA`; verificar con `dotnet test`.
+- [x] 4.4 Agregar `POST /{id}/publicar` (200) con `[Authorize(Policy = "CoordinadorPrograma")]`; probar 200, 401, 403 (`ADMIN_FINANCIERO` y `MIEMBRO_COMITE`), 404, 409 `RUBRICA_BLOQUEADA` y 422 `PESOS_INVALIDOS`; verificar con `dotnet test`.
+- [x] 4.5 Verificar que Swagger documenta los endpoints y respuestas (`/swagger/v1/swagger.json`); ampliar `SwaggerApiTests` y verificar con `dotnet test`.
 
 ## 5. Verificación integral y seguimiento
 
