@@ -241,6 +241,7 @@ public sealed class ConsultasBeca : IConsultasBeca
             compromiso.BecaId,
             compromiso.Estado.ACodigo(),
             compromiso.NumeroIntentoCarga,
+            compromiso.UrlPlantillaGeneradaFirebase,
             compromiso.UrlPdfFirmadoFirebase,
             compromiso.FechaCargaFirma,
             compromiso.ObservacionesRevision,

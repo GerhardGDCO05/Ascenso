@@ -57,8 +57,35 @@ public sealed class BecaTests
         Assert.Equal(beca.Id, beca.Compromiso.BecaId);
         Assert.Equal(EstadoCompromiso.PendienteCarga, beca.Compromiso.Estado);
         Assert.Equal(0, beca.Compromiso.NumeroIntentoCarga);
+        Assert.Equal(
+            "https://storage.example/becas/plantilla-compromiso.pdf",
+            beca.Compromiso.UrlPlantillaGeneradaFirebase);
         Assert.Null(beca.Compromiso.UrlPdfFirmadoFirebase);
         Assert.Null(beca.Compromiso.HashDocumentoSha256);
+    }
+
+    [Fact]
+    public void Debe_RechazarLaCreacion_Cuando_ElProgramaExigeCompromisoSinPlantilla()
+    {
+        var datos = PruebasOtorgamiento.DatosBeca(requiereCompromiso: true) with
+        {
+            UrlPlantillaCompromiso = null
+        };
+
+        Assert.Throws<ArgumentException>(
+            () => Beca.CrearOtorgada(datos, PruebasOtorgamiento.Contexto()));
+    }
+
+    [Fact]
+    public void Debe_RechazarLaCreacion_Cuando_LaPlantillaDelCompromisoEstaVacia()
+    {
+        var datos = PruebasOtorgamiento.DatosBeca(requiereCompromiso: true) with
+        {
+            UrlPlantillaCompromiso = "   "
+        };
+
+        Assert.Throws<ArgumentException>(
+            () => Beca.CrearOtorgada(datos, PruebasOtorgamiento.Contexto()));
     }
 
     [Fact]

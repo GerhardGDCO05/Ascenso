@@ -256,6 +256,15 @@ namespace Ascenso.Becas.Infrastructure.Persistence.Migraciones
                         .HasColumnType("uuid")
                         .HasColumnName("revisado_por_coordinador_id");
 
+                    b.Property<long?>("TamanioDocumentoBytes")
+                        .HasColumnType("bigint")
+                        .HasColumnName("tamanio_documento_bytes");
+
+                    b.Property<string>("TipoMimeDocumento")
+                        .HasMaxLength(100)
+                        .HasColumnType("character varying(100)")
+                        .HasColumnName("tipo_mime_documento");
+
                     b.Property<string>("UrlPdfFirmadoFirebase")
                         .HasMaxLength(2048)
                         .HasColumnType("character varying(2048)")
@@ -291,13 +300,14 @@ namespace Ascenso.Becas.Infrastructure.Persistence.Migraciones
                             t.HasCheckConstraint("ck_compromiso_becario_estado_valido", "estado IN ('PENDIENTE_CARGA', 'EN_REVISION', 'APROBADO', 'RECHAZADO')");
 
                             t.HasCheckConstraint("ck_compromiso_becario_intento_valido", "numero_intento_carga >= 0");
+
+                            t.HasCheckConstraint("ck_compromiso_becario_tamanio_valido", "tamanio_documento_bytes IS NULL OR tamanio_documento_bytes > 0");
                         });
                 });
 
             modelBuilder.Entity("Ascenso.Becas.Domain.Otorgamiento.Entidades.HistorialEstadoBeca", b =>
                 {
                     b.Property<Guid>("Id")
-                        .ValueGeneratedOnAdd()
                         .HasColumnType("uuid")
                         .HasColumnName("id");
 
@@ -491,6 +501,16 @@ namespace Ascenso.Becas.Infrastructure.Persistence.Migraciones
                         .HasColumnType("uuid")
                         .HasColumnName("reserva_presupuesto_id");
 
+                    b.Property<long>("TamanioCartaPdfBytes")
+                        .HasColumnType("bigint")
+                        .HasColumnName("tamanio_carta_pdf_bytes");
+
+                    b.Property<string>("TipoMimeCartaPdf")
+                        .IsRequired()
+                        .HasMaxLength(100)
+                        .HasColumnType("character varying(100)")
+                        .HasColumnName("tipo_mime_carta_pdf");
+
                     b.Property<string>("UrlCartaPdfFirebase")
                         .IsRequired()
                         .HasMaxLength(2048)
@@ -519,6 +539,8 @@ namespace Ascenso.Becas.Infrastructure.Persistence.Migraciones
 
                     b.ToTable("oferta_beca", "becas", t =>
                         {
+                            t.HasCheckConstraint("ck_oferta_beca_carta_metadatos_validos", "tamanio_carta_pdf_bytes >= 0 AND length(tipo_mime_carta_pdf) > 0");
+
                             t.HasCheckConstraint("ck_oferta_beca_condiciones_validas", "condiciones_promedio_minimo_renovacion >= 0\nAND condiciones_promedio_minimo_renovacion <= 20\nAND condiciones_materias_minimas_aprobadas >= 0\nAND condiciones_maximo_materias_reprobadas >= 0\nAND condiciones_horas_servicio_por_periodo >= 0\nAND condiciones_consecuencia_incumplimiento IN ('LLAMADO_ATENCION', 'SUSPENSION', 'REVOCACION')");
 
                             t.HasCheckConstraint("ck_oferta_beca_duracion_valida", "duracion_periodos > 0");

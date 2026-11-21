@@ -98,6 +98,14 @@ public sealed class CargarCompromisoBecarioHandler
                 new InvalidOperationException("El hash devuelto no coincide con el archivo cargado."));
         }
 
+        if (archivo.TamanioBytes != command.Contenido.Length)
+        {
+            await EliminarArchivoSilenciosoAsync(archivo.Url);
+            throw new DependenciaNoDisponibleException(
+                "almacenamiento",
+                new InvalidOperationException("El tamaño devuelto no coincide con el archivo cargado."));
+        }
+
         try
         {
             CompromisoCargadoDto? resultado = null;
@@ -112,7 +120,13 @@ public sealed class CargarCompromisoBecarioHandler
 
                     try
                     {
-                        beca.CargarCompromiso(archivo.Url, hash, ip, contexto);
+                        beca.CargarCompromiso(
+                            archivo.Url,
+                            hash,
+                            archivo.TamanioBytes,
+                            TipoMimePdf,
+                            ip,
+                            contexto);
                     }
                     catch (ArgumentException excepcion)
                     {

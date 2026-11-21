@@ -34,6 +34,8 @@ public sealed class CargarCompromisoBecarioHandlerTests
 
         var hashEsperado = Convert.ToHexString(SHA256.HashData(_pdfValido)).ToLowerInvariant();
         beca.Compromiso.HashDocumentoSha256.Should().Be(hashEsperado);
+        beca.Compromiso.TipoMimeDocumento.Should().Be("application/pdf");
+        beca.Compromiso.TamanioDocumentoBytes.Should().Be(_pdfValido.Length);
         escenario.Almacenamiento.RutasSubidas.Should().ContainSingle()
             .Which.Should().Be(
                 $"becas/{beca.Id}/compromisos/{beca.Compromiso.Id}/intento-1.pdf");
@@ -52,6 +54,8 @@ public sealed class CargarCompromisoBecarioHandlerTests
         beca.CargarCompromiso(
             "https://storage.example/compromiso-1.pdf",
             new string('b', 64),
+            _pdfValido.Length,
+            "application/pdf",
             "10.0.0.1",
             contexto);
         beca.RechazarCompromiso("Documento ilegible.", contexto);
@@ -220,6 +224,33 @@ public sealed class CargarCompromisoBecarioHandlerTests
         escenario.Almacenamiento.UrlsEliminadas.Should().ContainSingle()
             .Which.Should().Be("https://storage.example/compromiso.pdf");
         beca.Compromiso!.NumeroIntentoCarga.Should().Be(0);
+    }
+
+    [Fact]
+    public async Task Debe_EliminarElArchivo_Cuando_ElTamanioDevueltoNoCoincide()
+    {
+        var escenario = new EscenarioOtorgamiento();
+        var beca = CrearBecaConCompromiso(escenario);
+        var hash = Convert.ToHexString(SHA256.HashData(_pdfValido)).ToLowerInvariant();
+        escenario.Almacenamiento.CalcularHash = false;
+        escenario.Almacenamiento.Resultado = new ArchivoAlmacenado(
+            "https://storage.example/compromiso.pdf",
+            hash,
+            _pdfValido.Length + 1);
+
+        var accion = () => escenario.CrearCargarCompromiso().HandleAsync(
+            CrearComando(beca, _pdfValido));
+
+        var excepcion = await accion.Should().ThrowAsync<DependenciaNoDisponibleException>();
+
+        excepcion.Which.Dependencia.Should().Be("almacenamiento");
+        excepcion.Which.InnerException.Should()
+            .BeOfType<InvalidOperationException>()
+            .Which.Message.Should().Contain("tamaño");
+        escenario.Almacenamiento.UrlsEliminadas.Should().ContainSingle()
+            .Which.Should().Be("https://storage.example/compromiso.pdf");
+        beca.Compromiso!.NumeroIntentoCarga.Should().Be(0);
+        escenario.Unidad.Confirmaciones.Should().Be(0);
     }
 
     [Fact]

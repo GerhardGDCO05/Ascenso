@@ -23,6 +23,7 @@ public sealed class EmitirOfertaBecaHandler
     : ICommandHandler<EmitirOfertaBecaCommand, OfertaEmitidaDto>
 {
     private const int MaximoLongitudCodigoBeca = 20;
+    private const string TipoMimePdf = "application/pdf";
 
     private readonly IContextoOperacionActual _contextoActual;
     private readonly IClock _reloj;
@@ -31,6 +32,7 @@ public sealed class EmitirOfertaBecaHandler
     private readonly IMetricaConfiguracionFaltante _metricaConfiguracion;
     private readonly IProgramasClient _programas;
     private readonly ICartaOfertaPdfGenerator _generadorCarta;
+    private readonly IPlantillaCompromisoPdfGenerator _generadorPlantilla;
     private readonly IAlmacenamientoArchivos _almacenamiento;
     private readonly IProgramadorExpiracionOfertas _programador;
     private readonly IBecaRepository _repositorio;
@@ -45,6 +47,7 @@ public sealed class EmitirOfertaBecaHandler
         IMetricaConfiguracionFaltante metricaConfiguracion,
         IProgramasClient programas,
         ICartaOfertaPdfGenerator generadorCarta,
+        IPlantillaCompromisoPdfGenerator generadorPlantilla,
         IAlmacenamientoArchivos almacenamiento,
         IProgramadorExpiracionOfertas programador,
         IBecaRepository repositorio,
@@ -59,6 +62,8 @@ public sealed class EmitirOfertaBecaHandler
             ?? throw new ArgumentNullException(nameof(metricaConfiguracion));
         _programas = programas ?? throw new ArgumentNullException(nameof(programas));
         _generadorCarta = generadorCarta ?? throw new ArgumentNullException(nameof(generadorCarta));
+        _generadorPlantilla = generadorPlantilla
+            ?? throw new ArgumentNullException(nameof(generadorPlantilla));
         _almacenamiento = almacenamiento ?? throw new ArgumentNullException(nameof(almacenamiento));
         _programador = programador ?? throw new ArgumentNullException(nameof(programador));
         _repositorio = repositorio ?? throw new ArgumentNullException(nameof(repositorio));
@@ -123,6 +128,7 @@ public sealed class EmitirOfertaBecaHandler
 
         var becaId = UuidV7.Nuevo(ahora);
         var ofertaId = UuidV7.Nuevo(ahora);
+        var codigoBeca = CrearCodigoBeca(becaId);
         var reserva = await ReservarAsync(
             adjudicacion,
             ofertaId,
@@ -132,6 +138,8 @@ public sealed class EmitirOfertaBecaHandler
         var fechaVencimiento = ahora.AddDays(Beca.DiasVigenciaOferta);
         Stream? carta = null;
         ArchivoAlmacenado? archivo = null;
+        Stream? plantilla = null;
+        ArchivoAlmacenado? archivoPlantilla = null;
         string? referenciaJob = null;
 
         try
@@ -145,11 +153,27 @@ public sealed class EmitirOfertaBecaHandler
                 fechaVencimiento,
                 cancellationToken);
 
-            archivo = await SubirCartaAsync(
+            archivo = await SubirPdfAsync(
                 carta,
-                becaId,
-                ofertaId,
+                $"becas/{becaId}/ofertas/{ofertaId}/carta-otorgamiento.pdf",
                 cancellationToken);
+
+            if (proyeccion.Programa.RequiereCompromisoFirmado)
+            {
+                plantilla = await GenerarPlantillaAsync(
+                    becaId,
+                    codigoBeca,
+                    adjudicacion,
+                    proyeccion,
+                    montoPorPeriodo,
+                    fechaOperacion,
+                    cancellationToken);
+
+                archivoPlantilla = await SubirPdfAsync(
+                    plantilla,
+                    $"becas/{becaId}/compromisos/plantilla-compromiso.pdf",
+                    cancellationToken);
+            }
 
             referenciaJob = await ProgramarExpiracionAsync(
                 ofertaId,
@@ -160,12 +184,14 @@ public sealed class EmitirOfertaBecaHandler
             var beca = CrearAgregado(
                 becaId,
                 ofertaId,
+                codigoBeca,
                 adjudicacion,
                 proyeccion,
                 reserva,
                 montoPorPeriodo,
                 montoTotal,
                 archivo,
+                archivoPlantilla?.Url,
                 referenciaJob,
                 contexto);
 
@@ -186,7 +212,7 @@ public sealed class EmitirOfertaBecaHandler
         }
         catch
         {
-            await CompensarAsync(referenciaJob, archivo?.Url);
+            await CompensarAsync(referenciaJob, archivo?.Url, archivoPlantilla?.Url);
             throw;
         }
         finally
@@ -194,6 +220,11 @@ public sealed class EmitirOfertaBecaHandler
             if (carta is not null)
             {
                 await carta.DisposeAsync();
+            }
+
+            if (plantilla is not null)
+            {
+                await plantilla.DisposeAsync();
             }
         }
     }
@@ -296,10 +327,43 @@ public sealed class EmitirOfertaBecaHandler
         }
     }
 
-    private async Task<ArchivoAlmacenado> SubirCartaAsync(
-        Stream carta,
+    private async Task<Stream> GenerarPlantillaAsync(
         Guid becaId,
-        Guid ofertaId,
+        string codigoBeca,
+        ResultadoAdjudicabilidad adjudicacion,
+        ProyeccionOtorgamiento proyeccion,
+        decimal montoPorPeriodo,
+        DateOnly fechaEmision,
+        CancellationToken cancellationToken)
+    {
+        try
+        {
+            return await _generadorPlantilla.GenerarAsync(
+                new DatosPlantillaCompromiso(
+                    becaId,
+                    codigoBeca,
+                    adjudicacion.NombreEstudiante.Trim(),
+                    adjudicacion.NumeroDocumentoEstudiante.Trim(),
+                    proyeccion.Programa.Nombre,
+                    adjudicacion.PeriodoCodigo,
+                    proyeccion.Programa.PoliticaCobertura,
+                    montoPorPeriodo,
+                    proyeccion.Programa.DuracionPeriodos,
+                    proyeccion.Programa.CondicionesPermanencia,
+                    fechaEmision),
+                cancellationToken);
+        }
+        catch (Exception excepcion) when (!cancellationToken.IsCancellationRequested)
+        {
+            throw new DependenciaNoDisponibleException(
+                "generador-plantilla-compromiso",
+                excepcion);
+        }
+    }
+
+    private async Task<ArchivoAlmacenado> SubirPdfAsync(
+        Stream contenido,
+        string rutaLogica,
         CancellationToken cancellationToken)
     {
         ArchivoAlmacenado archivo;
@@ -307,9 +371,9 @@ public sealed class EmitirOfertaBecaHandler
         try
         {
             archivo = await _almacenamiento.SubirAsync(
-                carta,
-                "application/pdf",
-                $"becas/{becaId}/ofertas/{ofertaId}/carta-otorgamiento.pdf",
+                contenido,
+                TipoMimePdf,
+                rutaLogica,
                 cancellationToken);
         }
         catch (Exception excepcion) when (!cancellationToken.IsCancellationRequested)
@@ -327,6 +391,14 @@ public sealed class EmitirOfertaBecaHandler
             throw new DependenciaNoDisponibleException(
                 "almacenamiento",
                 new InvalidOperationException("El almacenamiento devolvió una URL o un hash inválido."));
+        }
+
+        if (archivo.TamanioBytes <= 0)
+        {
+            await EliminarArchivoSilenciosoAsync(archivo.Url, cancellationToken);
+            throw new DependenciaNoDisponibleException(
+                "almacenamiento",
+                new InvalidOperationException("El almacenamiento devolvió un tamaño inválido."));
         }
 
         return archivo;
@@ -360,12 +432,14 @@ public sealed class EmitirOfertaBecaHandler
     private static Beca CrearAgregado(
         Guid becaId,
         Guid ofertaId,
+        string codigoBeca,
         ResultadoAdjudicabilidad adjudicacion,
         ProyeccionOtorgamiento proyeccion,
         ResultadoReservaPresupuesto reserva,
         decimal montoPorPeriodo,
         decimal montoTotal,
         ArchivoAlmacenado archivo,
+        string? urlPlantillaCompromiso,
         string referenciaJob,
         ContextoOperacion contexto)
     {
@@ -385,7 +459,8 @@ public sealed class EmitirOfertaBecaHandler
                     montoPorPeriodo,
                     proyeccion.Programa.PermiteAcumulacion,
                     proyeccion.Programa.RequiereCompromisoFirmado,
-                    CrearCodigoBeca(becaId)),
+                    codigoBeca,
+                    urlPlantillaCompromiso),
                 contexto,
                 becaId);
 
@@ -399,6 +474,8 @@ public sealed class EmitirOfertaBecaHandler
                     proyeccion.Programa.CondicionesPermanencia,
                     archivo.Url,
                     archivo.HashSha256,
+                    TipoMimePdf,
+                    archivo.TamanioBytes,
                     referenciaJob,
                     contexto.AutorizacionOtpId),
                 contexto,
@@ -424,7 +501,10 @@ public sealed class EmitirOfertaBecaHandler
         }
     }
 
-    private async Task CompensarAsync(string? referenciaJob, string? urlArchivo)
+    private async Task CompensarAsync(
+        string? referenciaJob,
+        string? urlCarta,
+        string? urlPlantilla)
     {
         if (!string.IsNullOrWhiteSpace(referenciaJob))
         {
@@ -438,9 +518,14 @@ public sealed class EmitirOfertaBecaHandler
             }
         }
 
-        if (!string.IsNullOrWhiteSpace(urlArchivo))
+        if (!string.IsNullOrWhiteSpace(urlCarta))
         {
-            await EliminarArchivoSilenciosoAsync(urlArchivo, CancellationToken.None);
+            await EliminarArchivoSilenciosoAsync(urlCarta, CancellationToken.None);
+        }
+
+        if (!string.IsNullOrWhiteSpace(urlPlantilla))
+        {
+            await EliminarArchivoSilenciosoAsync(urlPlantilla, CancellationToken.None);
         }
     }
 

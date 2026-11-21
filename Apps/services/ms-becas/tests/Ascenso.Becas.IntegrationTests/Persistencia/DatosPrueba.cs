@@ -44,7 +44,10 @@ internal static class DatosPrueba
             1500m,
             permiteAcumulacion,
             requiereCompromisoFirmado,
-            codigoBeca ?? NuevoCodigoBeca());
+            codigoBeca ?? NuevoCodigoBeca(),
+            requiereCompromisoFirmado
+                ? "https://storage.example/becas/plantilla-compromiso.pdf"
+                : null);
     }
 
     public static DatosOfertaBeca CrearDatosOferta(DatosCreacionBeca datosBeca)
@@ -62,6 +65,8 @@ internal static class DatosPrueba
                 ConsecuenciaPermanencia.LlamadoAtencion),
             "https://storage.example/carta-otorgamiento.pdf",
             new string('a', 64),
+            "application/pdf",
+            1024L,
             $"job-{Guid.NewGuid():N}");
 
     public static Beca CrearBecaActiva(

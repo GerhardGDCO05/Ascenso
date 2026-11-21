@@ -50,6 +50,8 @@ internal sealed class EscenarioOtorgamiento
 
     public GeneradorCartaFalso Generador { get; } = new();
 
+    public GeneradorPlantillaFalso GeneradorPlantilla { get; } = new();
+
     public AlmacenamientoArchivosFalso Almacenamiento { get; } = new();
 
     public ProgramadorExpiracionFalso Programador { get; } = new();
@@ -105,6 +107,7 @@ internal sealed class EscenarioOtorgamiento
             MetricaConfiguracion,
             Programas,
             Generador,
+            GeneradorPlantilla,
             Almacenamiento,
             Programador,
             Repositorio,

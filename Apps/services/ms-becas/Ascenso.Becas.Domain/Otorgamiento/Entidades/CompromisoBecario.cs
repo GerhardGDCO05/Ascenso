@@ -33,6 +33,10 @@ public sealed class CompromisoBecario : EntidadAuditable
 
     public string? HashDocumentoSha256 { get; private set; }
 
+    public string? TipoMimeDocumento { get; private set; }
+
+    public long? TamanioDocumentoBytes { get; private set; }
+
     public int NumeroIntentoCarga { get; private set; }
 
     public string? IpCargaFirma { get; private set; }
@@ -47,7 +51,10 @@ public sealed class CompromisoBecario : EntidadAuditable
 
     public DateTimeOffset? FechaRevision { get; private set; }
 
-    internal static CompromisoBecario Crear(Guid becaId, ContextoOperacion contexto)
+    internal static CompromisoBecario Crear(
+        Guid becaId,
+        string urlPlantillaGenerada,
+        ContextoOperacion contexto)
     {
         ArgumentNullException.ThrowIfNull(contexto);
 
@@ -56,12 +63,31 @@ public sealed class CompromisoBecario : EntidadAuditable
             throw new ArgumentException("La beca del compromiso es obligatoria.", nameof(becaId));
         }
 
-        return new CompromisoBecario(UuidV7.Nuevo(), becaId, contexto);
+        if (string.IsNullOrWhiteSpace(urlPlantillaGenerada))
+        {
+            throw new ArgumentException(
+                "La URL de la plantilla del compromiso es obligatoria.",
+                nameof(urlPlantillaGenerada));
+        }
+
+        if (urlPlantillaGenerada.Trim().Length > 2048)
+        {
+            throw new ArgumentException(
+                "La URL de la plantilla del compromiso no puede superar 2048 caracteres.",
+                nameof(urlPlantillaGenerada));
+        }
+
+        return new CompromisoBecario(UuidV7.Nuevo(), becaId, contexto)
+        {
+            UrlPlantillaGeneradaFirebase = urlPlantillaGenerada.Trim()
+        };
     }
 
     internal void Cargar(
         string urlPdfFirmadoFirebase,
         string hashDocumentoSha256,
+        long tamanioDocumentoBytes,
+        string tipoMimeDocumento,
         string ipCargaFirma,
         ContextoOperacion contexto)
     {
@@ -80,6 +106,20 @@ public sealed class CompromisoBecario : EntidadAuditable
                 nameof(hashDocumentoSha256));
         }
 
+        if (tamanioDocumentoBytes <= 0)
+        {
+            throw new ArgumentOutOfRangeException(
+                nameof(tamanioDocumentoBytes),
+                "El tamaño del compromiso debe ser mayor que cero.");
+        }
+
+        if (string.IsNullOrWhiteSpace(tipoMimeDocumento))
+        {
+            throw new ArgumentException(
+                "El tipo MIME del compromiso es obligatorio.",
+                nameof(tipoMimeDocumento));
+        }
+
         if (string.IsNullOrWhiteSpace(ipCargaFirma) || !IPAddress.TryParse(ipCargaFirma, out _))
         {
             throw new ArgumentException("La IP de carga de la firma debe ser válida.", nameof(ipCargaFirma));
@@ -96,6 +136,8 @@ public sealed class CompromisoBecario : EntidadAuditable
         Estado = EstadoCompromiso.EnRevision;
         UrlPdfFirmadoFirebase = urlPdfFirmadoFirebase.Trim();
         HashDocumentoSha256 = hashDocumentoSha256.Trim().ToLowerInvariant();
+        TipoMimeDocumento = tipoMimeDocumento.Trim().ToLowerInvariant();
+        TamanioDocumentoBytes = tamanioDocumentoBytes;
         IpCargaFirma = ipCargaFirma.Trim();
         FechaCargaFirma = contexto.Fecha;
         NumeroIntentoCarga++;

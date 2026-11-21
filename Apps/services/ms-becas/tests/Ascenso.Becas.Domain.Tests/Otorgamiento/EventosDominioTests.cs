@@ -99,6 +99,8 @@ public sealed class EventosDominioTests
         beca.CargarCompromiso(
             "https://storage.example/becas/compromiso.pdf",
             PruebasOtorgamiento.Hash('k'),
+            PruebasOtorgamiento.TamanioPdf,
+            PruebasOtorgamiento.TipoMimePdf,
             "190.85.12.34",
             PruebasOtorgamiento.Contexto(
                 PruebasOtorgamiento.FechaBase.AddDays(2),
@@ -122,6 +124,8 @@ public sealed class EventosDominioTests
         becaParaRechazo.CargarCompromiso(
             "https://storage.example/becas/compromiso-rechazo.pdf",
             PruebasOtorgamiento.Hash('l'),
+            PruebasOtorgamiento.TamanioPdf,
+            PruebasOtorgamiento.TipoMimePdf,
             "190.85.12.35",
             PruebasOtorgamiento.Contexto(
                 PruebasOtorgamiento.FechaBase.AddDays(2),

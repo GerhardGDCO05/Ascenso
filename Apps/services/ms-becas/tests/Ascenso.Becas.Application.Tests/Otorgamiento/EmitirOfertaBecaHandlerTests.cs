@@ -1,3 +1,5 @@
+using System.Security.Cryptography;
+using System.Text;
 using Ascenso.Becas.Application.Excepciones;
 using Ascenso.Becas.Application.Otorgamiento.Comandos.EmitirOfertaBeca;
 using Ascenso.Becas.Domain.Enums;
@@ -32,6 +34,12 @@ public sealed class EmitirOfertaBecaHandlerTests
         beca.Oferta.Should().NotBeNull();
         beca.Oferta!.Estado.Should().Be(EstadoOferta.PendienteRespuesta);
         beca.Oferta.Id.Should().Be(resultado.OfertaId);
+        beca.Oferta.UrlCartaPdfFirebase.Should().Be(escenario.Almacenamiento.Resultado.Url);
+        var contenidoCarta = Encoding.UTF8.GetBytes(escenario.Generador.Contenido);
+        beca.Oferta.HashCartaSha256.Should().Be(
+            Convert.ToHexString(SHA256.HashData(contenidoCarta)).ToLowerInvariant());
+        beca.Oferta.TipoMimeCartaPdf.Should().Be("application/pdf");
+        beca.Oferta.TamanioCartaPdfBytes.Should().Be(contenidoCarta.Length);
 
         escenario.Generador.Datos.Should().NotBeNull();
         escenario.Generador.Datos!.NombreEstudiante.Should().Be("Ana Pérez");
@@ -298,4 +306,159 @@ public sealed class EmitirOfertaBecaHandlerTests
         excepcion.Which.Dependencia.Should().Be("generador-carta");
         escenario.Almacenamiento.RutasSubidas.Should().BeEmpty();
     }
+
+    [Fact]
+    public async Task Debe_GenerarYAlmacenarLaPlantillaDelCompromiso_Cuando_ElProgramaLoExige()
+    {
+        var escenario = new EscenarioOtorgamiento();
+        ExigirCompromiso(escenario);
+        ConfigurarUrlsPorRuta(escenario);
+
+        var resultado = await escenario.CrearEmitir().HandleAsync(
+            new EmitirOfertaBecaCommand(escenario.PostulacionId));
+
+        var beca = escenario.Repositorio.Becas.Should().ContainSingle().Subject;
+        var rutaPlantilla =
+            $"becas/{resultado.BecaId}/compromisos/plantilla-compromiso.pdf";
+
+        beca.Compromiso.Should().NotBeNull();
+        beca.Compromiso!.Estado.Should().Be(EstadoCompromiso.PendienteCarga);
+        beca.Compromiso.UrlPlantillaGeneradaFirebase.Should().Be(
+            $"https://storage.example/{rutaPlantilla}");
+        beca.Compromiso.UrlPdfFirmadoFirebase.Should().BeNull();
+        beca.Compromiso.NumeroIntentoCarga.Should().Be(0);
+
+        escenario.GeneradorPlantilla.Datos.Should().NotBeNull();
+        var datos = escenario.GeneradorPlantilla.Datos!;
+        datos.BecaId.Should().Be(resultado.BecaId);
+        datos.CodigoBeca.Should().Be(beca.CodigoBeca);
+        datos.NombreEstudiante.Should().Be("Ana Pérez");
+        datos.NumeroDocumentoEstudiante.Should().Be("12345678");
+        datos.NombrePrograma.Should().Be("Programa de becas de prueba");
+        datos.PeriodoCodigo.Should().Be("2026-2");
+        datos.Cobertura.Should().Be(beca.CoberturaAplicada);
+        datos.MontoPorPeriodo.Should().Be(500m);
+        datos.DuracionPeriodos.Should().Be(4);
+        datos.Condiciones.PromedioMinimoRenovacion.Should().Be(14m);
+        datos.Condiciones.MateriasMinimasAprobadas.Should().Be(4);
+        datos.Condiciones.MaximoMateriasReprobadas.Should().Be(1);
+        datos.Condiciones.HorasServicioPorPeriodo.Should().Be(80);
+        datos.Condiciones.ConsecuenciaIncumplimiento.Should()
+            .Be(ConsecuenciaPermanencia.Suspension);
+        datos.FechaEmision.Should().Be(
+            DateOnly.FromDateTime(DatosAplicacion.FechaBase.UtcDateTime));
+
+        escenario.Almacenamiento.RutasSubidas.Should().HaveCount(2);
+        escenario.Almacenamiento.RutasSubidas.Should().Contain(
+            $"becas/{resultado.BecaId}/ofertas/{resultado.OfertaId}/carta-otorgamiento.pdf");
+        escenario.Almacenamiento.RutasSubidas.Should().Contain(rutaPlantilla);
+        escenario.Almacenamiento.UrlsEliminadas.Should().BeEmpty();
+    }
+
+    [Fact]
+    public async Task Debe_NoGenerarLaPlantilla_Cuando_ElProgramaNoExigeCompromiso()
+    {
+        var escenario = new EscenarioOtorgamiento();
+
+        var resultado = await escenario.CrearEmitir().HandleAsync(
+            new EmitirOfertaBecaCommand(escenario.PostulacionId));
+
+        var beca = escenario.Repositorio.Becas.Should().ContainSingle().Subject;
+
+        beca.Compromiso.Should().BeNull();
+        escenario.GeneradorPlantilla.Datos.Should().BeNull();
+        escenario.Almacenamiento.RutasSubidas.Should().ContainSingle()
+            .Which.Should().Be(
+                $"becas/{resultado.BecaId}/ofertas/{resultado.OfertaId}/carta-otorgamiento.pdf");
+    }
+
+    [Fact]
+    public async Task Debe_CompensarLaCartaYLaPlantilla_Cuando_FallaLaPersistencia()
+    {
+        var escenario = new EscenarioOtorgamiento();
+        ExigirCompromiso(escenario);
+        ConfigurarUrlsPorRuta(escenario);
+        escenario.Unidad.ErrorGuardado = new InvalidOperationException("fallo de persistencia");
+
+        var accion = () => escenario.CrearEmitir().HandleAsync(
+            new EmitirOfertaBecaCommand(escenario.PostulacionId));
+
+        await accion.Should().ThrowAsync<InvalidOperationException>();
+
+        escenario.Almacenamiento.UrlsEliminadas.Should().HaveCount(2);
+        escenario.Almacenamiento.UrlsEliminadas.Should().Contain(
+            url => url.Contains("/ofertas/", StringComparison.Ordinal)
+                && url.EndsWith("/carta-otorgamiento.pdf", StringComparison.Ordinal));
+        escenario.Almacenamiento.UrlsEliminadas.Should().Contain(
+            url => url.EndsWith(
+                "/compromisos/plantilla-compromiso.pdf",
+                StringComparison.Ordinal));
+        escenario.Unidad.Confirmaciones.Should().Be(0);
+        escenario.Unidad.Reversiones.Should().Be(1);
+    }
+
+    [Fact]
+    public async Task Debe_FallarYCompensarLaCarta_Cuando_ElGeneradorDePlantillaFalla()
+    {
+        var escenario = new EscenarioOtorgamiento();
+        ExigirCompromiso(escenario);
+        ConfigurarUrlsPorRuta(escenario);
+        escenario.GeneradorPlantilla.Error =
+            new InvalidOperationException("fallo del generador de plantilla");
+
+        var accion = () => escenario.CrearEmitir().HandleAsync(
+            new EmitirOfertaBecaCommand(escenario.PostulacionId));
+
+        var excepcion = await accion.Should().ThrowAsync<DependenciaNoDisponibleException>();
+
+        excepcion.Which.Dependencia.Should().Be("generador-plantilla-compromiso");
+        escenario.Almacenamiento.RutasSubidas.Should().ContainSingle()
+            .Which.Should().Contain("carta-otorgamiento.pdf");
+        escenario.Almacenamiento.UrlsEliminadas.Should().ContainSingle()
+            .Which.Should().Contain("carta-otorgamiento.pdf");
+        escenario.Repositorio.Becas.Should().BeEmpty();
+    }
+
+    [Fact]
+    public async Task Debe_FallarYCompensarLaCarta_Cuando_LaSubidaDeLaPlantillaFalla()
+    {
+        var escenario = new EscenarioOtorgamiento();
+        ExigirCompromiso(escenario);
+        ConfigurarUrlsPorRuta(escenario);
+        escenario.Almacenamiento.ErrorSubidaSegunRuta = ruta =>
+            ruta.EndsWith("/plantilla-compromiso.pdf", StringComparison.Ordinal)
+                ? new IOException("fallo de almacenamiento de la plantilla")
+                : null;
+
+        var accion = () => escenario.CrearEmitir().HandleAsync(
+            new EmitirOfertaBecaCommand(escenario.PostulacionId));
+
+        var excepcion = await accion.Should().ThrowAsync<DependenciaNoDisponibleException>();
+
+        excepcion.Which.Dependencia.Should().Be("almacenamiento");
+        escenario.Almacenamiento.UrlsEliminadas.Should().ContainSingle()
+            .Which.Should().Contain("carta-otorgamiento.pdf");
+        escenario.Repositorio.Becas.Should().BeEmpty();
+        escenario.Unidad.Confirmaciones.Should().Be(0);
+    }
+
+    private static void ExigirCompromiso(EscenarioOtorgamiento escenario)
+    {
+        var proyeccion = escenario.Proyecciones.Proyeccion
+            ?? throw new InvalidOperationException("La proyección de prueba no está configurada.");
+
+        escenario.Proyecciones.Proyeccion = proyeccion with
+        {
+            Programa = proyeccion.Programa with
+            {
+                RequiereCompromisoFirmado = true
+            }
+        };
+    }
+
+    private static void ConfigurarUrlsPorRuta(EscenarioOtorgamiento escenario)
+        => escenario.Almacenamiento.CrearResultado = ruta => new ArchivoAlmacenado(
+            $"https://storage.example/{ruta}",
+            new string('a', 64),
+            1);
 }

@@ -18,4 +18,5 @@ public sealed record class DatosCreacionBeca(
     decimal MontoComprometidoPeriodoActual,
     bool PermiteAcumulacion,
     bool RequiereCompromisoFirmado,
-    string CodigoBeca);
+    string CodigoBeca,
+    string? UrlPlantillaCompromiso);

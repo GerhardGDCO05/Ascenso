@@ -21,6 +21,9 @@ internal sealed class OfertaBecaConfiguracion : IEntityTypeConfiguration<OfertaB
                 "ck_oferta_beca_duracion_valida",
                 "duracion_periodos > 0");
             tabla.HasCheckConstraint(
+                "ck_oferta_beca_carta_metadatos_validos",
+                "tamanio_carta_pdf_bytes >= 0 AND length(tipo_mime_carta_pdf) > 0");
+            tabla.HasCheckConstraint(
                 "ck_oferta_beca_fechas_coherentes",
                 """
                 fecha_vencimiento_aceptacion > fecha_emision
@@ -91,6 +94,13 @@ internal sealed class OfertaBecaConfiguracion : IEntityTypeConfiguration<OfertaB
             .HasColumnName("hash_carta_sha256")
             .HasMaxLength(64)
             .IsFixedLength();
+
+        builder.Property(oferta => oferta.TipoMimeCartaPdf)
+            .HasColumnName("tipo_mime_carta_pdf")
+            .HasMaxLength(100);
+
+        builder.Property(oferta => oferta.TamanioCartaPdfBytes)
+            .HasColumnName("tamanio_carta_pdf_bytes");
 
         builder.Property(oferta => oferta.FechaEmision)
             .HasColumnName("fecha_emision")

@@ -48,7 +48,11 @@ public sealed class ModeloPersistenciaTests
     [InlineData(typeof(Beca), nameof(Beca.CadenaBecaId), "cadena_beca_id")]
     [InlineData(typeof(Beca), nameof(Beca.MontoComprometidoPeriodoActual), "monto_comprometido_periodo_actual")]
     [InlineData(typeof(OfertaBeca), nameof(OfertaBeca.FechaVencimientoAceptacion), "fecha_vencimiento_aceptacion")]
+    [InlineData(typeof(OfertaBeca), nameof(OfertaBeca.TipoMimeCartaPdf), "tipo_mime_carta_pdf")]
+    [InlineData(typeof(OfertaBeca), nameof(OfertaBeca.TamanioCartaPdfBytes), "tamanio_carta_pdf_bytes")]
     [InlineData(typeof(CompromisoBecario), nameof(CompromisoBecario.NumeroIntentoCarga), "numero_intento_carga")]
+    [InlineData(typeof(CompromisoBecario), nameof(CompromisoBecario.TipoMimeDocumento), "tipo_mime_documento")]
+    [InlineData(typeof(CompromisoBecario), nameof(CompromisoBecario.TamanioDocumentoBytes), "tamanio_documento_bytes")]
     [InlineData(typeof(HistorialEstadoBeca), nameof(HistorialEstadoBeca.EstadoBecaNuevo), "estado_beca_nuevo")]
     [InlineData(typeof(ProgramaBecaRef), nameof(ProgramaBecaRef.UltimoEventoId), "ultimo_evento_id")]
     [InlineData(typeof(CostoMatriculaRef), nameof(CostoMatriculaRef.MontoReferenciaMatricula), "monto_referencia_matricula")]
@@ -75,7 +79,9 @@ public sealed class ModeloPersistenciaTests
     [InlineData(typeof(Beca), nameof(Beca.MontoComprometidoPeriodoActual), "numeric(18,2)")]
     [InlineData(typeof(Beca), "CoberturaAplicada.PorcentajeCobertura", "numeric(5,2)")]
     [InlineData(typeof(OfertaBeca), nameof(OfertaBeca.FechaVencimientoAceptacion), "timestamptz")]
+    [InlineData(typeof(OfertaBeca), nameof(OfertaBeca.TamanioCartaPdfBytes), "bigint")]
     [InlineData(typeof(OfertaBeca), "CondicionesSnapshot.PromedioMinimoRenovacion", "numeric(5,2)")]
+    [InlineData(typeof(CompromisoBecario), nameof(CompromisoBecario.TamanioDocumentoBytes), "bigint")]
     [InlineData(typeof(HistorialEstadoBeca), nameof(HistorialEstadoBeca.FechaCambio), "timestamptz")]
     [InlineData(typeof(ProgramaBecaRef), nameof(ProgramaBecaRef.FechaUltimaActualizacion), "timestamptz")]
     [InlineData(typeof(CostoMatriculaRef), nameof(CostoMatriculaRef.FechaVigenciaDesde), "date")]
@@ -179,6 +185,49 @@ public sealed class ModeloPersistenciaTests
 
         await Assert.ThrowsAsync<DbUpdateConcurrencyException>(
             () => contextoB.SaveChangesAsync());
+    }
+
+    [Fact]
+    public void Debe_PersistirSoloMetadatosDeArchivos_SinColumnasBinarias()
+    {
+        using var contexto = _fixture.CrearContexto();
+
+        var columnasBinarias = contexto.Model
+            .GetEntityTypes()
+            .Where(entidad => entidad.ClrType.Namespace?.StartsWith(
+                "Ascenso.Becas.Domain",
+                StringComparison.Ordinal) == true)
+            .SelectMany(entidad => entidad
+                .GetProperties()
+                .Where(propiedad => propiedad.ClrType == typeof(byte[])
+                    || string.Equals(
+                        propiedad.GetColumnType(),
+                        "bytea",
+                        StringComparison.OrdinalIgnoreCase))
+                .Select(propiedad => $"{entidad.DisplayName()}.{propiedad.Name}"))
+            .ToList();
+
+        Assert.Empty(columnasBinarias);
+    }
+
+    [Theory]
+    [InlineData(typeof(OfertaBeca), nameof(OfertaBeca.UrlCartaPdfFirebase))]
+    [InlineData(typeof(OfertaBeca), nameof(OfertaBeca.HashCartaSha256))]
+    [InlineData(typeof(OfertaBeca), nameof(OfertaBeca.TamanioCartaPdfBytes))]
+    [InlineData(typeof(OfertaBeca), nameof(OfertaBeca.TipoMimeCartaPdf))]
+    [InlineData(typeof(CompromisoBecario), nameof(CompromisoBecario.UrlPlantillaGeneradaFirebase))]
+    [InlineData(typeof(CompromisoBecario), nameof(CompromisoBecario.UrlPdfFirmadoFirebase))]
+    [InlineData(typeof(CompromisoBecario), nameof(CompromisoBecario.HashDocumentoSha256))]
+    [InlineData(typeof(CompromisoBecario), nameof(CompromisoBecario.TamanioDocumentoBytes))]
+    [InlineData(typeof(CompromisoBecario), nameof(CompromisoBecario.TipoMimeDocumento))]
+    public void Debe_ConservarLosMetadatosDeArchivoRequeridos(
+        Type tipo,
+        string propiedad)
+    {
+        using var contexto = _fixture.CrearContexto();
+        var entidad = contexto.Model.FindEntityType(tipo)!;
+
+        Assert.NotNull(entidad.FindProperty(propiedad));
     }
 
     private static IProperty ObtenerPropiedad(

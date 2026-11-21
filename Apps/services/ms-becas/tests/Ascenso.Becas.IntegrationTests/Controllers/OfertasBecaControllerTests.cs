@@ -689,6 +689,9 @@ public sealed class OfertasBecaApiFactory : WebApplicationFactory<Program>
             servicios.RemoveAll<ICartaOfertaPdfGenerator>();
             servicios.AddSingleton(Substitute.For<ICartaOfertaPdfGenerator>());
 
+            servicios.RemoveAll<IPlantillaCompromisoPdfGenerator>();
+            servicios.AddSingleton(Substitute.For<IPlantillaCompromisoPdfGenerator>());
+
             servicios.RemoveAll<IAlmacenamientoArchivos>();
             servicios.AddSingleton(Substitute.For<IAlmacenamientoArchivos>());
 

@@ -40,6 +40,7 @@ public sealed class DomainIndependenceTests
             typeof(IClock),
             typeof(IAlmacenamientoArchivos),
             typeof(ICartaOfertaPdfGenerator),
+            typeof(IPlantillaCompromisoPdfGenerator),
             typeof(IPostulacionesClient),
             typeof(IProgramasClient),
             typeof(IOtpClient)

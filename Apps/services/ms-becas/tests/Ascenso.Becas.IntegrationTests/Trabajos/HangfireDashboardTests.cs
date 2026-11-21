@@ -101,6 +101,8 @@ public sealed class HangfireDashboardTests
                 // tareas posteriores; aquí solo se satisface la validación.
                 servicios.RemoveAll<ICartaOfertaPdfGenerator>();
                 servicios.AddSingleton(Substitute.For<ICartaOfertaPdfGenerator>());
+                servicios.RemoveAll<IPlantillaCompromisoPdfGenerator>();
+                servicios.AddSingleton(Substitute.For<IPlantillaCompromisoPdfGenerator>());
                 servicios.RemoveAll<IAlmacenamientoArchivos>();
                 servicios.AddSingleton(Substitute.For<IAlmacenamientoArchivos>());
 

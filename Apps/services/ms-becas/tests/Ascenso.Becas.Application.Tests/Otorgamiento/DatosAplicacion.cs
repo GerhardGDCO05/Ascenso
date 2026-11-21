@@ -141,7 +141,10 @@ internal static class DatosAplicacion
             montoPorPeriodo,
             permiteAcumulacion,
             requiereCompromisoFirmado,
-            $"BECA-{Guid.NewGuid():N}"[..20]);
+            $"BECA-{Guid.NewGuid():N}"[..20],
+            requiereCompromisoFirmado
+                ? "https://storage.example/becas/plantilla-compromiso.pdf"
+                : null);
 
         var beca = Beca.CrearOtorgada(datosBeca, contexto);
         beca.EmitirOferta(
@@ -161,6 +164,8 @@ internal static class DatosAplicacion
                     ConsecuenciaPermanencia.Suspension),
                 "https://storage.example/carta.pdf",
                 HashValido,
+                "application/pdf",
+                1024,
                 "job-expiracion-oferta"),
             contexto);
 
@@ -213,6 +218,8 @@ internal static class DatosAplicacion
         beca.CargarCompromiso(
             "https://storage.example/compromiso.pdf",
             new string('b', 64),
+            1024,
+            "application/pdf",
             "10.0.0.5",
             Contexto((fecha ?? FechaBase).AddDays(2)));
 

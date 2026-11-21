@@ -70,6 +70,10 @@ public sealed class RepositoriosTests
         Assert.NotNull(reconstruida.Compromiso);
         Assert.Equal(EstadoCompromiso.PendienteCarga, reconstruida.Compromiso.Estado);
         Assert.Equal(0, reconstruida.Compromiso.NumeroIntentoCarga);
+        Assert.Equal(
+            datosBeca.UrlPlantillaCompromiso,
+            reconstruida.Compromiso.UrlPlantillaGeneradaFirebase);
+        Assert.Null(reconstruida.Compromiso.UrlPdfFirmadoFirebase);
 
         Assert.Equal(4, reconstruida.Historial.Count);
         Assert.Contains(

@@ -11,6 +11,7 @@ using Ascenso.Becas.Api.Trabajos;
 using Ascenso.Becas.Application;
 using Ascenso.Becas.Application.Comun;
 using Ascenso.Becas.Application.Correlacion;
+using Ascenso.Becas.Infrastructure.Archivos;
 using Ascenso.Becas.Infrastructure.Clientes;
 using Ascenso.Becas.Infrastructure.Dependencias;
 using Ascenso.Becas.Infrastructure.Trabajos;
@@ -51,6 +52,7 @@ var cadenaConexionBecas = builder.Configuration.GetConnectionString("Becas")
 builder.Services.AgregarPersistencia(cadenaConexionBecas);
 builder.Services.AgregarMetricas();
 builder.Services.AgregarClientes(builder.Configuration);
+builder.Services.AgregarArchivos(builder.Configuration);
 builder.Services.AgregarMensajeria(builder.Configuration);
 builder.Services.AgregarHangfire(cadenaConexionBecas);
 builder.Services.AddHangfireServer(opciones => opciones.Queues =

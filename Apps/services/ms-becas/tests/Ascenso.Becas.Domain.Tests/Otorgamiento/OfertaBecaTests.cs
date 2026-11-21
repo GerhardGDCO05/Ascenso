@@ -26,6 +26,8 @@ public sealed class OfertaBecaTests
         Assert.Equal(datos.CondicionesSnapshot, oferta.CondicionesSnapshot);
         Assert.Equal(datos.UrlCartaPdfFirebase, oferta.UrlCartaPdfFirebase);
         Assert.Equal(datos.HashCartaSha256, oferta.HashCartaSha256);
+        Assert.Equal(datos.TipoMimeCartaPdf, oferta.TipoMimeCartaPdf);
+        Assert.Equal(datos.TamanioCartaPdfBytes, oferta.TamanioCartaPdfBytes);
         Assert.Equal(contexto.Fecha, oferta.FechaEmision);
         Assert.Equal(contexto.Fecha.AddDays(15), oferta.FechaVencimientoAceptacion);
         Assert.Equal(datos.ReferenciaJobExpiracionHangfireId, oferta.ReferenciaJobExpiracionHangfireId);
