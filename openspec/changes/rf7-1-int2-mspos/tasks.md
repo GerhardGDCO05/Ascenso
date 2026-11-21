@@ -16,14 +16,14 @@
 
 ## 2. Aplicación
 
-- [ ] 2.1 Crear `RubricaDto`, `CriterioEvaluacionDto` y `RubricaMapeador` en `Application/Rubricas/DTOs/` (incluye `sumaPesos` y `diferenciaPara100`); probar el mapeo en `Application.Tests` y verificar con `dotnet test`.
-- [ ] 2.2 Implementar `CrearRubricaCommand`, validador (`nombre` obligatorio y máximo 200 caracteres, identificadores no vacíos) y handler (usuario autenticado, duplicado → `409 RUBRICA_DUPLICADA`, `TimeProvider`, `IUnitOfWork`); con repositorio simulado (NSubstitute) probar éxito, validación inválida y duplicado; probar el validador; verificar con `dotnet test`.
-- [ ] 2.3 Implementar `AgregarCriterioCommand`, validador y handler; probar éxito, rúbrica inexistente, `RUBRICA_BLOQUEADA` y validador (`nombre` vacío o > 200 caracteres, `descripcion` vacía o > 1000 caracteres, peso 0/negativo/`>100`/3 decimales, rango de puntaje inválido: negativo, > 1000.00, > 2 decimales o puntajeMinimo >= puntajeMaximo); verificar con `dotnet test`.
-- [ ] 2.4 Implementar `EditarCriterioCommand`, validador y handler; probar éxito, rúbrica inexistente, criterio inexistente, `RUBRICA_BLOQUEADA` y validador (`nombre` vacío o > 200 caracteres, `descripcion` vacía o > 1000 caracteres, peso inválido y rango de puntaje inválido: negativo, > 1000.00, > 2 decimales o puntajeMinimo >= puntajeMaximo); verificar con `dotnet test`.
-- [ ] 2.5 Implementar `EliminarCriterioCommand` y handler; probar éxito, rúbrica inexistente, criterio inexistente y `RUBRICA_BLOQUEADA`; verificar con `dotnet test`.
-- [ ] 2.6 Implementar `PublicarRubricaCommand` y handler; probar éxito, rúbrica inexistente, `PESOS_INVALIDOS` y `RUBRICA_BLOQUEADA`, comprobando que no se guarda ante error; verificar con `dotnet test`.
-- [ ] 2.7 Implementar `ObtenerRubricaQuery` y handler (solo lectura); probar éxito con suma y diferencia, y rúbrica inexistente; verificar con `dotnet test`.
-- [ ] 2.8 Registrar los handlers en `Application/DependencyInjection.cs`; probar en `InyeccionDependenciasTests` que handlers y validadores se resuelven; verificar con `dotnet test` y que `ArchitectureTests` siguen en verde.
+- [x] 2.1 Crear `RubricaDto`, `CriterioEvaluacionDto` y `RubricaMapeador` en `Application/Rubricas/DTOs/` (incluye `sumaPesos` y `diferenciaPara100`); probar el mapeo en `Application.Tests` y verificar con `dotnet test`.
+- [x] 2.2 Implementar `CrearRubricaCommand`, validador (`nombre` obligatorio y máximo 200 caracteres, identificadores no vacíos) y handler (usuario autenticado, duplicado → `409 RUBRICA_DUPLICADA`, `TimeProvider`, `IUnitOfWork`); con repositorio simulado (NSubstitute) probar éxito, validación inválida y duplicado; probar el validador; verificar con `dotnet test`.
+- [x] 2.3 Implementar `AgregarCriterioCommand`, validador y handler; probar éxito, rúbrica inexistente, `RUBRICA_BLOQUEADA` y validador (`nombre` vacío o > 200 caracteres, `descripcion` vacía o > 1000 caracteres, peso 0/negativo/`>100`/3 decimales, rango de puntaje inválido: negativo, > 1000.00, > 2 decimales o puntajeMinimo >= puntajeMaximo); verificar con `dotnet test`.
+- [x] 2.4 Implementar `EditarCriterioCommand`, validador y handler; probar éxito, rúbrica inexistente, criterio inexistente, `RUBRICA_BLOQUEADA` y validador (`nombre` vacío o > 200 caracteres, `descripcion` vacía o > 1000 caracteres, peso inválido y rango de puntaje inválido: negativo, > 1000.00, > 2 decimales o puntajeMinimo >= puntajeMaximo); verificar con `dotnet test`.
+- [x] 2.5 Implementar `EliminarCriterioCommand` y handler; probar éxito, rúbrica inexistente, criterio inexistente y `RUBRICA_BLOQUEADA`; verificar con `dotnet test`.
+- [x] 2.6 Implementar `PublicarRubricaCommand` y handler; probar éxito, rúbrica inexistente, `PESOS_INVALIDOS` y `RUBRICA_BLOQUEADA`, comprobando que no se guarda ante error; verificar con `dotnet test`.
+- [x] 2.7 Implementar `ObtenerRubricaQuery` y handler (solo lectura); probar éxito con suma y diferencia, y rúbrica inexistente; verificar con `dotnet test`.
+- [x] 2.8 Registrar los handlers en `Application/DependencyInjection.cs`; probar en `InyeccionDependenciasTests` que handlers y validadores se resuelven; verificar con `dotnet test` y que `ArchitectureTests` siguen en verde.
 
 ## 3. Persistencia
 

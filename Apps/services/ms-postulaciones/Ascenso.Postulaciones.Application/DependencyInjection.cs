@@ -1,6 +1,12 @@
 using Ascenso.Postulaciones.Application.Postulantes.Comandos.ActualizarPerfilSocioeconomico;
 using Ascenso.Postulaciones.Application.Postulantes.Comandos.RegistrarPostulante;
 using Ascenso.Postulaciones.Application.Postulantes.Consultas.ObtenerMiPerfil;
+using Ascenso.Postulaciones.Application.Rubricas.Comandos.AgregarCriterio;
+using Ascenso.Postulaciones.Application.Rubricas.Comandos.CrearRubrica;
+using Ascenso.Postulaciones.Application.Rubricas.Comandos.EditarCriterio;
+using Ascenso.Postulaciones.Application.Rubricas.Comandos.EliminarCriterio;
+using Ascenso.Postulaciones.Application.Rubricas.Comandos.PublicarRubrica;
+using Ascenso.Postulaciones.Application.Rubricas.Consultas.ObtenerRubrica;
 using FluentValidation;
 using Microsoft.Extensions.DependencyInjection;
 
@@ -17,6 +23,12 @@ public static class DependencyInjection
         services.AddScoped<RegistrarPostulanteCommandHandler>();
         services.AddScoped<ActualizarPerfilSocioeconomicoCommandHandler>();
         services.AddScoped<ObtenerMiPerfilQueryHandler>();
+        services.AddScoped<CrearRubricaCommandHandler>();
+        services.AddScoped<AgregarCriterioCommandHandler>();
+        services.AddScoped<EditarCriterioCommandHandler>();
+        services.AddScoped<EliminarCriterioCommandHandler>();
+        services.AddScoped<PublicarRubricaCommandHandler>();
+        services.AddScoped<ObtenerRubricaQueryHandler>();
 
         return services;
     }
