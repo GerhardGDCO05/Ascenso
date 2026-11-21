@@ -1,3 +1,4 @@
+using Ascenso.Postulaciones.Application.Postulantes.Comandos.ActualizarPerfilSocioeconomico;
 using Ascenso.Postulaciones.Application.Postulantes.Comandos.RegistrarPostulante;
 using Ascenso.Postulaciones.Application.Postulantes.Consultas.ObtenerMiPerfil;
 using FluentValidation;
@@ -14,6 +15,7 @@ public static class DependencyInjection
         services.AddValidatorsFromAssembly(typeof(DependencyInjection).Assembly);
 
         services.AddScoped<RegistrarPostulanteCommandHandler>();
+        services.AddScoped<ActualizarPerfilSocioeconomicoCommandHandler>();
         services.AddScoped<ObtenerMiPerfilQueryHandler>();
 
         return services;

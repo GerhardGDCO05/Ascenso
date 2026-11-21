@@ -11,6 +11,14 @@ public sealed class DependenciasEntreCapasTests
     private const string Infraestructura = "Ascenso.Postulaciones.Infrastructure";
     private const string Api = "Ascenso.Postulaciones.Api";
 
+    private static readonly string[] _prefijosProhibidosAplicacion =
+    [
+        "Microsoft.EntityFrameworkCore",
+        "Microsoft.AspNetCore",
+        "MassTransit",
+        "Npgsql"
+    ];
+
     [Theory]
     [InlineData(Dominio, Aplicacion)]
     [InlineData(Dominio, Infraestructura)]
@@ -27,6 +35,21 @@ public sealed class DependenciasEntreCapasTests
         Assert.DoesNotContain(
             referencias,
             referencia => string.Equals(referencia.Name, capaProhibida, StringComparison.OrdinalIgnoreCase));
+    }
+
+    [Fact]
+    public void Debe_NoReferenciarFrameworksDeInfraestructura_Cuando_SeInspeccionaElEnsambladoDeAplicacion()
+    {
+        var referencias = typeof(Ascenso.Postulaciones.Application.DependencyInjection)
+            .Assembly
+            .GetReferencedAssemblies();
+
+        foreach (var prefijo in _prefijosProhibidosAplicacion)
+        {
+            Assert.DoesNotContain(
+                referencias,
+                referencia => referencia.Name?.StartsWith(prefijo, StringComparison.OrdinalIgnoreCase) == true);
+        }
     }
 
     [Fact]
