@@ -2,6 +2,7 @@ using Ascenso.Postulaciones.Domain.Enums;
 using Ascenso.Postulaciones.Domain.Excepciones;
 using Ascenso.Postulaciones.Domain.Postulantes.Agregados;
 using Ascenso.Postulaciones.Domain.Postulantes.ObjetosValor;
+using Ascenso.Postulaciones.Domain.Rubricas.Agregados;
 using Ascenso.Postulaciones.Infrastructure.Persistence;
 using FluentAssertions;
 using Microsoft.EntityFrameworkCore;
@@ -21,6 +22,31 @@ public sealed class ConcurrenciaOptimistaTests
 
         await using var contexto = new PostulacionesDbContext(opciones);
         contexto.Postulantes.Add(CrearPostulante());
+
+        var accion = () => contexto.GuardarCambiosAsync();
+
+        await accion.Should()
+            .ThrowAsync<ExcepcionConflictoConcurrencia>()
+            .Where(excepcion =>
+                excepcion.Codigo == ExcepcionConflictoConcurrencia.CodigoError
+                && excepcion.EstadoHttp == 409);
+    }
+
+    [Fact]
+    public async Task Debe_TraducirA409_Cuando_EFDetectaUnConflictoDeConcurrenciaEnRubrica()
+    {
+        var opciones = new DbContextOptionsBuilder<PostulacionesDbContext>()
+            .UseNpgsql(PostulacionesDbContextFactory.CadenaConexionPorDefecto)
+            .AddInterceptors(new InterceptorConflictoConcurrencia())
+            .Options;
+
+        await using var contexto = new PostulacionesDbContext(opciones);
+        contexto.Rubricas.Add(RubricaEvaluacion.Crear(
+            Guid.NewGuid(),
+            Guid.NewGuid(),
+            "Rúbrica Concurrencia",
+            DateTimeOffset.UtcNow,
+            Guid.NewGuid()));
 
         var accion = () => contexto.GuardarCambiosAsync();
 

@@ -1,5 +1,7 @@
 using Ascenso.Postulaciones.Domain.Postulantes.Agregados;
 using Ascenso.Postulaciones.Domain.Postulantes.Entidades;
+using Ascenso.Postulaciones.Domain.Rubricas.Agregados;
+using Ascenso.Postulaciones.Domain.Rubricas.Entidades;
 using Ascenso.Postulaciones.Infrastructure.Persistence;
 using FluentAssertions;
 using Microsoft.EntityFrameworkCore;
@@ -231,5 +233,155 @@ public sealed class ModeloPersistenciaPostulacionesTests
         script.Should().Contain("fk_miembros_familiares_postulantes");
         script.Should().Contain("ix_miembros_familiares_postulante_id");
         script.Should().Contain("ck_miembro_familiar_edad_rango");
+        script.Should().Contain("CREATE TABLE postulaciones.rubricas");
+        script.Should().Contain("ux_rubricas_programa_convocatoria");
+        script.Should().Contain("ck_rubricas_estado_valido");
+        script.Should().Contain("CREATE TABLE postulaciones.criterios_evaluacion");
+        script.Should().Contain("fk_criterios_evaluacion_rubricas");
+        script.Should().Contain("ux_criterios_evaluacion_rubrica_orden");
+        script.Should().Contain("ck_criterios_evaluacion_peso_rango");
+        script.Should().Contain("ck_criterios_evaluacion_puntaje_rango");
+        script.Should().Contain("ck_criterios_evaluacion_orden_positivo");
+    }
+
+    [Fact]
+    public void Debe_MapearRubricaEvaluacionConIndiceUnicoRestriccionYCriterios_Cuando_SeConstruyeElModelo()
+    {
+        using var contexto = CrearContextoModelo();
+        var modeloDiseno = contexto.GetService<IDesignTimeModel>().Model;
+        var entidad = modeloDiseno.FindEntityType(typeof(RubricaEvaluacion));
+
+        entidad.Should().NotBeNull();
+        entidad!.GetSchema().Should().Be(PostulacionesDbContext.Esquema);
+        entidad.GetTableName().Should().Be("rubricas");
+        entidad.FindPrimaryKey()!.GetName().Should().Be("pk_rubricas");
+
+        var propiedadId = entidad.FindProperty(nameof(RubricaEvaluacion.Id))!;
+        propiedadId.ValueGenerated.Should().Be(ValueGenerated.Never);
+        propiedadId.GetColumnName().Should().Be("id");
+
+        var propiedadVersion = entidad.FindProperty(nameof(RubricaEvaluacion.Version))!;
+        propiedadVersion.ValueGenerated.Should().Be(ValueGenerated.Never);
+        propiedadVersion.IsConcurrencyToken.Should().BeTrue();
+
+        var programaBecaId = entidad.FindProperty(nameof(RubricaEvaluacion.ProgramaBecaId))!;
+        programaBecaId.GetColumnName().Should().Be("programa_beca_id");
+        programaBecaId.IsNullable.Should().BeFalse();
+
+        var convocatoriaId = entidad.FindProperty(nameof(RubricaEvaluacion.ConvocatoriaId))!;
+        convocatoriaId.GetColumnName().Should().Be("convocatoria_id");
+        convocatoriaId.IsNullable.Should().BeFalse();
+
+        var nombre = entidad.FindProperty(nameof(RubricaEvaluacion.Nombre))!;
+        nombre.GetColumnName().Should().Be("nombre");
+        nombre.IsNullable.Should().BeFalse();
+        nombre.GetMaxLength().Should().Be(200);
+
+        var estado = entidad.FindProperty(nameof(RubricaEvaluacion.Estado))!;
+        estado.GetColumnName().Should().Be("estado");
+        estado.GetColumnType().Should().Be("varchar");
+        estado.IsNullable.Should().BeFalse();
+        estado.GetMaxLength().Should().Be(20);
+
+        var fechaPublicacion = entidad.FindProperty(nameof(RubricaEvaluacion.FechaPublicacion))!;
+        fechaPublicacion.GetColumnName().Should().Be("fecha_publicacion");
+        fechaPublicacion.IsNullable.Should().BeTrue();
+
+        entidad.FindProperty(nameof(RubricaEvaluacion.SumaPesos)).Should().BeNull();
+        entidad.FindProperty(nameof(RubricaEvaluacion.DiferenciaPara100)).Should().BeNull();
+
+        var navegacion = entidad.FindNavigation(nameof(RubricaEvaluacion.Criterios))!;
+        navegacion.IsCollection.Should().BeTrue();
+        navegacion.TargetEntityType.ClrType.Should().Be<CriterioEvaluacion>();
+        navegacion.FieldInfo!.Name.Should().Be("_criterios");
+        navegacion.GetPropertyAccessMode().Should().Be(PropertyAccessMode.Field);
+
+        entidad.GetIndexes()
+            .Where(indice => indice.IsUnique)
+            .Select(indice => indice.GetDatabaseName())
+            .Should().Contain("ux_rubricas_programa_convocatoria");
+
+        entidad.GetCheckConstraints()
+            .Select(check => check.Name)
+            .Should().Contain("ck_rubricas_estado_valido");
+
+        contexto.Rubricas.Should().NotBeNull();
+    }
+
+    [Fact]
+    public void Debe_MapearCriterioEvaluacionConRelacionIndiceUnicoYRestricciones_Cuando_SeConstruyeElModelo()
+    {
+        using var contexto = CrearContextoModelo();
+        var modeloDiseno = contexto.GetService<IDesignTimeModel>().Model;
+        var entidad = modeloDiseno.FindEntityType(typeof(CriterioEvaluacion));
+
+        entidad.Should().NotBeNull();
+        entidad!.GetSchema().Should().Be(PostulacionesDbContext.Esquema);
+        entidad.GetTableName().Should().Be("criterios_evaluacion");
+        entidad.FindPrimaryKey()!.GetName().Should().Be("pk_criterios_evaluacion");
+
+        var propiedadId = entidad.FindProperty(nameof(CriterioEvaluacion.Id))!;
+        propiedadId.ValueGenerated.Should().Be(ValueGenerated.Never);
+        propiedadId.GetColumnName().Should().Be("id");
+
+        var propiedadVersion = entidad.FindProperty(nameof(CriterioEvaluacion.Version))!;
+        propiedadVersion.ValueGenerated.Should().Be(ValueGenerated.Never);
+        propiedadVersion.IsConcurrencyToken.Should().BeTrue();
+
+        var rubricaId = entidad.FindProperty(nameof(CriterioEvaluacion.RubricaEvaluacionId))!;
+        rubricaId.GetColumnName().Should().Be("rubrica_evaluacion_id");
+        rubricaId.IsNullable.Should().BeFalse();
+
+        var nombre = entidad.FindProperty(nameof(CriterioEvaluacion.Nombre))!;
+        nombre.GetColumnName().Should().Be("nombre");
+        nombre.IsNullable.Should().BeFalse();
+        nombre.GetMaxLength().Should().Be(200);
+
+        var descripcion = entidad.FindProperty(nameof(CriterioEvaluacion.Descripcion))!;
+        descripcion.GetColumnName().Should().Be("descripcion");
+        descripcion.IsNullable.Should().BeFalse();
+        descripcion.GetMaxLength().Should().Be(1000);
+
+        var peso = entidad.FindProperty(nameof(CriterioEvaluacion.PesoPorcentual))!;
+        peso.GetColumnName().Should().Be("peso_porcentual");
+        peso.GetPrecision().Should().Be(5);
+        peso.GetScale().Should().Be(2);
+        peso.IsNullable.Should().BeFalse();
+
+        var puntajeMinimo = entidad.FindProperty(nameof(CriterioEvaluacion.PuntajeMinimo))!;
+        puntajeMinimo.GetColumnName().Should().Be("puntaje_minimo");
+        puntajeMinimo.GetPrecision().Should().Be(7);
+        puntajeMinimo.GetScale().Should().Be(2);
+        puntajeMinimo.IsNullable.Should().BeFalse();
+
+        var puntajeMaximo = entidad.FindProperty(nameof(CriterioEvaluacion.PuntajeMaximo))!;
+        puntajeMaximo.GetColumnName().Should().Be("puntaje_maximo");
+        puntajeMaximo.GetPrecision().Should().Be(7);
+        puntajeMaximo.GetScale().Should().Be(2);
+        puntajeMaximo.IsNullable.Should().BeFalse();
+
+        var orden = entidad.FindProperty(nameof(CriterioEvaluacion.Orden))!;
+        orden.GetColumnName().Should().Be("orden");
+        orden.IsNullable.Should().BeFalse();
+
+        var claveForanea = entidad.GetForeignKeys()
+            .Single(clave => clave.PrincipalEntityType.ClrType == typeof(RubricaEvaluacion));
+        claveForanea.GetConstraintName().Should().Be("fk_criterios_evaluacion_rubricas");
+        claveForanea.DeleteBehavior.Should().Be(DeleteBehavior.Cascade);
+
+        entidad.GetIndexes()
+            .Where(indice => indice.IsUnique)
+            .Select(indice => indice.GetDatabaseName())
+            .Should().Contain("ux_criterios_evaluacion_rubrica_orden");
+
+        var nombresChecks = entidad.GetCheckConstraints()
+            .Select(check => check.Name)
+            .ToList();
+
+        nombresChecks.Should().Contain("ck_criterios_evaluacion_peso_rango");
+        nombresChecks.Should().Contain("ck_criterios_evaluacion_puntaje_rango");
+        nombresChecks.Should().Contain("ck_criterios_evaluacion_orden_positivo");
+
+        contexto.CriteriosEvaluacion.Should().NotBeNull();
     }
 }

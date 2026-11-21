@@ -248,6 +248,149 @@ namespace Ascenso.Postulaciones.Infrastructure.Persistence.Migrations
                         });
                 });
 
+            modelBuilder.Entity("Ascenso.Postulaciones.Domain.Rubricas.Agregados.RubricaEvaluacion", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .HasColumnType("uuid")
+                        .HasColumnName("id");
+
+                    b.Property<Guid>("ConvocatoriaId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("convocatoria_id");
+
+                    b.Property<string>("Estado")
+                        .IsRequired()
+                        .HasMaxLength(20)
+                        .HasColumnType("varchar")
+                        .HasColumnName("estado");
+
+                    b.Property<DateTimeOffset>("FechaCreacion")
+                        .HasColumnType("timestamptz")
+                        .HasColumnName("fecha_creacion");
+
+                    b.Property<DateTimeOffset?>("FechaPublicacion")
+                        .HasColumnType("timestamptz")
+                        .HasColumnName("fecha_publicacion");
+
+                    b.Property<DateTimeOffset>("FechaUltimaModificacion")
+                        .HasColumnType("timestamptz")
+                        .HasColumnName("fecha_ultima_modificacion");
+
+                    b.Property<string>("Nombre")
+                        .IsRequired()
+                        .HasMaxLength(200)
+                        .HasColumnType("character varying(200)")
+                        .HasColumnName("nombre");
+
+                    b.Property<Guid>("ProgramaBecaId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("programa_beca_id");
+
+                    b.Property<Guid>("UsuarioCreacionId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("usuario_creacion_id");
+
+                    b.Property<Guid>("UsuarioModificacionId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("usuario_modificacion_id");
+
+                    b.Property<int>("Version")
+                        .IsConcurrencyToken()
+                        .HasColumnType("integer")
+                        .HasColumnName("version");
+
+                    b.HasKey("Id")
+                        .HasName("pk_rubricas");
+
+                    b.HasIndex("ProgramaBecaId", "ConvocatoriaId")
+                        .IsUnique()
+                        .HasDatabaseName("ux_rubricas_programa_convocatoria");
+
+                    b.ToTable("rubricas", "postulaciones", t =>
+                        {
+                            t.HasCheckConstraint("ck_rubricas_estado_valido", "estado IN ('BORRADOR', 'PUBLICADA', 'BLOQUEADA')");
+                        });
+                });
+
+            modelBuilder.Entity("Ascenso.Postulaciones.Domain.Rubricas.Entidades.CriterioEvaluacion", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .HasColumnType("uuid")
+                        .HasColumnName("id");
+
+                    b.Property<string>("Descripcion")
+                        .IsRequired()
+                        .HasMaxLength(1000)
+                        .HasColumnType("character varying(1000)")
+                        .HasColumnName("descripcion");
+
+                    b.Property<DateTimeOffset>("FechaCreacion")
+                        .HasColumnType("timestamptz")
+                        .HasColumnName("fecha_creacion");
+
+                    b.Property<DateTimeOffset>("FechaUltimaModificacion")
+                        .HasColumnType("timestamptz")
+                        .HasColumnName("fecha_ultima_modificacion");
+
+                    b.Property<string>("Nombre")
+                        .IsRequired()
+                        .HasMaxLength(200)
+                        .HasColumnType("character varying(200)")
+                        .HasColumnName("nombre");
+
+                    b.Property<int>("Orden")
+                        .HasColumnType("integer")
+                        .HasColumnName("orden");
+
+                    b.Property<decimal>("PesoPorcentual")
+                        .HasPrecision(5, 2)
+                        .HasColumnType("numeric(5,2)")
+                        .HasColumnName("peso_porcentual");
+
+                    b.Property<decimal>("PuntajeMaximo")
+                        .HasPrecision(7, 2)
+                        .HasColumnType("numeric(7,2)")
+                        .HasColumnName("puntaje_maximo");
+
+                    b.Property<decimal>("PuntajeMinimo")
+                        .HasPrecision(7, 2)
+                        .HasColumnType("numeric(7,2)")
+                        .HasColumnName("puntaje_minimo");
+
+                    b.Property<Guid>("RubricaEvaluacionId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("rubrica_evaluacion_id");
+
+                    b.Property<Guid>("UsuarioCreacionId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("usuario_creacion_id");
+
+                    b.Property<Guid>("UsuarioModificacionId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("usuario_modificacion_id");
+
+                    b.Property<int>("Version")
+                        .IsConcurrencyToken()
+                        .HasColumnType("integer")
+                        .HasColumnName("version");
+
+                    b.HasKey("Id")
+                        .HasName("pk_criterios_evaluacion");
+
+                    b.HasIndex("RubricaEvaluacionId", "Orden")
+                        .IsUnique()
+                        .HasDatabaseName("ux_criterios_evaluacion_rubrica_orden");
+
+                    b.ToTable("criterios_evaluacion", "postulaciones", t =>
+                        {
+                            t.HasCheckConstraint("ck_criterios_evaluacion_orden_positivo", "orden > 0");
+
+                            t.HasCheckConstraint("ck_criterios_evaluacion_peso_rango", "peso_porcentual > 0 AND peso_porcentual <= 100");
+
+                            t.HasCheckConstraint("ck_criterios_evaluacion_puntaje_rango", "puntaje_minimo >= 0 AND puntaje_maximo <= 1000 AND puntaje_minimo < puntaje_maximo");
+                        });
+                });
+
             modelBuilder.Entity("Ascenso.Postulaciones.Domain.Postulantes.Agregados.Postulante", b =>
                 {
                     b.OwnsOne("Ascenso.Postulaciones.Domain.Postulantes.ObjetosValor.DatosContacto", "DatosContacto", b1 =>
@@ -289,9 +432,24 @@ namespace Ascenso.Postulaciones.Infrastructure.Persistence.Migrations
                         .HasConstraintName("fk_miembros_familiares_postulantes");
                 });
 
+            modelBuilder.Entity("Ascenso.Postulaciones.Domain.Rubricas.Entidades.CriterioEvaluacion", b =>
+                {
+                    b.HasOne("Ascenso.Postulaciones.Domain.Rubricas.Agregados.RubricaEvaluacion", null)
+                        .WithMany("Criterios")
+                        .HasForeignKey("RubricaEvaluacionId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired()
+                        .HasConstraintName("fk_criterios_evaluacion_rubricas");
+                });
+
             modelBuilder.Entity("Ascenso.Postulaciones.Domain.Postulantes.Agregados.Postulante", b =>
                 {
                     b.Navigation("MiembrosFamiliares");
+                });
+
+            modelBuilder.Entity("Ascenso.Postulaciones.Domain.Rubricas.Agregados.RubricaEvaluacion", b =>
+                {
+                    b.Navigation("Criterios");
                 });
 #pragma warning restore 612, 618
         }

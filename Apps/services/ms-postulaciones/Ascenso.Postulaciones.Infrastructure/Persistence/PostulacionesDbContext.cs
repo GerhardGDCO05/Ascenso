@@ -2,6 +2,8 @@ using Ascenso.Postulaciones.Domain.Excepciones;
 using Ascenso.Postulaciones.Domain.Interfaces;
 using Ascenso.Postulaciones.Domain.Postulantes.Agregados;
 using Ascenso.Postulaciones.Domain.Postulantes.Entidades;
+using Ascenso.Postulaciones.Domain.Rubricas.Agregados;
+using Ascenso.Postulaciones.Domain.Rubricas.Entidades;
 using Microsoft.EntityFrameworkCore;
 
 namespace Ascenso.Postulaciones.Infrastructure.Persistence;
@@ -21,6 +23,10 @@ public sealed class PostulacionesDbContext : DbContext, IUnitOfWork
     public DbSet<Postulante> Postulantes => Set<Postulante>();
 
     public DbSet<MiembroFamiliar> MiembrosFamiliares => Set<MiembroFamiliar>();
+
+    public DbSet<RubricaEvaluacion> Rubricas => Set<RubricaEvaluacion>();
+
+    public DbSet<CriterioEvaluacion> CriteriosEvaluacion => Set<CriterioEvaluacion>();
 
     public async Task<int> GuardarCambiosAsync(CancellationToken cancellationToken = default)
     {
