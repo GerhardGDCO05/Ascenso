@@ -5,6 +5,8 @@ using System.Text.Encodings.Web;
 using System.Text.Json;
 using Ascenso.Postulaciones.Api.Seguridad;
 using Ascenso.Postulaciones.Application.Rubricas.DTOs;
+using Ascenso.Postulaciones.Domain.Comun;
+using Ascenso.Postulaciones.Domain.Enums;
 using Ascenso.Postulaciones.Domain.Excepciones;
 using Ascenso.Postulaciones.Domain.Interfaces;
 using Ascenso.Postulaciones.Domain.Rubricas.Agregados;
@@ -176,9 +178,152 @@ public sealed class RubricasControllerTests : IClassFixture<WebApplicationFactor
         dto.Should().NotBeNull();
         dto!.Id.Should().Be(rubrica.Id);
         dto.Estado.Should().Be("BORRADOR");
+        dto.SoloLectura.Should().BeFalse();
+        dto.MotivoBloqueo.Should().BeNull();
+        dto.FechaBloqueo.Should().BeNull();
         dto.Criterios.Should().HaveCount(2);
         dto.SumaPesos.Should().Be(90.50m);
         dto.DiferenciaPara100.Should().Be(9.50m);
+    }
+
+    [Fact]
+    public async Task Debe_RetornarSoloLecturaMotivoYFechaBloqueo_Cuando_ObtenerRubricaEnBorradorPublicadaYBloqueada()
+    {
+        var usuarioId = Guid.NewGuid();
+        var rubricaBorrador = CrearRubricaConCriterios(usuarioId, ("Criterio 1", 50.00m));
+        var rubricaPublicada = CrearRubricaPublicada(usuarioId);
+        var fechaBloqueo = new DateTimeOffset(2026, 11, 22, 16, 30, 0, TimeSpan.Zero);
+        var rubricaBloqueada = CrearRubricaBloqueada(
+            usuarioId,
+            MotivoBloqueoRubrica.PrimeraCalificacion,
+            fechaBloqueo);
+
+        var repo = Substitute.For<IRubricaRepository>();
+        repo.ObtenerPorIdAsync(rubricaBorrador.Id, Arg.Any<CancellationToken>()).Returns(rubricaBorrador);
+        repo.ObtenerPorIdAsync(rubricaPublicada.Id, Arg.Any<CancellationToken>()).Returns(rubricaPublicada);
+        repo.ObtenerPorIdAsync(rubricaBloqueada.Id, Arg.Any<CancellationToken>()).Returns(rubricaBloqueada);
+
+        using var fabrica = CrearFabrica(repo);
+        using var cliente = CrearClienteAutenticado(fabrica, usuarioId, RolCoordinador);
+
+        var respBorrador = await cliente.GetAsync($"/api/v1/rubricas/{rubricaBorrador.Id}");
+        respBorrador.StatusCode.Should().Be(HttpStatusCode.OK);
+        var dtoBorrador = await respBorrador.Content.ReadFromJsonAsync<RubricaDto>();
+        dtoBorrador!.Estado.Should().Be("BORRADOR");
+        dtoBorrador.SoloLectura.Should().BeFalse();
+        dtoBorrador.MotivoBloqueo.Should().BeNull();
+        dtoBorrador.FechaBloqueo.Should().BeNull();
+
+        var respPublicada = await cliente.GetAsync($"/api/v1/rubricas/{rubricaPublicada.Id}");
+        respPublicada.StatusCode.Should().Be(HttpStatusCode.OK);
+        var dtoPublicada = await respPublicada.Content.ReadFromJsonAsync<RubricaDto>();
+        dtoPublicada!.Estado.Should().Be("PUBLICADA");
+        dtoPublicada.SoloLectura.Should().BeTrue();
+        dtoPublicada.MotivoBloqueo.Should().BeNull();
+        dtoPublicada.FechaBloqueo.Should().BeNull();
+
+        var respBloqueada = await cliente.GetAsync($"/api/v1/rubricas/{rubricaBloqueada.Id}");
+        respBloqueada.StatusCode.Should().Be(HttpStatusCode.OK);
+        var dtoBloqueada = await respBloqueada.Content.ReadFromJsonAsync<RubricaDto>();
+        dtoBloqueada!.Estado.Should().Be("BLOQUEADA");
+        dtoBloqueada.SoloLectura.Should().BeTrue();
+        dtoBloqueada.MotivoBloqueo.Should().Be("PRIMERA_CALIFICACION");
+        dtoBloqueada.FechaBloqueo.Should().Be(fechaBloqueo);
+    }
+
+    [Fact]
+    public async Task Debe_PermitirLectura200AMiembroComiteDeRubricaBloqueadaYRechazar403EnEscritura()
+    {
+        var usuarioId = Guid.NewGuid();
+        var fechaBloqueo = new DateTimeOffset(2026, 11, 22, 17, 0, 0, TimeSpan.Zero);
+        var rubrica = CrearRubricaBloqueada(
+            usuarioId,
+            MotivoBloqueoRubrica.InicioEvaluacion,
+            fechaBloqueo);
+        var criterioId = rubrica.Criterios.First().Id;
+
+        var repo = Substitute.For<IRubricaRepository>();
+        repo.ObtenerPorIdAsync(rubrica.Id, Arg.Any<CancellationToken>()).Returns(rubrica);
+
+        using var fabrica = CrearFabrica(repo);
+        using var cliente = CrearClienteAutenticado(fabrica, usuarioId, RolMiembroComite);
+
+        var respLectura = await cliente.GetAsync($"/api/v1/rubricas/{rubrica.Id}");
+        respLectura.StatusCode.Should().Be(HttpStatusCode.OK);
+        var dto = await respLectura.Content.ReadFromJsonAsync<RubricaDto>();
+        dto!.Estado.Should().Be("BLOQUEADA");
+        dto.SoloLectura.Should().BeTrue();
+        dto.MotivoBloqueo.Should().Be("INICIO_EVALUACION");
+        dto.FechaBloqueo.Should().Be(fechaBloqueo);
+
+        await VerificarPermisoDenegadoAsync(await cliente.PostAsJsonAsync(
+            "/api/v1/rubricas",
+            new { programaBecaId = Guid.NewGuid(), convocatoriaId = Guid.NewGuid(), nombre = "Nueva" }));
+        await VerificarPermisoDenegadoAsync(await cliente.PostAsJsonAsync(
+            $"/api/v1/rubricas/{rubrica.Id}/criterios",
+            CrearPayloadCriterioValido()));
+        await VerificarPermisoDenegadoAsync(await cliente.PutAsJsonAsync(
+            $"/api/v1/rubricas/{rubrica.Id}/criterios/{criterioId}",
+            CrearPayloadCriterioValido()));
+        await VerificarPermisoDenegadoAsync(await cliente.DeleteAsync(
+            $"/api/v1/rubricas/{rubrica.Id}/criterios/{criterioId}"));
+        await VerificarPermisoDenegadoAsync(await cliente.PostAsync(
+            $"/api/v1/rubricas/{rubrica.Id}/publicar",
+            content: null));
+    }
+
+    [Fact]
+    public async Task Debe_Retornar409RubricaBloqueadaConFechaYMotivo_Cuando_SeModificaRubricaBloqueada()
+    {
+        var usuarioId = Guid.NewGuid();
+        var fechaBloqueo = new DateTimeOffset(2026, 11, 22, 18, 15, 30, TimeSpan.Zero);
+        var rubrica = CrearRubricaBloqueada(
+            usuarioId,
+            MotivoBloqueoRubrica.InicioEvaluacion,
+            fechaBloqueo);
+        var criterioId = rubrica.Criterios.First().Id;
+
+        var repo = Substitute.For<IRubricaRepository>();
+        var uow = Substitute.For<IUnitOfWork>();
+        repo.ObtenerParaActualizarPorIdAsync(rubrica.Id, Arg.Any<CancellationToken>()).Returns(rubrica);
+
+        using var fabrica = CrearFabrica(repo, uow);
+        using var cliente = CrearClienteAutenticado(fabrica, usuarioId, RolCoordinador);
+
+        var respuestas = new[]
+        {
+            await cliente.PostAsJsonAsync($"/api/v1/rubricas/{rubrica.Id}/criterios", CrearPayloadCriterioValido()),
+            await cliente.PutAsJsonAsync($"/api/v1/rubricas/{rubrica.Id}/criterios/{criterioId}", CrearPayloadCriterioValido()),
+            await cliente.DeleteAsync($"/api/v1/rubricas/{rubrica.Id}/criterios/{criterioId}"),
+            await cliente.PostAsync($"/api/v1/rubricas/{rubrica.Id}/publicar", content: null)
+        };
+
+        foreach (var respuesta in respuestas)
+        {
+            respuesta.StatusCode.Should().Be(HttpStatusCode.Conflict);
+            using var documento = JsonDocument.Parse(await respuesta.Content.ReadAsStringAsync());
+            documento.RootElement.GetProperty("codigo").GetString()
+                .Should().Be(RubricaBloqueadaException.CodigoError);
+            var detalle = documento.RootElement.GetProperty("detail").GetString();
+            detalle.Should().Contain("2026-11-22 18:15:30 UTC");
+            detalle.Should().Contain("inicio de la etapa de evaluación");
+        }
+
+        await uow.DidNotReceive().GuardarCambiosAsync(Arg.Any<CancellationToken>());
+    }
+
+    [Fact]
+    public async Task Debe_NoExistirRutaHttpDeBloqueo_Cuando_SeIntentaBloquearPorLaApi()
+    {
+        using var fabrica = CrearFabrica();
+        using var cliente = CrearClienteAutenticado(fabrica, Guid.NewGuid(), RolCoordinador);
+        var id = Guid.NewGuid();
+
+        var postBloquear = await cliente.PostAsync($"/api/v1/rubricas/{id}/bloquear", content: null);
+        var putBloquear = await cliente.PutAsync($"/api/v1/rubricas/{id}/bloquear", content: null);
+
+        postBloquear.StatusCode.Should().Be(HttpStatusCode.NotFound);
+        putBloquear.StatusCode.Should().Be(HttpStatusCode.NotFound);
     }
 
     [Fact]
@@ -194,7 +339,6 @@ public sealed class RubricasControllerTests : IClassFixture<WebApplicationFactor
 
     [Theory]
     [InlineData(RolAdminFinanciero)]
-    [InlineData(RolMiembroComite)]
     public async Task Debe_Retornar403ConPermisoDenegado_Cuando_ObtenerRubricaConRolNoAutorizado(string rol)
     {
         using var fabrica = CrearFabrica();
@@ -738,6 +882,16 @@ public sealed class RubricasControllerTests : IClassFixture<WebApplicationFactor
     {
         var rubrica = CrearRubricaConCriterios(usuarioId, ("Criterio único", 100.00m));
         rubrica.Publicar(DateTimeOffset.UtcNow, usuarioId);
+        return rubrica;
+    }
+
+    private static RubricaEvaluacion CrearRubricaBloqueada(
+        Guid usuarioId,
+        MotivoBloqueoRubrica motivo,
+        DateTimeOffset fechaBloqueo)
+    {
+        var rubrica = CrearRubricaPublicada(usuarioId);
+        rubrica.Bloquear(motivo, fechaBloqueo, UsuarioSistema.Id);
         return rubrica;
     }
 

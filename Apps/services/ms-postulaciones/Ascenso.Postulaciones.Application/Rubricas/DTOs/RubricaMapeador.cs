@@ -22,7 +22,10 @@ public static class RubricaMapeador
                 .Select(criterio => criterio.ADto())
                 .ToArray(),
             rubrica.SumaPesos,
-            rubrica.DiferenciaPara100);
+            rubrica.DiferenciaPara100,
+            rubrica.MotivoBloqueo?.ACodigo(),
+            rubrica.FechaBloqueo,
+            rubrica.Estado != EstadoRubrica.Borrador);
     }
 
     public static CriterioEvaluacionDto ADto(this CriterioEvaluacion criterio)

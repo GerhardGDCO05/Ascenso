@@ -1,6 +1,6 @@
-using System.Reflection;
 using Ascenso.Postulaciones.Application.Interfaces;
 using Ascenso.Postulaciones.Application.Rubricas.Comandos.PublicarRubrica;
+using Ascenso.Postulaciones.Domain.Comun;
 using Ascenso.Postulaciones.Domain.Enums;
 using Ascenso.Postulaciones.Domain.Excepciones;
 using Ascenso.Postulaciones.Domain.Interfaces;
@@ -233,9 +233,10 @@ public sealed class PublicarRubricaCommandHandlerTests
 
         if (estadoInmutable == EstadoRubrica.Bloqueada)
         {
-            typeof(RubricaEvaluacion)
-                .GetProperty(nameof(RubricaEvaluacion.Estado), BindingFlags.Public | BindingFlags.Instance)!
-                .SetValue(rubrica, EstadoRubrica.Bloqueada);
+            rubrica.Bloquear(
+                MotivoBloqueoRubrica.InicioEvaluacion,
+                _fechaCreacion.AddMinutes(15),
+                UsuarioSistema.Id);
         }
 
         return rubrica;

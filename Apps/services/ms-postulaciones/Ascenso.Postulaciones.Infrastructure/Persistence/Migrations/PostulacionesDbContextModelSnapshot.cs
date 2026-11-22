@@ -264,6 +264,10 @@ namespace Ascenso.Postulaciones.Infrastructure.Persistence.Migrations
                         .HasColumnType("varchar")
                         .HasColumnName("estado");
 
+                    b.Property<DateTimeOffset?>("FechaBloqueo")
+                        .HasColumnType("timestamptz")
+                        .HasColumnName("fecha_bloqueo");
+
                     b.Property<DateTimeOffset>("FechaCreacion")
                         .HasColumnType("timestamptz")
                         .HasColumnName("fecha_creacion");
@@ -275,6 +279,11 @@ namespace Ascenso.Postulaciones.Infrastructure.Persistence.Migrations
                     b.Property<DateTimeOffset>("FechaUltimaModificacion")
                         .HasColumnType("timestamptz")
                         .HasColumnName("fecha_ultima_modificacion");
+
+                    b.Property<string>("MotivoBloqueo")
+                        .HasMaxLength(30)
+                        .HasColumnType("varchar")
+                        .HasColumnName("motivo_bloqueo");
 
                     b.Property<string>("Nombre")
                         .IsRequired()
@@ -308,7 +317,11 @@ namespace Ascenso.Postulaciones.Infrastructure.Persistence.Migrations
 
                     b.ToTable("rubricas", "postulaciones", t =>
                         {
+                            t.HasCheckConstraint("ck_rubricas_bloqueo_coherente", "(estado = 'BLOQUEADA' AND motivo_bloqueo IS NOT NULL AND fecha_bloqueo IS NOT NULL) OR (estado IN ('BORRADOR', 'PUBLICADA') AND motivo_bloqueo IS NULL AND fecha_bloqueo IS NULL)");
+
                             t.HasCheckConstraint("ck_rubricas_estado_valido", "estado IN ('BORRADOR', 'PUBLICADA', 'BLOQUEADA')");
+
+                            t.HasCheckConstraint("ck_rubricas_motivo_bloqueo_valido", "motivo_bloqueo IS NULL OR motivo_bloqueo IN ('INICIO_EVALUACION', 'PRIMERA_CALIFICACION')");
                         });
                 });
 

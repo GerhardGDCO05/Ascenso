@@ -31,4 +31,20 @@ public sealed class MigracionRubricasEvaluacionTests
         script.Should().Contain("ck_criterios_evaluacion_orden_positivo");
         script.Should().Contain("ux_criterios_evaluacion_rubrica_orden");
     }
+
+    [Fact]
+    public void Debe_GenerarElScriptDeLaMigracionBloqueoRubrica_Cuando_SeMigraDesdeRubricasEvaluacion()
+    {
+        using var contexto = new PostulacionesDbContextFactory().CreateDbContext([]);
+        var migrador = contexto.GetService<IMigrator>();
+
+        var script = migrador.GenerateScript(
+            fromMigration: nameof(RubricasEvaluacion),
+            toMigration: nameof(BloqueoRubrica));
+
+        script.Should().Contain("motivo_bloqueo");
+        script.Should().Contain("fecha_bloqueo");
+        script.Should().Contain("ck_rubricas_motivo_bloqueo_valido");
+        script.Should().Contain("ck_rubricas_bloqueo_coherente");
+    }
 }

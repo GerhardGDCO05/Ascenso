@@ -14,6 +14,8 @@ public sealed class RubricaEvaluacionTests
     private static readonly Guid _usuarioId = Guid.NewGuid();
     private static readonly DateTimeOffset _fechaCreacion =
         new(2026, 11, 21, 10, 0, 0, TimeSpan.Zero);
+    private static readonly DateTimeOffset _fechaBloqueo =
+        new(2026, 11, 22, 14, 30, 0, TimeSpan.Zero);
 
     [Fact]
     public void Debe_CrearLaRubricaEnBorrador_Cuando_LosDatosSonValidos()
@@ -32,6 +34,8 @@ public sealed class RubricaEvaluacionTests
         Assert.Equal("Rúbrica General 2026-II", rubrica.Nombre);
         Assert.Equal(EstadoRubrica.Borrador, rubrica.Estado);
         Assert.Null(rubrica.FechaPublicacion);
+        Assert.Null(rubrica.MotivoBloqueo);
+        Assert.Null(rubrica.FechaBloqueo);
         Assert.Empty(rubrica.Criterios);
         Assert.Equal(_fechaCreacion, rubrica.FechaCreacion);
         Assert.Equal(_usuarioId, rubrica.UsuarioCreacionId);
@@ -331,6 +335,8 @@ public sealed class RubricaEvaluacionTests
 
         Assert.Equal(EstadoRubrica.Publicada, rubrica.Estado);
         Assert.Equal(fechaPublicacion, rubrica.FechaPublicacion);
+        Assert.Null(rubrica.MotivoBloqueo);
+        Assert.Null(rubrica.FechaBloqueo);
         Assert.Equal(fechaPublicacion, rubrica.FechaUltimaModificacion);
         Assert.Equal(usuarioPublicadorId, rubrica.UsuarioModificacionId);
         Assert.Equal(4, rubrica.Version);
@@ -395,12 +401,136 @@ public sealed class RubricaEvaluacionTests
     }
 
     [Theory]
+    [InlineData(MotivoBloqueoRubrica.InicioEvaluacion)]
+    [InlineData(MotivoBloqueoRubrica.PrimeraCalificacion)]
+    public void Debe_BloquearLaRubricaConMotivoFechaUtcYAuditoria_Cuando_EstaPublicada(
+        MotivoBloqueoRubrica motivo)
+    {
+        var (rubrica, _) = CrearRubricaEnEstadoInmutable(EstadoRubrica.Publicada);
+        var versionPrevia = rubrica.Version;
+        var fechaBloqueoConOffset = new DateTimeOffset(2026, 11, 22, 10, 15, 0, TimeSpan.FromHours(-4));
+
+        var cambioAplicado = rubrica.Bloquear(motivo, fechaBloqueoConOffset, UsuarioSistema.Id);
+
+        Assert.True(cambioAplicado);
+        Assert.Equal(EstadoRubrica.Bloqueada, rubrica.Estado);
+        Assert.Equal(motivo, rubrica.MotivoBloqueo);
+        Assert.Equal(fechaBloqueoConOffset.ToUniversalTime(), rubrica.FechaBloqueo);
+        Assert.Equal(TimeSpan.Zero, rubrica.FechaBloqueo!.Value.Offset);
+        Assert.Equal(fechaBloqueoConOffset.ToUniversalTime(), rubrica.FechaUltimaModificacion);
+        Assert.Equal(UsuarioSistema.Id, rubrica.UsuarioModificacionId);
+        Assert.Equal(versionPrevia + 1, rubrica.Version);
+    }
+
+    [Fact]
+    public void Debe_SerIdempotenteSinCambios_Cuando_SeBloqueaUnaRubricaYaBloqueada()
+    {
+        var (rubrica, _) = CrearRubricaEnEstadoInmutable(EstadoRubrica.Publicada);
+        var fechaPrimerBloqueo = new DateTimeOffset(2026, 11, 22, 12, 0, 0, TimeSpan.Zero);
+
+        var primerResultado = rubrica.Bloquear(
+            MotivoBloqueoRubrica.InicioEvaluacion,
+            fechaPrimerBloqueo,
+            UsuarioSistema.Id);
+        var versionTrasPrimerBloqueo = rubrica.Version;
+
+        var segundoResultado = rubrica.Bloquear(
+            MotivoBloqueoRubrica.PrimeraCalificacion,
+            fechaPrimerBloqueo.AddHours(2),
+            Guid.NewGuid());
+
+        Assert.True(primerResultado);
+        Assert.False(segundoResultado);
+        Assert.Equal(EstadoRubrica.Bloqueada, rubrica.Estado);
+        Assert.Equal(MotivoBloqueoRubrica.InicioEvaluacion, rubrica.MotivoBloqueo);
+        Assert.Equal(fechaPrimerBloqueo, rubrica.FechaBloqueo);
+        Assert.Equal(fechaPrimerBloqueo, rubrica.FechaUltimaModificacion);
+        Assert.Equal(UsuarioSistema.Id, rubrica.UsuarioModificacionId);
+        Assert.Equal(versionTrasPrimerBloqueo, rubrica.Version);
+    }
+
+    [Fact]
+    public void Debe_RechazarElBloqueoConRubricaNoPublicada_Cuando_LaRubricaEstaEnBorrador()
+    {
+        var rubrica = CrearRubricaValida();
+        var versionInicial = rubrica.Version;
+
+        var excepcion = Assert.Throws<RubricaNoPublicadaException>(
+            () => rubrica.Bloquear(
+                MotivoBloqueoRubrica.InicioEvaluacion,
+                _fechaCreacion.AddHours(1),
+                UsuarioSistema.Id));
+
+        Assert.Equal(RubricaNoPublicadaException.CodigoError, excepcion.Codigo);
+        Assert.Equal(409, excepcion.EstadoHttp);
+        Assert.Equal(EstadoRubrica.Borrador, rubrica.Estado);
+        Assert.Null(rubrica.MotivoBloqueo);
+        Assert.Null(rubrica.FechaBloqueo);
+        Assert.Equal(versionInicial, rubrica.Version);
+    }
+
+    [Fact]
+    public void Debe_RechazarElBloqueo_Cuando_ElMotivoNoEstaDefinido()
+    {
+        var (rubrica, _) = CrearRubricaEnEstadoInmutable(EstadoRubrica.Publicada);
+        var versionPrevia = rubrica.Version;
+
+        Assert.Throws<ArgumentOutOfRangeException>(
+            () => rubrica.Bloquear(
+                (MotivoBloqueoRubrica)999,
+                _fechaCreacion.AddHours(1),
+                UsuarioSistema.Id));
+
+        Assert.Equal(EstadoRubrica.Publicada, rubrica.Estado);
+        Assert.Null(rubrica.MotivoBloqueo);
+        Assert.Null(rubrica.FechaBloqueo);
+        Assert.Equal(versionPrevia, rubrica.Version);
+    }
+
+    [Fact]
+    public void Debe_RechazarElBloqueo_Cuando_LaFechaEsPorDefecto()
+    {
+        var (rubrica, _) = CrearRubricaEnEstadoInmutable(EstadoRubrica.Publicada);
+        var versionPrevia = rubrica.Version;
+
+        Assert.Throws<ArgumentException>(
+            () => rubrica.Bloquear(
+                MotivoBloqueoRubrica.InicioEvaluacion,
+                default,
+                UsuarioSistema.Id));
+
+        Assert.Equal(EstadoRubrica.Publicada, rubrica.Estado);
+        Assert.Null(rubrica.MotivoBloqueo);
+        Assert.Null(rubrica.FechaBloqueo);
+        Assert.Equal(versionPrevia, rubrica.Version);
+    }
+
+    [Fact]
+    public void Debe_RechazarElBloqueo_Cuando_ElUsuarioEstaVacio()
+    {
+        var (rubrica, _) = CrearRubricaEnEstadoInmutable(EstadoRubrica.Publicada);
+        var versionPrevia = rubrica.Version;
+
+        Assert.Throws<ArgumentException>(
+            () => rubrica.Bloquear(
+                MotivoBloqueoRubrica.InicioEvaluacion,
+                _fechaCreacion.AddHours(1),
+                Guid.Empty));
+
+        Assert.Equal(EstadoRubrica.Publicada, rubrica.Estado);
+        Assert.Null(rubrica.MotivoBloqueo);
+        Assert.Null(rubrica.FechaBloqueo);
+        Assert.Equal(versionPrevia, rubrica.Version);
+    }
+
+    [Theory]
     [InlineData(EstadoRubrica.Publicada)]
     [InlineData(EstadoRubrica.Bloqueada)]
     public void Debe_RechazarAgregarCriterioConRubricaBloqueada_Cuando_LaRubricaNoEstaEnBorrador(
         EstadoRubrica estadoInmutable)
     {
         var (rubrica, _) = CrearRubricaEnEstadoInmutable(estadoInmutable);
+        var versionPrevia = rubrica.Version;
 
         var excepcion = Assert.Throws<RubricaBloqueadaException>(
             () => rubrica.AgregarCriterio(
@@ -414,7 +544,10 @@ public sealed class RubricaEvaluacionTests
 
         Assert.Equal(RubricaBloqueadaException.CodigoError, excepcion.Codigo);
         Assert.Equal(409, excepcion.EstadoHttp);
+        AssertMensajeInmutabilidadEsperado(estadoInmutable, excepcion);
         Assert.Single(rubrica.Criterios);
+        Assert.Equal(estadoInmutable, rubrica.Estado);
+        Assert.Equal(versionPrevia, rubrica.Version);
     }
 
     [Theory]
@@ -424,6 +557,7 @@ public sealed class RubricaEvaluacionTests
         EstadoRubrica estadoInmutable)
     {
         var (rubrica, criterioId) = CrearRubricaEnEstadoInmutable(estadoInmutable);
+        var versionPrevia = rubrica.Version;
 
         var excepcion = Assert.Throws<RubricaBloqueadaException>(
             () => rubrica.EditarCriterio(
@@ -438,6 +572,10 @@ public sealed class RubricaEvaluacionTests
 
         Assert.Equal(RubricaBloqueadaException.CodigoError, excepcion.Codigo);
         Assert.Equal(409, excepcion.EstadoHttp);
+        AssertMensajeInmutabilidadEsperado(estadoInmutable, excepcion);
+        Assert.Equal("Criterio único", rubrica.Criterios.Single().Nombre);
+        Assert.Equal(estadoInmutable, rubrica.Estado);
+        Assert.Equal(versionPrevia, rubrica.Version);
     }
 
     [Theory]
@@ -447,6 +585,7 @@ public sealed class RubricaEvaluacionTests
         EstadoRubrica estadoInmutable)
     {
         var (rubrica, criterioId) = CrearRubricaEnEstadoInmutable(estadoInmutable);
+        var versionPrevia = rubrica.Version;
 
         var excepcion = Assert.Throws<RubricaBloqueadaException>(
             () => rubrica.EliminarCriterio(
@@ -456,7 +595,10 @@ public sealed class RubricaEvaluacionTests
 
         Assert.Equal(RubricaBloqueadaException.CodigoError, excepcion.Codigo);
         Assert.Equal(409, excepcion.EstadoHttp);
+        AssertMensajeInmutabilidadEsperado(estadoInmutable, excepcion);
         Assert.Single(rubrica.Criterios);
+        Assert.Equal(estadoInmutable, rubrica.Estado);
+        Assert.Equal(versionPrevia, rubrica.Version);
     }
 
     [Theory]
@@ -466,13 +608,16 @@ public sealed class RubricaEvaluacionTests
         EstadoRubrica estadoInmutable)
     {
         var (rubrica, _) = CrearRubricaEnEstadoInmutable(estadoInmutable);
+        var versionPrevia = rubrica.Version;
 
         var excepcion = Assert.Throws<RubricaBloqueadaException>(
             () => rubrica.Publicar(_fechaCreacion.AddHours(2), _usuarioId));
 
         Assert.Equal(RubricaBloqueadaException.CodigoError, excepcion.Codigo);
         Assert.Equal(409, excepcion.EstadoHttp);
+        AssertMensajeInmutabilidadEsperado(estadoInmutable, excepcion);
         Assert.Equal(estadoInmutable, rubrica.Estado);
+        Assert.Equal(versionPrevia, rubrica.Version);
     }
 
     [Fact]
@@ -492,6 +637,24 @@ public sealed class RubricaEvaluacionTests
         Assert.True(metodoInterno.IsAssembly);
     }
 
+    private static void AssertMensajeInmutabilidadEsperado(
+        EstadoRubrica estadoInmutable,
+        RubricaBloqueadaException excepcion)
+    {
+        if (estadoInmutable == EstadoRubrica.Publicada)
+        {
+            Assert.Equal(
+                "La rúbrica está publicada y no admite modificaciones; los cambios requieren una rúbrica nueva.",
+                excepcion.Message);
+        }
+        else
+        {
+            Assert.Equal(
+                "La rúbrica está bloqueada desde 2026-11-22 14:30:00 UTC por inicio de la etapa de evaluación; los cambios requieren una rúbrica nueva.",
+                excepcion.Message);
+        }
+    }
+
     private static (RubricaEvaluacion Rubrica, Guid CriterioId) CrearRubricaEnEstadoInmutable(
         EstadoRubrica estadoInmutable)
     {
@@ -509,20 +672,13 @@ public sealed class RubricaEvaluacionTests
 
         if (estadoInmutable == EstadoRubrica.Bloqueada)
         {
-            ForzarEstadoPorReflexion(rubrica, EstadoRubrica.Bloqueada);
+            rubrica.Bloquear(
+                MotivoBloqueoRubrica.InicioEvaluacion,
+                _fechaBloqueo,
+                UsuarioSistema.Id);
         }
 
         return (rubrica, criterio.Id);
-    }
-
-    private static void ForzarEstadoPorReflexion(RubricaEvaluacion rubrica, EstadoRubrica estado)
-    {
-        var propiedadEstado = typeof(RubricaEvaluacion).GetProperty(
-            nameof(RubricaEvaluacion.Estado),
-            BindingFlags.Public | BindingFlags.Instance)
-            ?? throw new InvalidOperationException("No se encontró la propiedad Estado en RubricaEvaluacion.");
-
-        propiedadEstado.SetValue(rubrica, estado);
     }
 
     private static RubricaEvaluacion CrearRubricaValida(string nombre = "Rúbrica General 2026-II")

@@ -1,5 +1,8 @@
+using Ascenso.Postulaciones.Application.Rubricas.Comandos.BloquearRubrica;
+using Ascenso.Postulaciones.Domain.Comun;
 using Ascenso.Postulaciones.Domain.Enums;
 using Ascenso.Postulaciones.Domain.Excepciones;
+using Ascenso.Postulaciones.Domain.Interfaces;
 using Ascenso.Postulaciones.Domain.Rubricas.Agregados;
 using Ascenso.Postulaciones.Infrastructure.Persistence.Repositorios;
 using FluentAssertions;
@@ -328,5 +331,272 @@ public sealed class RubricaPostgreSqlTests
 
         (await accionDescripcionCriterio.Should().ThrowAsync<PostgresException>()).Which
             .SqlState.Should().Be(PostgresErrorCodes.StringDataRightTruncation);
+    }
+
+    [Fact]
+    public async Task Debe_PersistirYRecargarBloqueoDeRubrica_Cuando_SeBloqueaEnPostgreSqlReal()
+    {
+        var usuarioId = Guid.CreateVersion7();
+        var ahora = new DateTimeOffset(2026, 11, 22, 14, 0, 0, TimeSpan.Zero);
+        var fechaPublicacion = ahora.AddMinutes(5);
+        var fechaBloqueo = ahora.AddMinutes(10);
+        Guid rubricaId;
+
+        await using (var contextoCrear = _fixture.CrearContexto())
+        {
+            var repoCrear = new RubricaRepository(contextoCrear);
+            var rubrica = RubricaEvaluacion.Crear(
+                Guid.CreateVersion7(),
+                Guid.CreateVersion7(),
+                "Rúbrica para bloqueo persistido",
+                ahora,
+                usuarioId);
+            rubrica.AgregarCriterio(
+                "Mérito académico",
+                "Promedio ponderado",
+                100.00m,
+                0.00m,
+                20.00m,
+                ahora.AddMinutes(1),
+                usuarioId);
+            rubrica.Publicar(fechaPublicacion, usuarioId);
+            rubricaId = rubrica.Id;
+
+            await repoCrear.AgregarAsync(rubrica);
+            await contextoCrear.GuardarCambiosAsync();
+        }
+
+        await using (var contextoBloquear = _fixture.CrearContexto())
+        {
+            var repoBloquear = new RubricaRepository(contextoBloquear);
+            var rubrica = await repoBloquear.ObtenerParaActualizarPorIdAsync(rubricaId);
+            rubrica.Should().NotBeNull();
+            var versionAntes = rubrica!.Version;
+
+            rubrica.Bloquear(MotivoBloqueoRubrica.PrimeraCalificacion, fechaBloqueo, UsuarioSistema.Id)
+                .Should().BeTrue();
+            rubrica.Version.Should().Be(versionAntes + 1);
+
+            await contextoBloquear.GuardarCambiosAsync();
+        }
+
+        await using (var contextoLectura = _fixture.CrearContexto())
+        {
+            var repoLectura = new RubricaRepository(contextoLectura);
+            var rubrica = await repoLectura.ObtenerPorIdAsync(rubricaId);
+
+            rubrica.Should().NotBeNull();
+            rubrica!.Estado.Should().Be(EstadoRubrica.Bloqueada);
+            rubrica.MotivoBloqueo.Should().Be(MotivoBloqueoRubrica.PrimeraCalificacion);
+            rubrica.FechaBloqueo.Should().Be(fechaBloqueo);
+            rubrica.UsuarioModificacionId.Should().Be(UsuarioSistema.Id);
+        }
+    }
+
+    [Fact]
+    public async Task Debe_RechazarViolacionesDeChecksDeBloqueo_Cuando_SeEvaluaEnPostgreSqlReal()
+    {
+        var usuarioId = Guid.CreateVersion7();
+        var ahora = DateTimeOffset.UtcNow;
+        var rubrica = RubricaEvaluacion.Crear(
+            Guid.CreateVersion7(),
+            Guid.CreateVersion7(),
+            "Rúbrica Validación CHECKs Bloqueo",
+            ahora,
+            usuarioId);
+        rubrica.AgregarCriterio(
+            "Criterio único",
+            "Descripción",
+            100.00m,
+            0.00m,
+            20.00m,
+            ahora.AddMinutes(1),
+            usuarioId);
+
+        await using var contexto = _fixture.CrearContexto();
+        contexto.Rubricas.Add(rubrica);
+        await contexto.GuardarCambiosAsync();
+
+        // 1. BLOQUEADA sin motivo ni fecha -> viola ck_rubricas_bloqueo_coherente
+        var bloqueadaSinDatos = () => contexto.Database.ExecuteSqlInterpolatedAsync($"""
+            UPDATE postulaciones.rubricas
+            SET estado = 'BLOQUEADA', motivo_bloqueo = NULL, fecha_bloqueo = NULL
+            WHERE id = {rubrica.Id}
+            """);
+        var ex1 = (await bloqueadaSinDatos.Should().ThrowAsync<PostgresException>()).Which;
+        ex1.SqlState.Should().Be(PostgresErrorCodes.CheckViolation);
+        ex1.ConstraintName.Should().Be("ck_rubricas_bloqueo_coherente");
+
+        // 2. BLOQUEADA con motivo pero sin fecha -> viola ck_rubricas_bloqueo_coherente
+        var bloqueadaSinFecha = () => contexto.Database.ExecuteSqlInterpolatedAsync($"""
+            UPDATE postulaciones.rubricas
+            SET estado = 'BLOQUEADA', motivo_bloqueo = 'INICIO_EVALUACION', fecha_bloqueo = NULL
+            WHERE id = {rubrica.Id}
+            """);
+        var ex2 = (await bloqueadaSinFecha.Should().ThrowAsync<PostgresException>()).Which;
+        ex2.SqlState.Should().Be(PostgresErrorCodes.CheckViolation);
+        ex2.ConstraintName.Should().Be("ck_rubricas_bloqueo_coherente");
+
+        // 3. BLOQUEADA con fecha pero sin motivo -> viola ck_rubricas_bloqueo_coherente
+        var bloqueadaSinMotivo = () => contexto.Database.ExecuteSqlInterpolatedAsync($"""
+            UPDATE postulaciones.rubricas
+            SET estado = 'BLOQUEADA', motivo_bloqueo = NULL, fecha_bloqueo = {ahora}
+            WHERE id = {rubrica.Id}
+            """);
+        var ex3 = (await bloqueadaSinMotivo.Should().ThrowAsync<PostgresException>()).Which;
+        ex3.SqlState.Should().Be(PostgresErrorCodes.CheckViolation);
+        ex3.ConstraintName.Should().Be("ck_rubricas_bloqueo_coherente");
+
+        // 4. BORRADOR con motivo y fecha -> viola ck_rubricas_bloqueo_coherente
+        var borradorConDatos = () => contexto.Database.ExecuteSqlInterpolatedAsync($"""
+            UPDATE postulaciones.rubricas
+            SET estado = 'BORRADOR', motivo_bloqueo = 'INICIO_EVALUACION', fecha_bloqueo = {ahora}
+            WHERE id = {rubrica.Id}
+            """);
+        var ex4 = (await borradorConDatos.Should().ThrowAsync<PostgresException>()).Which;
+        ex4.SqlState.Should().Be(PostgresErrorCodes.CheckViolation);
+        ex4.ConstraintName.Should().Be("ck_rubricas_bloqueo_coherente");
+
+        // 5. PUBLICADA con motivo o fecha -> viola ck_rubricas_bloqueo_coherente
+        var publicadaConDatos = () => contexto.Database.ExecuteSqlInterpolatedAsync($"""
+            UPDATE postulaciones.rubricas
+            SET estado = 'PUBLICADA', motivo_bloqueo = 'PRIMERA_CALIFICACION', fecha_bloqueo = {ahora}
+            WHERE id = {rubrica.Id}
+            """);
+        var ex5 = (await publicadaConDatos.Should().ThrowAsync<PostgresException>()).Which;
+        ex5.SqlState.Should().Be(PostgresErrorCodes.CheckViolation);
+        ex5.ConstraintName.Should().Be("ck_rubricas_bloqueo_coherente");
+
+        // 6. Motivo inválido en estado BLOQUEADA -> viola ck_rubricas_motivo_bloqueo_valido
+        var motivoInvalido = () => contexto.Database.ExecuteSqlInterpolatedAsync($"""
+            UPDATE postulaciones.rubricas
+            SET estado = 'BLOQUEADA', motivo_bloqueo = 'MOTIVO_INVALIDO', fecha_bloqueo = {ahora}
+            WHERE id = {rubrica.Id}
+            """);
+        var ex6 = (await motivoInvalido.Should().ThrowAsync<PostgresException>()).Which;
+        ex6.SqlState.Should().Be(PostgresErrorCodes.CheckViolation);
+        ex6.ConstraintName.Should().Be("ck_rubricas_motivo_bloqueo_valido");
+    }
+
+    [Fact]
+    public async Task Debe_ProducirUnUnicoCambioEfectivoYTerminarSinError_Cuando_DosBloqueosConcurrentesSeEjecutanConBarrera()
+    {
+        var usuarioId = Guid.CreateVersion7();
+        var fechaCreacion = new DateTimeOffset(2026, 11, 22, 12, 0, 0, TimeSpan.Zero);
+        var fechaPublicacion = fechaCreacion.AddMinutes(5);
+        var fechaHandler1 = new DateTimeOffset(2026, 11, 22, 13, 0, 0, TimeSpan.Zero);
+        var fechaHandler2 = new DateTimeOffset(2026, 11, 22, 13, 5, 0, TimeSpan.Zero);
+        Guid rubricaId;
+        int versionPublicada;
+
+        await using (var contextoSemilla = _fixture.CrearContexto())
+        {
+            var repoSemilla = new RubricaRepository(contextoSemilla);
+            var rubrica = RubricaEvaluacion.Crear(
+                Guid.CreateVersion7(),
+                Guid.CreateVersion7(),
+                "Rúbrica Concurrencia Bloqueo",
+                fechaCreacion,
+                usuarioId);
+            rubrica.AgregarCriterio(
+                "Criterio Único",
+                "Descripción",
+                100.00m,
+                0.00m,
+                20.00m,
+                fechaCreacion.AddMinutes(1),
+                usuarioId);
+            rubrica.Publicar(fechaPublicacion, usuarioId);
+            rubricaId = rubrica.Id;
+            versionPublicada = rubrica.Version;
+
+            await repoSemilla.AgregarAsync(rubrica);
+            await contextoSemilla.GuardarCambiosAsync();
+        }
+
+        var lecturaCompletada1 = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
+        var lecturaCompletada2 = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
+        Task barreraLecturas = Task.WhenAll(lecturaCompletada1.Task, lecturaCompletada2.Task);
+
+        await using var contexto1 = _fixture.CrearContexto();
+        await using var contexto2 = _fixture.CrearContexto();
+
+        var handler1 = new BloquearRubricaCommandHandler(
+            new RubricaRepository(contexto1),
+            new UnitOfWorkConBarrera(contexto1, lecturaCompletada1, barreraLecturas),
+            new ProveedorTiempoFijo(fechaHandler1));
+
+        var handler2 = new BloquearRubricaCommandHandler(
+            new RubricaRepository(contexto2),
+            new UnitOfWorkConBarrera(contexto2, lecturaCompletada2, barreraLecturas),
+            new ProveedorTiempoFijo(fechaHandler2));
+
+        var resultados = await Task.WhenAll(
+            Task.Run(() => handler1.HandleAsync(new BloquearRubricaCommand(rubricaId, MotivoBloqueoRubrica.InicioEvaluacion))),
+            Task.Run(() => handler2.HandleAsync(new BloquearRubricaCommand(rubricaId, MotivoBloqueoRubrica.PrimeraCalificacion))));
+
+        resultados.Should().HaveCount(2);
+        resultados[0].Estado.Should().Be("BLOQUEADA");
+        resultados[1].Estado.Should().Be("BLOQUEADA");
+        resultados[0].SoloLectura.Should().BeTrue();
+        resultados[1].SoloLectura.Should().BeTrue();
+        resultados[0].MotivoBloqueo.Should().Be(resultados[1].MotivoBloqueo);
+        resultados[0].FechaBloqueo.Should().Be(resultados[1].FechaBloqueo);
+
+        await using var contextoVerificacion = _fixture.CrearContexto();
+        var repoVerificacion = new RubricaRepository(contextoVerificacion);
+        var rubricaFinal = await repoVerificacion.ObtenerPorIdAsync(rubricaId);
+
+        rubricaFinal.Should().NotBeNull();
+        rubricaFinal!.Estado.Should().Be(EstadoRubrica.Bloqueada);
+        rubricaFinal.Version.Should().Be(versionPublicada + 1);
+        rubricaFinal.MotivoBloqueo.Should().NotBeNull();
+        rubricaFinal.FechaBloqueo.Should().NotBeNull();
+
+        if (rubricaFinal.MotivoBloqueo == MotivoBloqueoRubrica.InicioEvaluacion)
+        {
+            rubricaFinal.FechaBloqueo.Should().Be(fechaHandler1);
+        }
+        else
+        {
+            rubricaFinal.MotivoBloqueo.Should().Be(MotivoBloqueoRubrica.PrimeraCalificacion);
+            rubricaFinal.FechaBloqueo.Should().Be(fechaHandler2);
+        }
+    }
+
+    private sealed class UnitOfWorkConBarrera : IUnitOfWork
+    {
+        private readonly IUnitOfWork _interno;
+        private readonly TaskCompletionSource _lecturaPropiaLista;
+        private readonly Task _barreraAmbosLeidos;
+
+        public UnitOfWorkConBarrera(
+            IUnitOfWork interno,
+            TaskCompletionSource lecturaPropiaLista,
+            Task barreraAmbosLeidos)
+        {
+            _interno = interno;
+            _lecturaPropiaLista = lecturaPropiaLista;
+            _barreraAmbosLeidos = barreraAmbosLeidos;
+        }
+
+        public async Task<int> GuardarCambiosAsync(CancellationToken cancellationToken = default)
+        {
+            _lecturaPropiaLista.TrySetResult();
+            await _barreraAmbosLeidos.WaitAsync(TimeSpan.FromSeconds(10), cancellationToken);
+            return await _interno.GuardarCambiosAsync(cancellationToken);
+        }
+    }
+
+    private sealed class ProveedorTiempoFijo : TimeProvider
+    {
+        private readonly DateTimeOffset _instanteUtc;
+
+        public ProveedorTiempoFijo(DateTimeOffset instanteUtc)
+        {
+            _instanteUtc = instanteUtc;
+        }
+
+        public override DateTimeOffset GetUtcNow() => _instanteUtc;
     }
 }

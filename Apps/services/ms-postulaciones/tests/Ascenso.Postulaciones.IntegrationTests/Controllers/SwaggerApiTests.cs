@@ -114,12 +114,18 @@ public sealed class SwaggerApiTests : IClassFixture<WebApplicationFactory<Progra
         VerificarRespuestas(rutaCriterio.GetProperty("delete"), "200", ["200", "401", "403", "404", "409"]);
 
         VerificarRespuestas(rutas.GetProperty("/api/v1/rubricas/{id}/publicar").GetProperty("post"), "200", ["200", "401", "403", "404", "409", "422"]);
+        rutas.TryGetProperty("/api/v1/rubricas/{id}/bloquear", out _).Should().BeFalse();
 
         var esquemas = raiz.GetProperty("components").GetProperty("schemas");
         esquemas.TryGetProperty("CrearRubricaRequest", out _).Should().BeTrue();
         esquemas.TryGetProperty("GuardarCriterioRequest", out _).Should().BeTrue();
-        esquemas.TryGetProperty("RubricaDto", out _).Should().BeTrue();
+        esquemas.TryGetProperty("RubricaDto", out var esquemaRubricaDto).Should().BeTrue();
         esquemas.TryGetProperty("CriterioEvaluacionDto", out _).Should().BeTrue();
+
+        var propiedadesRubricaDto = esquemaRubricaDto.GetProperty("properties");
+        propiedadesRubricaDto.TryGetProperty("motivoBloqueo", out _).Should().BeTrue();
+        propiedadesRubricaDto.TryGetProperty("fechaBloqueo", out _).Should().BeTrue();
+        propiedadesRubricaDto.TryGetProperty("soloLectura", out _).Should().BeTrue();
     }
 
     private static void VerificarRespuestas(

@@ -1,3 +1,4 @@
+using Ascenso.Postulaciones.Domain.Enums;
 using Ascenso.Postulaciones.Domain.Postulantes.Agregados;
 using Ascenso.Postulaciones.Domain.Postulantes.Entidades;
 using Ascenso.Postulaciones.Domain.Rubricas.Agregados;
@@ -236,6 +237,10 @@ public sealed class ModeloPersistenciaPostulacionesTests
         script.Should().Contain("CREATE TABLE postulaciones.rubricas");
         script.Should().Contain("ux_rubricas_programa_convocatoria");
         script.Should().Contain("ck_rubricas_estado_valido");
+        script.Should().Contain("ck_rubricas_motivo_bloqueo_valido");
+        script.Should().Contain("ck_rubricas_bloqueo_coherente");
+        script.Should().Contain("motivo_bloqueo");
+        script.Should().Contain("fecha_bloqueo");
         script.Should().Contain("CREATE TABLE postulaciones.criterios_evaluacion");
         script.Should().Contain("fk_criterios_evaluacion_rubricas");
         script.Should().Contain("ux_criterios_evaluacion_rubrica_orden");
@@ -285,7 +290,30 @@ public sealed class ModeloPersistenciaPostulacionesTests
 
         var fechaPublicacion = entidad.FindProperty(nameof(RubricaEvaluacion.FechaPublicacion))!;
         fechaPublicacion.GetColumnName().Should().Be("fecha_publicacion");
+        fechaPublicacion.GetColumnType().Should().Be("timestamptz");
         fechaPublicacion.IsNullable.Should().BeTrue();
+
+        var motivoBloqueo = entidad.FindProperty(nameof(RubricaEvaluacion.MotivoBloqueo))!;
+        motivoBloqueo.GetColumnName().Should().Be("motivo_bloqueo");
+        motivoBloqueo.GetColumnType().Should().Be("varchar");
+        motivoBloqueo.IsNullable.Should().BeTrue();
+        motivoBloqueo.GetMaxLength().Should().Be(30);
+
+        var convertidorMotivo = motivoBloqueo.GetValueConverter();
+        convertidorMotivo.Should().NotBeNull();
+        convertidorMotivo!.ConvertToProvider(MotivoBloqueoRubrica.InicioEvaluacion)
+            .Should().Be("INICIO_EVALUACION");
+        convertidorMotivo.ConvertToProvider(MotivoBloqueoRubrica.PrimeraCalificacion)
+            .Should().Be("PRIMERA_CALIFICACION");
+        convertidorMotivo.ConvertFromProvider("INICIO_EVALUACION")
+            .Should().Be(MotivoBloqueoRubrica.InicioEvaluacion);
+        convertidorMotivo.ConvertFromProvider("PRIMERA_CALIFICACION")
+            .Should().Be(MotivoBloqueoRubrica.PrimeraCalificacion);
+
+        var fechaBloqueo = entidad.FindProperty(nameof(RubricaEvaluacion.FechaBloqueo))!;
+        fechaBloqueo.GetColumnName().Should().Be("fecha_bloqueo");
+        fechaBloqueo.GetColumnType().Should().Be("timestamptz");
+        fechaBloqueo.IsNullable.Should().BeTrue();
 
         entidad.FindProperty(nameof(RubricaEvaluacion.SumaPesos)).Should().BeNull();
         entidad.FindProperty(nameof(RubricaEvaluacion.DiferenciaPara100)).Should().BeNull();
@@ -301,9 +329,27 @@ public sealed class ModeloPersistenciaPostulacionesTests
             .Select(indice => indice.GetDatabaseName())
             .Should().Contain("ux_rubricas_programa_convocatoria");
 
-        entidad.GetCheckConstraints()
-            .Select(check => check.Name)
-            .Should().Contain("ck_rubricas_estado_valido");
+        var checks = entidad.GetCheckConstraints().ToList();
+        checks.Select(check => check.Name)
+            .Should().Contain([
+                "ck_rubricas_estado_valido",
+                "ck_rubricas_motivo_bloqueo_valido",
+                "ck_rubricas_bloqueo_coherente"
+            ]);
+
+        var checkMotivo = checks.Single(check => check.Name == "ck_rubricas_motivo_bloqueo_valido");
+        checkMotivo.Sql.Should().Contain("motivo_bloqueo IS NULL");
+        checkMotivo.Sql.Should().Contain("'INICIO_EVALUACION'");
+        checkMotivo.Sql.Should().Contain("'PRIMERA_CALIFICACION'");
+
+        var checkCoherencia = checks.Single(check => check.Name == "ck_rubricas_bloqueo_coherente");
+        checkCoherencia.Sql.Should().Contain("estado = 'BLOQUEADA'");
+        checkCoherencia.Sql.Should().Contain("motivo_bloqueo IS NOT NULL");
+        checkCoherencia.Sql.Should().Contain("fecha_bloqueo IS NOT NULL");
+        checkCoherencia.Sql.Should().Contain("'BORRADOR'");
+        checkCoherencia.Sql.Should().Contain("'PUBLICADA'");
+        checkCoherencia.Sql.Should().Contain("motivo_bloqueo IS NULL");
+        checkCoherencia.Sql.Should().Contain("fecha_bloqueo IS NULL");
 
         contexto.Rubricas.Should().NotBeNull();
     }
