@@ -44,11 +44,11 @@
 
 ## 5. Verificación integral y seguimiento
 
-- [ ] 5.1 Ejecutar `dotnet build "Apps/services/ms-postulaciones/Ascenso.Postulaciones.sln" --configuration Release` y `dotnet test` de la misma solución, verificando `0` advertencias, `ArchitectureTests` en verde sin cambios y todas las pruebas en verde.
-- [ ] 5.2 Ejecutar `dotnet format "Apps/services/ms-postulaciones/Ascenso.Postulaciones.sln" --verify-no-changes --no-restore` y `dotnet restore --locked-mode`, verificando salida limpia.
-- [ ] 5.3 Ejecutar `openspec validate rf7-1-int2-mspos --strict` y `openspec validate --specs`, verificando que no hay hallazgos.
-- [ ] 5.4 Actualizar `openspec/roadmaps/por_integrante.md` y `openspec/roadmaps/por_microservicio.md` marcando solo la HU 7.1, sin marcar `RF-07` como completo.
-- [ ] 5.5 **Tarea final:** redactar la bitácora `openspec/changes/rf7-1-int2-mspos/log-2026-11-21-rf7-1-int2-mspos.md` con la evidencia real de comandos y resultados.
+- [x] 5.1 Ejecutar `dotnet build "Apps/services/ms-postulaciones/Ascenso.Postulaciones.sln" --configuration Release` y `dotnet test` de la misma solución, verificando `0` advertencias, `ArchitectureTests` en verde sin cambios y todas las pruebas en verde.
+- [x] 5.2 Ejecutar `dotnet format "Apps/services/ms-postulaciones/Ascenso.Postulaciones.sln" --verify-no-changes --no-restore` y `dotnet restore --locked-mode`, verificando salida limpia.
+- [x] 5.3 Ejecutar `openspec validate rf7-1-int2-mspos --strict` y `openspec validate --specs`, verificando que no hay hallazgos.
+- [x] 5.4 Actualizar `openspec/roadmaps/por_integrante.md` y `openspec/roadmaps/por_microservicio.md` marcando solo la HU 7.1, sin marcar `RF-07` como completo.
+- [x] 5.5 **Tarea final:** redactar la bitácora `openspec/changes/rf7-1-int2-mspos/log-2026-11-21-rf7-1-int2-mspos.md` con la evidencia real de comandos y resultados.
 
 ## Workflow follow-up
 

@@ -1,4 +1,4 @@
-﻿using Microsoft.EntityFrameworkCore.Migrations;
+using Microsoft.EntityFrameworkCore.Migrations;
 
 #nullable disable
 
@@ -7,8 +7,8 @@ namespace Ascenso.Postulaciones.Infrastructure.Persistence.Migrations;
 /// <inheritdoc />
 public partial class RubricasEvaluacion : Migration
 {
-    private static readonly string[] ColumnasIndiceCriteriosRubricaOrden = ["rubrica_evaluacion_id", "orden"];
-    private static readonly string[] ColumnasIndiceRubricasProgramaConvocatoria = ["programa_beca_id", "convocatoria_id"];
+    private static readonly string[] _columnasIndiceCriteriosRubricaOrden = ["rubrica_evaluacion_id", "orden"];
+    private static readonly string[] _columnasIndiceRubricasProgramaConvocatoria = ["programa_beca_id", "convocatoria_id"];
 
     /// <inheritdoc />
     protected override void Up(MigrationBuilder migrationBuilder)
@@ -74,14 +74,14 @@ public partial class RubricasEvaluacion : Migration
             name: "ux_criterios_evaluacion_rubrica_orden",
             schema: "postulaciones",
             table: "criterios_evaluacion",
-            columns: ColumnasIndiceCriteriosRubricaOrden,
+            columns: _columnasIndiceCriteriosRubricaOrden,
             unique: true);
 
         migrationBuilder.CreateIndex(
             name: "ux_rubricas_programa_convocatoria",
             schema: "postulaciones",
             table: "rubricas",
-            columns: ColumnasIndiceRubricasProgramaConvocatoria,
+            columns: _columnasIndiceRubricasProgramaConvocatoria,
             unique: true);
     }
 
