@@ -23,6 +23,157 @@ namespace Ascenso.Postulaciones.Infrastructure.Persistence.Migrations
 
             NpgsqlModelBuilderExtensions.UseIdentityByDefaultColumns(modelBuilder);
 
+            modelBuilder.Entity("Ascenso.Postulaciones.Domain.Comites.Agregados.ComiteEvaluador", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .HasColumnType("uuid")
+                        .HasColumnName("id");
+
+                    b.Property<bool>("Activo")
+                        .HasColumnType("boolean")
+                        .HasColumnName("activo");
+
+                    b.Property<Guid>("ConformadoPorUsuarioId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("conformado_por_usuario_id");
+
+                    b.Property<Guid>("ConvocatoriaId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("convocatoria_id");
+
+                    b.Property<DateOnly>("FechaConformacion")
+                        .HasColumnType("date")
+                        .HasColumnName("fecha_conformacion");
+
+                    b.Property<DateTimeOffset>("FechaCreacion")
+                        .HasColumnType("timestamptz")
+                        .HasColumnName("fecha_creacion");
+
+                    b.Property<DateTimeOffset>("FechaUltimaModificacion")
+                        .HasColumnType("timestamptz")
+                        .HasColumnName("fecha_ultima_modificacion");
+
+                    b.Property<Guid>("JefaturaUsuarioId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("jefatura_usuario_id");
+
+                    b.Property<string>("Nombre")
+                        .IsRequired()
+                        .HasMaxLength(200)
+                        .HasColumnType("character varying(200)")
+                        .HasColumnName("nombre");
+
+                    b.Property<Guid>("ProgramaBecaId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("programa_beca_id");
+
+                    b.Property<Guid>("UsuarioCreacionId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("usuario_creacion_id");
+
+                    b.Property<Guid>("UsuarioModificacionId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("usuario_modificacion_id");
+
+                    b.Property<int>("Version")
+                        .IsConcurrencyToken()
+                        .HasColumnType("integer")
+                        .HasColumnName("version");
+
+                    b.HasKey("Id")
+                        .HasName("pk_comites_evaluadores");
+
+                    b.HasIndex("ProgramaBecaId", "ConvocatoriaId")
+                        .IsUnique()
+                        .HasDatabaseName("ux_comites_programa_convocatoria");
+
+                    b.ToTable("comites_evaluadores", "postulaciones");
+                });
+
+            modelBuilder.Entity("Ascenso.Postulaciones.Domain.Comites.Entidades.MiembroComite", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .HasColumnType("uuid")
+                        .HasColumnName("id");
+
+                    b.Property<bool>("Activo")
+                        .HasColumnType("boolean")
+                        .HasColumnName("activo");
+
+                    b.Property<Guid>("ComiteEvaluadorId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("comite_evaluador_id");
+
+                    b.Property<DateOnly>("FechaAsignacion")
+                        .HasColumnType("date")
+                        .HasColumnName("fecha_asignacion");
+
+                    b.Property<DateTimeOffset>("FechaCreacion")
+                        .HasColumnType("timestamptz")
+                        .HasColumnName("fecha_creacion");
+
+                    b.Property<DateOnly?>("FechaDesvinculacion")
+                        .HasColumnType("date")
+                        .HasColumnName("fecha_desvinculacion");
+
+                    b.Property<DateTimeOffset>("FechaUltimaModificacion")
+                        .HasColumnType("timestamptz")
+                        .HasColumnName("fecha_ultima_modificacion");
+
+                    b.Property<string>("Rol")
+                        .IsRequired()
+                        .HasMaxLength(15)
+                        .HasColumnType("varchar")
+                        .HasColumnName("rol");
+
+                    b.Property<string>("Tipo")
+                        .IsRequired()
+                        .HasMaxLength(10)
+                        .HasColumnType("varchar")
+                        .HasColumnName("tipo");
+
+                    b.Property<Guid>("UsuarioCreacionId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("usuario_creacion_id");
+
+                    b.Property<Guid>("UsuarioEvaluadorId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("usuario_evaluador_id");
+
+                    b.Property<Guid>("UsuarioModificacionId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("usuario_modificacion_id");
+
+                    b.Property<int>("Version")
+                        .IsConcurrencyToken()
+                        .HasColumnType("integer")
+                        .HasColumnName("version");
+
+                    b.HasKey("Id")
+                        .HasName("pk_miembros_comite");
+
+                    b.HasIndex("ComiteEvaluadorId")
+                        .IsUnique()
+                        .HasDatabaseName("ux_miembros_comite_jefatura_activa")
+                        .HasFilter("activo AND rol = 'JEFATURA'");
+
+                    b.HasIndex("ComiteEvaluadorId", "UsuarioEvaluadorId")
+                        .IsUnique()
+                        .HasDatabaseName("ux_miembros_comite_usuario_activo")
+                        .HasFilter("activo");
+
+                    b.ToTable("miembros_comite", "postulaciones", t =>
+                        {
+                            t.HasCheckConstraint("ck_miembros_comite_desvinculacion_coherente", "(activo AND fecha_desvinculacion IS NULL) OR (NOT activo AND fecha_desvinculacion IS NOT NULL AND fecha_desvinculacion >= fecha_asignacion)");
+
+                            t.HasCheckConstraint("ck_miembros_comite_jefatura_interna", "rol <> 'JEFATURA' OR tipo = 'INTERNO'");
+
+                            t.HasCheckConstraint("ck_miembros_comite_rol_valido", "rol IN ('JEFATURA', 'EVALUADOR')");
+
+                            t.HasCheckConstraint("ck_miembros_comite_tipo_valido", "tipo IN ('INTERNO', 'EXTERNO')");
+                        });
+                });
+
             modelBuilder.Entity("Ascenso.Postulaciones.Domain.Postulantes.Agregados.Postulante", b =>
                 {
                     b.Property<Guid>("Id")
@@ -404,6 +555,16 @@ namespace Ascenso.Postulaciones.Infrastructure.Persistence.Migrations
                         });
                 });
 
+            modelBuilder.Entity("Ascenso.Postulaciones.Domain.Comites.Entidades.MiembroComite", b =>
+                {
+                    b.HasOne("Ascenso.Postulaciones.Domain.Comites.Agregados.ComiteEvaluador", null)
+                        .WithMany("Miembros")
+                        .HasForeignKey("ComiteEvaluadorId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired()
+                        .HasConstraintName("fk_miembros_comite_comites");
+                });
+
             modelBuilder.Entity("Ascenso.Postulaciones.Domain.Postulantes.Agregados.Postulante", b =>
                 {
                     b.OwnsOne("Ascenso.Postulaciones.Domain.Postulantes.ObjetosValor.DatosContacto", "DatosContacto", b1 =>
@@ -453,6 +614,11 @@ namespace Ascenso.Postulaciones.Infrastructure.Persistence.Migrations
                         .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired()
                         .HasConstraintName("fk_criterios_evaluacion_rubricas");
+                });
+
+            modelBuilder.Entity("Ascenso.Postulaciones.Domain.Comites.Agregados.ComiteEvaluador", b =>
+                {
+                    b.Navigation("Miembros");
                 });
 
             modelBuilder.Entity("Ascenso.Postulaciones.Domain.Postulantes.Agregados.Postulante", b =>

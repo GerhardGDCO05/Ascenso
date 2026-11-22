@@ -37,6 +37,7 @@ public static class DependencyInjection
 
         services.AddScoped<IPostulanteRepository, PostulanteRepository>();
         services.AddScoped<IRubricaRepository, RubricaRepository>();
+        services.AddScoped<IComiteEvaluadorRepository, ComiteEvaluadorRepository>();
 
         if (configuration is not null)
         {

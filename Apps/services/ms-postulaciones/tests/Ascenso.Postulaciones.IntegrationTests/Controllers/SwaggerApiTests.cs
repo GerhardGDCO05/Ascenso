@@ -31,6 +31,7 @@ public sealed class SwaggerApiTests : IClassFixture<WebApplicationFactory<Progra
                 servicios.AddSingleton(Substitute.For<IUsuarioActual>());
                 servicios.AddSingleton(Substitute.For<IPostulanteRepository>());
                 servicios.AddSingleton(Substitute.For<IRubricaRepository>());
+                servicios.AddSingleton(Substitute.For<IComiteEvaluadorRepository>());
                 servicios.AddSingleton(Substitute.For<IPeriodoAcademicoClient>());
                 servicios.AddSingleton(Substitute.For<ICatalogoAcademicoClient>());
                 servicios.AddSingleton(Substitute.For<IUnitOfWork>());
@@ -89,6 +90,7 @@ public sealed class SwaggerApiTests : IClassFixture<WebApplicationFactory<Progra
                 servicios.AddSingleton(Substitute.For<IUsuarioActual>());
                 servicios.AddSingleton(Substitute.For<IPostulanteRepository>());
                 servicios.AddSingleton(Substitute.For<IRubricaRepository>());
+                servicios.AddSingleton(Substitute.For<IComiteEvaluadorRepository>());
                 servicios.AddSingleton(Substitute.For<IPeriodoAcademicoClient>());
                 servicios.AddSingleton(Substitute.For<ICatalogoAcademicoClient>());
                 servicios.AddSingleton(Substitute.For<IUnitOfWork>());
@@ -128,10 +130,78 @@ public sealed class SwaggerApiTests : IClassFixture<WebApplicationFactory<Progra
         propiedadesRubricaDto.TryGetProperty("soloLectura", out _).Should().BeTrue();
     }
 
+    [Fact]
+    public async Task Debe_DocumentarEndpointsDeComitesEvaluadoresYSusEsquemas_Cuando_EntornoEsDevelopment()
+    {
+        using var fabrica = _fabricaBase.WithWebHostBuilder(constructor =>
+        {
+            constructor.UseEnvironment("Development");
+            constructor.ConfigureTestServices(servicios =>
+            {
+                servicios.AddSingleton(Substitute.For<IUsuarioActual>());
+                servicios.AddSingleton(Substitute.For<IPostulanteRepository>());
+                servicios.AddSingleton(Substitute.For<IRubricaRepository>());
+                servicios.AddSingleton(Substitute.For<IComiteEvaluadorRepository>());
+                servicios.AddSingleton(Substitute.For<IPeriodoAcademicoClient>());
+                servicios.AddSingleton(Substitute.For<ICatalogoAcademicoClient>());
+                servicios.AddSingleton(Substitute.For<IUnitOfWork>());
+                servicios.AddSingleton(TimeProvider.System);
+            });
+        });
+        using var cliente = fabrica.CreateClient();
+
+        var respuesta = await cliente.GetAsync("/swagger/v1/swagger.json");
+
+        respuesta.StatusCode.Should().Be(HttpStatusCode.OK);
+
+        using var documento = JsonDocument.Parse(await respuesta.Content.ReadAsStringAsync());
+        var raiz = documento.RootElement;
+        var rutas = raiz.GetProperty("paths");
+
+        VerificarRespuestasConEsquema(
+            rutas.GetProperty("/api/v1/comites-evaluadores").GetProperty("post"),
+            "201",
+            ["201", "400", "401", "403", "409", "422"],
+            "ComiteEvaluadorDto");
+        VerificarRespuestasConEsquema(
+            rutas.GetProperty("/api/v1/comites-evaluadores/{id}").GetProperty("get"),
+            "200",
+            ["200", "401", "403", "404"],
+            "ComiteEvaluadorDto");
+        VerificarRespuestasConEsquema(
+            rutas.GetProperty("/api/v1/comites-evaluadores/programas/{programaBecaId}/convocatorias/{convocatoriaId}").GetProperty("get"),
+            "200",
+            ["200", "401", "403", "404"],
+            "ComiteEvaluadorDto");
+        VerificarRespuestasConEsquema(
+            rutas.GetProperty("/api/v1/comites-evaluadores/{id}/miembros").GetProperty("post"),
+            "201",
+            ["201", "400", "401", "403", "404", "409"],
+            "ComiteEvaluadorDto");
+        VerificarRespuestasConEsquema(
+            rutas.GetProperty("/api/v1/comites-evaluadores/{id}/miembros/{miembroId}").GetProperty("delete"),
+            "200",
+            ["200", "401", "403", "404", "422"],
+            "ComiteEvaluadorDto");
+
+        var esquemas = raiz.GetProperty("components").GetProperty("schemas");
+        esquemas.TryGetProperty("CrearComiteEvaluadorRequest", out _).Should().BeTrue();
+        esquemas.TryGetProperty("AgregarMiembroComiteRequest", out _).Should().BeTrue();
+        esquemas.TryGetProperty("ComiteEvaluadorDto", out _).Should().BeTrue();
+        esquemas.TryGetProperty("MiembroComiteDto", out _).Should().BeTrue();
+    }
+
     private static void VerificarRespuestas(
         JsonElement operacion,
         string codigoExito,
         string[] codigosEsperados)
+        => VerificarRespuestasConEsquema(operacion, codigoExito, codigosEsperados, "RubricaDto");
+
+    private static void VerificarRespuestasConEsquema(
+        JsonElement operacion,
+        string codigoExito,
+        string[] codigosEsperados,
+        string nombreEsquema)
     {
         var respuestas = operacion.GetProperty("responses");
         foreach (var codigo in codigosEsperados)
@@ -145,6 +215,6 @@ public sealed class SwaggerApiTests : IClassFixture<WebApplicationFactory<Progra
             .GetProperty("schema")
             .GetProperty("$ref")
             .GetString();
-        esquemaRespuesta.Should().Contain("RubricaDto");
+        esquemaRespuesta.Should().Contain(nombreEsquema);
     }
 }
