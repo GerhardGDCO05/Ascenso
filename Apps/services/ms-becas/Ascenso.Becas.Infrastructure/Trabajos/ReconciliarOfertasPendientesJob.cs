@@ -2,6 +2,7 @@ using Ascenso.Becas.Application.Despacho;
 using Ascenso.Becas.Application.Otorgamiento.Comandos.ExpirarOfertaBeca;
 using Ascenso.Becas.Domain.Ports;
 using Ascenso.Becas.Infrastructure.Dependencias;
+using Ascenso.Becas.Infrastructure.Observabilidad;
 using Hangfire;
 using Microsoft.Extensions.Options;
 
@@ -31,7 +32,12 @@ public sealed class ReconciliarOfertasPendientesJob
     }
 
     [Queue(RegistroHangfire.ColaCritica)]
-    public async Task Ejecutar(CancellationToken cancellationToken = default)
+    public Task Ejecutar(CancellationToken cancellationToken = default)
+        => TelemetriaHangfire.EjecutarAsync(
+            nameof(ReconciliarOfertasPendientesJob),
+            () => EjecutarAsync(cancellationToken));
+
+    private async Task EjecutarAsync(CancellationToken cancellationToken)
     {
         var limite = Math.Max(1, _opciones.Value.LimiteOfertasPorReconciliacion);
         var vencidas = await _ofertas.ObtenerPendientesVencidasAsync(

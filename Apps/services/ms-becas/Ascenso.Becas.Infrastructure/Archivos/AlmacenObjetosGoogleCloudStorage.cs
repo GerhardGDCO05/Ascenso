@@ -54,4 +54,17 @@ public sealed class AlmacenObjetosGoogleCloudStorage : IAlmacenObjetosNube
             // El archivo ya no existe: la eliminación es idempotente.
         }
     }
+
+    public Task<string> CrearUrlFirmadaLecturaAsync(
+        string bucket,
+        string objeto,
+        TimeSpan vigencia,
+        CancellationToken cancellationToken)
+        => _cliente.CreateUrlSigner().SignAsync(
+            bucket,
+            objeto,
+            vigencia,
+            HttpMethod.Get,
+            SigningVersion.V4,
+            cancellationToken);
 }

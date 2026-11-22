@@ -1,4 +1,5 @@
 using Ascenso.Becas.Domain.Ports;
+using Google.Api.Gax;
 using Google.Apis.Auth.OAuth2;
 using Google.Cloud.Storage.V1;
 using Microsoft.Extensions.Configuration;
@@ -43,7 +44,7 @@ public static class RegistroArchivos
                     "El bucket de Firebase es obligatorio cuando el proveedor es Firebase.");
             }
 
-            servicios.AddSingleton(_ => CrearClienteStorage(opciones.Firebase));
+            servicios.AddSingleton(CrearClienteStorage(opciones.Firebase));
             servicios.AddSingleton<IAlmacenObjetosNube, AlmacenObjetosGoogleCloudStorage>();
             servicios.AddSingleton<IAlmacenamientoArchivos, AlmacenamientoFirebaseArchivos>();
             return servicios;
@@ -55,6 +56,14 @@ public static class RegistroArchivos
 
     private static StorageClient CrearClienteStorage(OpcionesAlmacenamientoFirebase opciones)
     {
+        if (opciones.UsaEmulador)
+        {
+            return new StorageClientBuilder
+            {
+                EmulatorDetection = EmulatorDetection.EmulatorOnly
+            }.Build();
+        }
+
         var credencial = string.IsNullOrWhiteSpace(opciones.RutaCredenciales)
             ? GoogleCredential.GetApplicationDefault()
             : CredentialFactory

@@ -52,6 +52,7 @@ internal static class EntornoTrabajos
         servicios.AddLogging();
         servicios.AgregarPersistencia(cadenaConexion);
         servicios.AgregarAplicacion();
+        servicios.AgregarMetricas();
         servicios.AddSingleton<IContextoOperacionActual, ContextoTrabajos>();
         servicios.AddSingleton<OutboxBecaTrabajosFalso>();
         servicios.AddSingleton<IOutboxBeca>(

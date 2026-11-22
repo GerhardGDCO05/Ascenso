@@ -4,6 +4,7 @@ using Ascenso.Becas.Application.Excepciones;
 using Ascenso.Becas.Application.Otorgamiento.Consultas.ObtenerBeca;
 using Ascenso.Becas.Application.Otorgamiento.Dtos;
 using Ascenso.Becas.Application.Otorgamiento.Puertos;
+using Ascenso.Becas.Domain.Ports;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 
@@ -21,15 +22,18 @@ public sealed class BecasController : ControllerBase
     private readonly IQueryDispatcher _consultas;
     private readonly IConsultasBeca _consultasBeca;
     private readonly IAuthorizationService _autorizacion;
+    private readonly IAlmacenamientoArchivos _almacenamiento;
 
     public BecasController(
         IQueryDispatcher consultas,
         IConsultasBeca consultasBeca,
-        IAuthorizationService autorizacion)
+        IAuthorizationService autorizacion,
+        IAlmacenamientoArchivos almacenamiento)
     {
         _consultas = consultas ?? throw new ArgumentNullException(nameof(consultas));
         _consultasBeca = consultasBeca ?? throw new ArgumentNullException(nameof(consultasBeca));
         _autorizacion = autorizacion ?? throw new ArgumentNullException(nameof(autorizacion));
+        _almacenamiento = almacenamiento ?? throw new ArgumentNullException(nameof(almacenamiento));
     }
 
     /// <summary>
@@ -58,8 +62,41 @@ public sealed class BecasController : ControllerBase
             new ObtenerBecaQuery(becaId),
             cancellationToken);
 
-        return Ok(resultado);
+        var oferta = resultado.Oferta is null
+            ? null
+            : resultado.Oferta with
+            {
+                UrlCartaPdf = await _almacenamiento.ResolverUrlLecturaAsync(
+                    resultado.Oferta.UrlCartaPdf,
+                    cancellationToken)
+            };
+        var compromiso = resultado.Compromiso is null
+            ? null
+            : resultado.Compromiso with
+            {
+                UrlPlantillaGenerada = await ResolverUrlOpcionalAsync(
+                    resultado.Compromiso.UrlPlantillaGenerada,
+                    cancellationToken),
+                UrlPdfFirmado = await ResolverUrlOpcionalAsync(
+                    resultado.Compromiso.UrlPdfFirmado,
+                    cancellationToken)
+            };
+
+        return Ok(resultado with
+        {
+            Oferta = oferta,
+            Compromiso = compromiso
+        });
     }
+
+    private async Task<string?> ResolverUrlOpcionalAsync(
+        string? referencia,
+        CancellationToken cancellationToken)
+        => string.IsNullOrWhiteSpace(referencia)
+            ? referencia
+            : await _almacenamiento.ResolverUrlLecturaAsync(
+                referencia,
+                cancellationToken);
 
     private async Task<RecursoBecaDto> ObtenerRecursoAsync(
         Guid becaId,

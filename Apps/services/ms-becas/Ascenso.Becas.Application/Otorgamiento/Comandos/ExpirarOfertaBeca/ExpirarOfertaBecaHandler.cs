@@ -17,6 +17,7 @@ public sealed class ExpirarOfertaBecaHandler
 {
     private readonly IContextoOperacionActual _contextoActual;
     private readonly IClock _reloj;
+    private readonly IMetricasOtorgamiento _metricas;
     private readonly IBecaRepository _repositorio;
     private readonly IUnitOfWork _unidadDeTrabajo;
     private readonly IOutboxBeca _outbox;
@@ -24,12 +25,14 @@ public sealed class ExpirarOfertaBecaHandler
     public ExpirarOfertaBecaHandler(
         IContextoOperacionActual contextoActual,
         IClock reloj,
+        IMetricasOtorgamiento metricas,
         IBecaRepository repositorio,
         IUnitOfWork unidadDeTrabajo,
         IOutboxBeca outbox)
     {
         _contextoActual = contextoActual ?? throw new ArgumentNullException(nameof(contextoActual));
         _reloj = reloj ?? throw new ArgumentNullException(nameof(reloj));
+        _metricas = metricas ?? throw new ArgumentNullException(nameof(metricas));
         _repositorio = repositorio ?? throw new ArgumentNullException(nameof(repositorio));
         _unidadDeTrabajo = unidadDeTrabajo ?? throw new ArgumentNullException(nameof(unidadDeTrabajo));
         _outbox = outbox ?? throw new ArgumentNullException(nameof(outbox));
@@ -82,6 +85,11 @@ public sealed class ExpirarOfertaBecaHandler
                 expirada = true;
             },
             cancellationToken);
+
+        if (expirada)
+        {
+            _metricas.OfertaExpirada();
+        }
 
         return expirada;
     }

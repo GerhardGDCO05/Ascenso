@@ -17,4 +17,10 @@ public interface IAlmacenObjetosNube
         string bucket,
         string objeto,
         CancellationToken cancellationToken);
+
+    Task<string> CrearUrlFirmadaLecturaAsync(
+        string bucket,
+        string objeto,
+        TimeSpan vigencia,
+        CancellationToken cancellationToken);
 }

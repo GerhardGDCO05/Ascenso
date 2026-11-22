@@ -19,6 +19,7 @@ public sealed class AceptarOfertaBecaHandler
 {
     private readonly IContextoOperacionActual _contextoActual;
     private readonly IClock _reloj;
+    private readonly IMetricasOtorgamiento _metricas;
     private readonly IBecaRepository _repositorio;
     private readonly IUnitOfWork _unidadDeTrabajo;
     private readonly IOutboxBeca _outbox;
@@ -26,12 +27,14 @@ public sealed class AceptarOfertaBecaHandler
     public AceptarOfertaBecaHandler(
         IContextoOperacionActual contextoActual,
         IClock reloj,
+        IMetricasOtorgamiento metricas,
         IBecaRepository repositorio,
         IUnitOfWork unidadDeTrabajo,
         IOutboxBeca outbox)
     {
         _contextoActual = contextoActual ?? throw new ArgumentNullException(nameof(contextoActual));
         _reloj = reloj ?? throw new ArgumentNullException(nameof(reloj));
+        _metricas = metricas ?? throw new ArgumentNullException(nameof(metricas));
         _repositorio = repositorio ?? throw new ArgumentNullException(nameof(repositorio));
         _unidadDeTrabajo = unidadDeTrabajo ?? throw new ArgumentNullException(nameof(unidadDeTrabajo));
         _outbox = outbox ?? throw new ArgumentNullException(nameof(outbox));
@@ -86,6 +89,11 @@ public sealed class AceptarOfertaBecaHandler
             },
             NivelAislamientoTransaccion.Serializable,
             cancellationToken);
+
+        if (resultado is not null)
+        {
+            _metricas.OfertaAceptada();
+        }
 
         return resultado
             ?? throw new InvalidOperationException("La aceptación no produjo un resultado.");

@@ -106,6 +106,15 @@ public sealed class AlmacenamientoLocalArchivos : IAlmacenamientoArchivos
         return Task.CompletedTask;
     }
 
+    public Task<string> ResolverUrlLecturaAsync(
+        string referencia,
+        CancellationToken cancellationToken = default)
+    {
+        cancellationToken.ThrowIfCancellationRequested();
+        _ = ResolverUrl(referencia);
+        return Task.FromResult(referencia);
+    }
+
     private string CrearUrl(string ruta)
     {
         if (_urlBase is not null)

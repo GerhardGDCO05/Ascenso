@@ -14,6 +14,10 @@ public static class RegistroMetricas
         ArgumentNullException.ThrowIfNull(servicios);
 
         servicios.AddSingleton<IMetricaConfiguracionFaltante, MetricaConfiguracionFaltante>();
+        servicios.AddSingleton<MetricasOtorgamiento>();
+        servicios.AddSingleton<IMetricasOtorgamiento>(
+            proveedor => proveedor.GetRequiredService<MetricasOtorgamiento>());
+        servicios.AddSingleton<IContadorPendientesOtorgamiento, ContadorPendientesOtorgamiento>();
 
         return servicios;
     }

@@ -26,16 +26,19 @@ public sealed class AlmacenamientoLocalArchivosTests : IDisposable
         }
     }
 
-    [Fact]
-    public async Task Debe_SubirElArchivo_CalcularHashYTamanioYDevolverUrlLocal()
+    [Theory]
+    [InlineData("becas/beca-1/ofertas/oferta-1/carta-otorgamiento.pdf")]
+    [InlineData("becas/beca-1/compromisos/compromiso-1/intento-1.pdf")]
+    public async Task Debe_SubirElArchivo_CalcularHashYTamanioYDevolverUrlLocal(
+        string rutaLogica)
     {
         var almacenamiento = CrearAlmacenamiento();
-        var contenido = Encoding.UTF8.GetBytes("%PDF-1.7 contenido de la carta");
+        var contenido = Encoding.UTF8.GetBytes("%PDF-1.7 contenido del documento");
 
         var resultado = await almacenamiento.SubirAsync(
             new MemoryStream(contenido),
             "application/pdf",
-            "becas/beca-1/ofertas/oferta-1/carta-otorgamiento.pdf");
+            rutaLogica);
 
         var hashEsperado = Convert.ToHexString(SHA256.HashData(contenido))
             .ToLowerInvariant();
@@ -45,13 +48,7 @@ public sealed class AlmacenamientoLocalArchivosTests : IDisposable
 
         var ruta = new Uri(resultado.Url).LocalPath;
         ruta.Should().Be(
-            Path.Combine(
-                _raiz,
-                "becas",
-                "beca-1",
-                "ofertas",
-                "oferta-1",
-                "carta-otorgamiento.pdf"));
+            Path.Combine(_raiz, rutaLogica.Replace('/', Path.DirectorySeparatorChar)));
         (await File.ReadAllBytesAsync(ruta)).Should().Equal(contenido);
     }
 

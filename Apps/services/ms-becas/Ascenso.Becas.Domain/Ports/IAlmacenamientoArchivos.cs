@@ -12,5 +12,9 @@ public interface IAlmacenamientoArchivos
         string rutaLogica,
         CancellationToken cancellationToken = default);
 
+    Task<string> ResolverUrlLecturaAsync(
+        string referencia,
+        CancellationToken cancellationToken = default);
+
     Task EliminarAsync(string url, CancellationToken cancellationToken = default);
 }

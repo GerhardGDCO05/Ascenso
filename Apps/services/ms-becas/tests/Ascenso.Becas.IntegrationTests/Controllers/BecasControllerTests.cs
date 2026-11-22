@@ -5,6 +5,7 @@ using Ascenso.Becas.Application.Despacho;
 using Ascenso.Becas.Application.Otorgamiento.Consultas.ObtenerBeca;
 using Ascenso.Becas.Application.Otorgamiento.Dtos;
 using Ascenso.Becas.Application.Otorgamiento.Puertos;
+using Ascenso.Becas.Domain.Ports;
 using FluentAssertions;
 using Microsoft.AspNetCore.Mvc.Testing;
 using Microsoft.AspNetCore.TestHost;
@@ -65,6 +66,10 @@ public sealed class BecasControllerTests : IClassFixture<OfertasBecaApiFactory>
         var programaId = Guid.NewGuid();
         var postulanteId = Guid.NewGuid();
         var beca = CrearBeca(becaId, programaId, postulanteId);
+        var almacenamiento = CrearAlmacenamiento(
+            ("https://storage.example/becas/carta.pdf", "https://firmada.example/carta.pdf"),
+            ("https://storage.example/becas/plantilla-compromiso.pdf", "https://firmada.example/plantilla.pdf"),
+            ("https://storage.example/becas/compromiso-firmado.pdf", "https://firmada.example/compromiso.pdf"));
 
         var consultas = Substitute.For<IQueryDispatcher>();
         consultas
@@ -80,7 +85,8 @@ public sealed class BecasControllerTests : IClassFixture<OfertasBecaApiFactory>
 
         using var fabrica = CrearFabrica(
             consultas: consultas,
-            consultasBeca: consultasBeca);
+            consultasBeca: consultasBeca,
+            almacenamiento: almacenamiento);
         using var cliente = fabrica.CreateClient();
         AutenticarComoPostulante(cliente, postulanteId);
 
@@ -88,10 +94,21 @@ public sealed class BecasControllerTests : IClassFixture<OfertasBecaApiFactory>
 
         respuesta.StatusCode.Should().Be(HttpStatusCode.OK);
         var cuerpo = await respuesta.Content.ReadFromJsonAsync<BecaDto>();
-        cuerpo.Should().BeEquivalentTo(beca);
+        cuerpo.Should().BeEquivalentTo(beca with
+        {
+            Compromiso = beca.Compromiso! with
+            {
+                UrlPlantillaGenerada = "https://firmada.example/plantilla.pdf",
+                UrlPdfFirmado = "https://firmada.example/compromiso.pdf"
+            },
+            Oferta = beca.Oferta! with
+            {
+                UrlCartaPdf = "https://firmada.example/carta.pdf"
+            }
+        });
         cuerpo!.Compromiso.Should().NotBeNull();
-        cuerpo.Compromiso!.UrlPlantillaGenerada.Should().Be(
-            "https://storage.example/becas/plantilla-compromiso.pdf");
+        cuerpo.Compromiso!.UrlPlantillaGenerada.Should().Be("https://firmada.example/plantilla.pdf");
+        cuerpo.Compromiso.UrlPdfFirmado.Should().Be("https://firmada.example/compromiso.pdf");
 
         await consultas.Received(1).ConsultarAsync<ObtenerBecaQuery, BecaDto>(
             Arg.Is<ObtenerBecaQuery>(consulta => consulta.BecaId == becaId),
@@ -135,6 +152,7 @@ public sealed class BecasControllerTests : IClassFixture<OfertasBecaApiFactory>
         var becaId = Guid.NewGuid();
         var programaId = Guid.NewGuid();
         var consultas = Substitute.For<IQueryDispatcher>();
+        var almacenamiento = Substitute.For<IAlmacenamientoArchivos>();
 
         var consultasBeca = CrearConsultasBeca(
             becaId,
@@ -143,7 +161,8 @@ public sealed class BecasControllerTests : IClassFixture<OfertasBecaApiFactory>
 
         using var fabrica = CrearFabrica(
             consultas: consultas,
-            consultasBeca: consultasBeca);
+            consultasBeca: consultasBeca,
+            almacenamiento: almacenamiento);
         using var cliente = fabrica.CreateClient();
         AutenticarComoPostulante(cliente, Guid.NewGuid());
 
@@ -153,6 +172,9 @@ public sealed class BecasControllerTests : IClassFixture<OfertasBecaApiFactory>
 
         await consultas.DidNotReceive().ConsultarAsync<ObtenerBecaQuery, BecaDto>(
             Arg.Any<ObtenerBecaQuery>(),
+            Arg.Any<CancellationToken>());
+        await almacenamiento.DidNotReceive().ResolverUrlLecturaAsync(
+            Arg.Any<string>(),
             Arg.Any<CancellationToken>());
     }
 
@@ -216,7 +238,8 @@ public sealed class BecasControllerTests : IClassFixture<OfertasBecaApiFactory>
 
     private WebApplicationFactory<Program> CrearFabrica(
         IQueryDispatcher? consultas = null,
-        IConsultasBeca? consultasBeca = null)
+        IConsultasBeca? consultasBeca = null,
+        IAlmacenamientoArchivos? almacenamiento = null)
         => _fabricaBase.WithWebHostBuilder(constructor =>
         {
             constructor.ConfigureTestServices(servicios =>
@@ -228,8 +251,37 @@ public sealed class BecasControllerTests : IClassFixture<OfertasBecaApiFactory>
                 servicios.RemoveAll<IConsultasBeca>();
                 servicios.AddSingleton(
                     consultasBeca ?? Substitute.For<IConsultasBeca>());
+
+                servicios.RemoveAll<IAlmacenamientoArchivos>();
+                servicios.AddSingleton(
+                    almacenamiento ?? CrearAlmacenamiento());
             });
         });
+
+    private static IAlmacenamientoArchivos CrearAlmacenamiento(
+        params (string Referencia, string UrlLectura)[] urls)
+    {
+        var almacenamiento = Substitute.For<IAlmacenamientoArchivos>();
+        var urlsPorReferencia = urls.ToDictionary(
+            par => par.Referencia,
+            par => par.UrlLectura,
+            StringComparer.Ordinal);
+        almacenamiento
+            .ResolverUrlLecturaAsync(
+                Arg.Any<string>(),
+                Arg.Any<CancellationToken>())
+            .Returns(call =>
+            {
+                var referenciaSolicitada = call.Arg<string>();
+                return Task.FromResult(urlsPorReferencia.TryGetValue(
+                    referenciaSolicitada,
+                    out var urlLectura)
+                        ? urlLectura
+                        : referenciaSolicitada);
+            });
+
+        return almacenamiento;
+    }
 
     private static IConsultasBeca CrearConsultasBeca(
         Guid becaId,
@@ -281,14 +333,30 @@ public sealed class BecasControllerTests : IClassFixture<OfertasBecaApiFactory>
             new DateOnly(2026, 11, 15),
             null,
             null,
-            null,
+            new OfertaBecaDto(
+                Guid.NewGuid(),
+                becaId,
+                Guid.NewGuid(),
+                programaId,
+                "Beca de excelencia",
+                Guid.NewGuid(),
+                "PENDIENTE_RESPUESTA",
+                750m,
+                7500m,
+                10,
+                new CondicionesPermanenciaDto(14m, 4, 1, 20, "REVOCACION"),
+                "https://storage.example/becas/carta.pdf",
+                DateTimeOffset.UtcNow,
+                DateTimeOffset.UtcNow.AddDays(15),
+                null,
+                null),
             new CompromisoBecarioDto(
                 Guid.NewGuid(),
                 becaId,
                 "PENDIENTE_CARGA",
                 0,
                 "https://storage.example/becas/plantilla-compromiso.pdf",
-                null,
+                "https://storage.example/becas/compromiso-firmado.pdf",
                 null,
                 null,
                 null,

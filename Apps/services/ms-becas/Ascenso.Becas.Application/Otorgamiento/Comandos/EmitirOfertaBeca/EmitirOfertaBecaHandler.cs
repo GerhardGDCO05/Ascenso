@@ -30,6 +30,7 @@ public sealed class EmitirOfertaBecaHandler
     private readonly IPostulacionesClient _postulaciones;
     private readonly IProyeccionesOtorgamiento _proyecciones;
     private readonly IMetricaConfiguracionFaltante _metricaConfiguracion;
+    private readonly IMetricasOtorgamiento _metricas;
     private readonly IProgramasClient _programas;
     private readonly ICartaOfertaPdfGenerator _generadorCarta;
     private readonly IPlantillaCompromisoPdfGenerator _generadorPlantilla;
@@ -45,6 +46,7 @@ public sealed class EmitirOfertaBecaHandler
         IPostulacionesClient postulaciones,
         IProyeccionesOtorgamiento proyecciones,
         IMetricaConfiguracionFaltante metricaConfiguracion,
+        IMetricasOtorgamiento metricas,
         IProgramasClient programas,
         ICartaOfertaPdfGenerator generadorCarta,
         IPlantillaCompromisoPdfGenerator generadorPlantilla,
@@ -60,6 +62,7 @@ public sealed class EmitirOfertaBecaHandler
         _proyecciones = proyecciones ?? throw new ArgumentNullException(nameof(proyecciones));
         _metricaConfiguracion = metricaConfiguracion
             ?? throw new ArgumentNullException(nameof(metricaConfiguracion));
+        _metricas = metricas ?? throw new ArgumentNullException(nameof(metricas));
         _programas = programas ?? throw new ArgumentNullException(nameof(programas));
         _generadorCarta = generadorCarta ?? throw new ArgumentNullException(nameof(generadorCarta));
         _generadorPlantilla = generadorPlantilla
@@ -203,6 +206,8 @@ public sealed class EmitirOfertaBecaHandler
                     await _unidadDeTrabajo.GuardarCambiosAsync(token);
                 },
                 cancellationToken);
+
+            _metricas.OfertaEmitida();
 
             return new OfertaEmitidaDto(
                 ofertaId,

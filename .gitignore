@@ -51,6 +51,8 @@ appsettings.Development.json
 appsettings.Local.json
 secrets.json
 firebase-service-account*.json
+secrets/
+.firebase/
 
 # ==========================================
 # 5. Sistema Operativo
