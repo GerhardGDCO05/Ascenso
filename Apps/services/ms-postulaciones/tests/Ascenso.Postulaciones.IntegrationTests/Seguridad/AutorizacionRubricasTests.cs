@@ -229,12 +229,14 @@ public sealed class AutorizacionRubricasTests : IClassFixture<WebApplicationFact
             {
                 servicios.RemoveAll<IPostulanteRepository>();
                 servicios.RemoveAll<IRubricaRepository>();
+                servicios.RemoveAll<IComiteEvaluadorRepository>();
                 servicios.RemoveAll<IPeriodoAcademicoClient>();
                 servicios.RemoveAll<ICatalogoAcademicoClient>();
                 servicios.RemoveAll<IUnitOfWork>();
 
                 servicios.AddSingleton(repo ?? Substitute.For<IPostulanteRepository>());
                 servicios.AddSingleton(repoRubricas ?? Substitute.For<IRubricaRepository>());
+                servicios.AddSingleton(Substitute.For<IComiteEvaluadorRepository>());
                 servicios.AddSingleton(Substitute.For<IPeriodoAcademicoClient>());
                 servicios.AddSingleton(Substitute.For<ICatalogoAcademicoClient>());
                 servicios.AddSingleton(Substitute.For<IUnitOfWork>());

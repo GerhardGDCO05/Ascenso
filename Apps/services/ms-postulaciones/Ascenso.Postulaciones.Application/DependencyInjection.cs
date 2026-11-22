@@ -1,3 +1,8 @@
+using Ascenso.Postulaciones.Application.Comites.Comandos.AgregarMiembroComite;
+using Ascenso.Postulaciones.Application.Comites.Comandos.CrearComiteEvaluador;
+using Ascenso.Postulaciones.Application.Comites.Comandos.DesvincularMiembroComite;
+using Ascenso.Postulaciones.Application.Comites.Consultas.ObtenerComiteEvaluador;
+using Ascenso.Postulaciones.Application.Comites.Consultas.ObtenerComitePorPrograma;
 using Ascenso.Postulaciones.Application.Postulantes.Comandos.ActualizarPerfilSocioeconomico;
 using Ascenso.Postulaciones.Application.Postulantes.Comandos.RegistrarPostulante;
 using Ascenso.Postulaciones.Application.Postulantes.Consultas.ObtenerMiPerfil;
@@ -31,6 +36,11 @@ public static class DependencyInjection
         services.AddScoped<PublicarRubricaCommandHandler>();
         services.AddScoped<BloquearRubricaCommandHandler>();
         services.AddScoped<ObtenerRubricaQueryHandler>();
+        services.AddScoped<CrearComiteEvaluadorCommandHandler>();
+        services.AddScoped<AgregarMiembroComiteCommandHandler>();
+        services.AddScoped<DesvincularMiembroComiteCommandHandler>();
+        services.AddScoped<ObtenerComiteEvaluadorQueryHandler>();
+        services.AddScoped<ObtenerComitePorProgramaQueryHandler>();
 
         return services;
     }

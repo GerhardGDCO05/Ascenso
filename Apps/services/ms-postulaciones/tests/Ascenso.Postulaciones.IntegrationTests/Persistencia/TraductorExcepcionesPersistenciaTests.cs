@@ -53,6 +53,30 @@ public sealed class TraductorExcepcionesPersistenciaTests
     }
 
     [Fact]
+    public void Debe_TraducirAComiteDuplicado_Cuando_FallaIndiceDeComitePorProgramaYConvocatoria()
+    {
+        var excepcion = CrearDbUpdateUnicidad(TraductorExcepcionesPersistencia.IndiceComiteProgramaConvocatoriaUnico);
+
+        var traducida = TraductorExcepcionesPersistencia.TraducirSiAplica(excepcion);
+
+        var duplicado = traducida.Should().BeOfType<ComiteDuplicadoException>().Subject;
+        duplicado.Codigo.Should().Be(ComiteDuplicadoException.CodigoError);
+        duplicado.EstadoHttp.Should().Be(409);
+    }
+
+    [Fact]
+    public void Debe_TraducirAMiembroComiteDuplicado_Cuando_FallaIndiceDeMiembroActivo()
+    {
+        var excepcion = CrearDbUpdateUnicidad(TraductorExcepcionesPersistencia.IndiceMiembroComiteUsuarioActivoUnico);
+
+        var traducida = TraductorExcepcionesPersistencia.TraducirSiAplica(excepcion);
+
+        var duplicado = traducida.Should().BeOfType<MiembroComiteDuplicadoException>().Subject;
+        duplicado.Codigo.Should().Be(MiembroComiteDuplicadoException.CodigoError);
+        duplicado.EstadoHttp.Should().Be(409);
+    }
+
+    [Fact]
     public void Debe_TraducirAConflictoConCodigoRestriccionUnicidad_Cuando_FallaIndiceDeOrdenDeCriterio()
     {
         var excepcion = CrearDbUpdateUnicidad(TraductorExcepcionesPersistencia.IndiceCriterioRubricaOrdenUnico);

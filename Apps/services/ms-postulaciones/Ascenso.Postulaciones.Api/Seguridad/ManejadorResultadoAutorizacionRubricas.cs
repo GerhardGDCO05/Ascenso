@@ -23,11 +23,14 @@ public sealed class ManejadorResultadoAutorizacionRubricas : IAuthorizationMiddl
 
         if (authorizeResult.Forbidden && EndpointTienePoliticaDeRubricas(context))
         {
+            var esPoliticaComites = EndpointTienePoliticaDeComites(context);
             var problema = new ProblemDetails
             {
                 Status = StatusCodes.Status403Forbidden,
                 Title = "Acceso denegado",
-                Detail = "El usuario autenticado no tiene permisos para ejecutar esta operación sobre las rúbricas de evaluación.",
+                Detail = esPoliticaComites
+                    ? "El usuario autenticado no tiene permisos para ejecutar esta operación sobre los comités evaluadores."
+                    : "El usuario autenticado no tiene permisos para ejecutar esta operación sobre las rúbricas de evaluación.",
                 Instance = context.Request.Path
             };
             problema.Extensions["codigo"] = CodigoPermisoDenegado;
@@ -50,6 +53,19 @@ public sealed class ManejadorResultadoAutorizacionRubricas : IAuthorizationMiddl
 
         return metadatosAutorizacion.Any(dato =>
             string.Equals(dato.Policy, PoliticasAutorizacionRubricas.CoordinadorPrograma, StringComparison.Ordinal)
-            || string.Equals(dato.Policy, PoliticasAutorizacionRubricas.LecturaRubrica, StringComparison.Ordinal));
+            || string.Equals(dato.Policy, PoliticasAutorizacionRubricas.LecturaRubrica, StringComparison.Ordinal)
+            || string.Equals(dato.Policy, PoliticasAutorizacionComites.GestionComitesEvaluadores, StringComparison.Ordinal));
+    }
+
+    private static bool EndpointTienePoliticaDeComites(HttpContext context)
+    {
+        var metadatosAutorizacion = context.GetEndpoint()?.Metadata.GetOrderedMetadata<IAuthorizeData>();
+        if (metadatosAutorizacion is null || metadatosAutorizacion.Count == 0)
+        {
+            return false;
+        }
+
+        return metadatosAutorizacion.Any(dato =>
+            string.Equals(dato.Policy, PoliticasAutorizacionComites.GestionComitesEvaluadores, StringComparison.Ordinal));
     }
 }

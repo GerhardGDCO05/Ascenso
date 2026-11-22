@@ -1,3 +1,8 @@
+using Ascenso.Postulaciones.Application.Comites.Comandos.AgregarMiembroComite;
+using Ascenso.Postulaciones.Application.Comites.Comandos.CrearComiteEvaluador;
+using Ascenso.Postulaciones.Application.Comites.Comandos.DesvincularMiembroComite;
+using Ascenso.Postulaciones.Application.Comites.Consultas.ObtenerComiteEvaluador;
+using Ascenso.Postulaciones.Application.Comites.Consultas.ObtenerComitePorPrograma;
 using Ascenso.Postulaciones.Application.Interfaces;
 using Ascenso.Postulaciones.Application.Postulantes.Comandos.ActualizarPerfilSocioeconomico;
 using Ascenso.Postulaciones.Application.Postulantes.Comandos.RegistrarPostulante;
@@ -27,6 +32,7 @@ public sealed class InyeccionDependenciasTests
         servicios.AddSingleton(Substitute.For<IUsuarioActual>());
         servicios.AddSingleton(Substitute.For<IPostulanteRepository>());
         servicios.AddSingleton(Substitute.For<IRubricaRepository>());
+        servicios.AddSingleton(Substitute.For<IComiteEvaluadorRepository>());
         servicios.AddSingleton(Substitute.For<IPeriodoAcademicoClient>());
         servicios.AddSingleton(Substitute.For<ICatalogoAcademicoClient>());
         servicios.AddSingleton(Substitute.For<IUnitOfWork>());
@@ -56,6 +62,16 @@ public sealed class InyeccionDependenciasTests
         alcance.ServiceProvider.GetRequiredService<BloquearRubricaCommandHandler>()
             .Should().NotBeNull();
         alcance.ServiceProvider.GetRequiredService<ObtenerRubricaQueryHandler>()
+            .Should().NotBeNull();
+        alcance.ServiceProvider.GetRequiredService<CrearComiteEvaluadorCommandHandler>()
+            .Should().NotBeNull();
+        alcance.ServiceProvider.GetRequiredService<AgregarMiembroComiteCommandHandler>()
+            .Should().NotBeNull();
+        alcance.ServiceProvider.GetRequiredService<DesvincularMiembroComiteCommandHandler>()
+            .Should().NotBeNull();
+        alcance.ServiceProvider.GetRequiredService<ObtenerComiteEvaluadorQueryHandler>()
+            .Should().NotBeNull();
+        alcance.ServiceProvider.GetRequiredService<ObtenerComitePorProgramaQueryHandler>()
             .Should().NotBeNull();
 
         var validadoresRegistro = alcance.ServiceProvider
@@ -93,5 +109,23 @@ public sealed class InyeccionDependenciasTests
 
         validadoresEditarCriterio.Should().ContainSingle(
             validador => validador is EditarCriterioCommandValidator);
+
+        var validadoresCrearComite = alcance.ServiceProvider
+            .GetServices<IValidator<CrearComiteEvaluadorCommand>>();
+
+        validadoresCrearComite.Should().ContainSingle(
+            validador => validador is CrearComiteEvaluadorCommandValidator);
+
+        var validadoresAgregarMiembro = alcance.ServiceProvider
+            .GetServices<IValidator<AgregarMiembroComiteCommand>>();
+
+        validadoresAgregarMiembro.Should().ContainSingle(
+            validador => validador is AgregarMiembroComiteCommandValidator);
+
+        var validadoresDesvincularMiembro = alcance.ServiceProvider
+            .GetServices<IValidator<DesvincularMiembroComiteCommand>>();
+
+        validadoresDesvincularMiembro.Should().ContainSingle(
+            validador => validador is DesvincularMiembroComiteCommandValidator);
     }
 }
