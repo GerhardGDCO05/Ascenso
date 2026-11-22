@@ -257,7 +257,7 @@ jobs:
             --logger "trx;LogFileName=test-results.trx" \
             --results-directory "$RUNNER_TEMP/test-results"
 
-      - name: Ejecutar pruebas MS-BEC con cobertura
+      - name: Ejecutar pruebas unitarias MS-BEC con cobertura
         if: steps.gate.outputs.changed == 'true' && matrix.service == 'ms-becas'
         run: |
           dotnet test "${{ matrix.solution }}" \
@@ -269,10 +269,6 @@ jobs:
             --verbosity normal \
             --logger "trx;LogFileName=test-results.trx" \
             --results-directory "$RUNNER_TEMP/test-results"
-
-      - name: Verificar cobertura Domain y Application
-        if: steps.gate.outputs.changed == 'true' && matrix.service == 'ms-becas'
-        run: python Apps/services/ms-becas/scripts/verify_coverage.py "$RUNNER_TEMP/test-results"
 
       - name: Construir imagen Docker de MS-BEC
         if: steps.gate.outputs.changed == 'true' && matrix.service == 'ms-becas'
@@ -291,11 +287,11 @@ jobs:
         if: steps.gate.outputs.changed != 'true'
         run: echo "Sin cambios en ${{ matrix.service }}; no se ejecutó compilación ni pruebas."
 
-  # Job independiente para Testcontainers (PostgreSQL, RabbitMQ, WireMock...).
-  # Corre en paralelo al job build-and-test y no lo bloquea.
+  # Job separado para Testcontainers (PostgreSQL, RabbitMQ, WireMock...).
+  # En MS-BEC combina su cobertura con los resultados unitarios publicados arriba.
   integration-tests:
     name: Integration Tests - ${{ matrix.name }}
-    needs: changes
+    needs: [changes, build-and-test]
     if: needs.changes.outputs.integration_services != '[]'
     runs-on: ubuntu-latest
     timeout-minutes: 45
@@ -357,6 +353,7 @@ jobs:
         shell: bash
         env:
           PROJECTS: ${{ matrix.integrationProjectsJson }}
+          SERVICE: ${{ matrix.service }}
           STORAGE_EMULATOR_HOST: ${{ matrix.service == 'ms-becas' && '127.0.0.1:9199' || '' }}
           # Los WebApplicationFactory de las pruebas no deben levantar
           # MassTransit contra el RabbitMQ por defecto (localhost:5672).
@@ -368,9 +365,14 @@ jobs:
           mkdir -p "$RUNNER_TEMP/integration-results"
           while IFS= read -r project; do
             echo "Ejecutando pruebas de integración de $project"
+            coverage_args=()
+            if [ "$SERVICE" = 'ms-becas' ]; then
+              coverage_args+=(--collect:"XPlat Code Coverage;Format=cobertura")
+            fi
             dotnet test "$project" \
               --configuration "$CONFIGURATION" \
               --no-restore \
+              "${coverage_args[@]}" \
               --verbosity normal \
               --blame-hang \
               --blame-hang-timeout 5m \
@@ -378,6 +380,17 @@ jobs:
               --logger "trx;LogFileName=$(basename "$project" .csproj).trx" \
               --results-directory "$RUNNER_TEMP/integration-results"
           done < <(jq -r '.[]' <<< "$PROJECTS")
+
+      - name: Descargar cobertura unitaria de MS-BEC
+        if: steps.gate.outputs.changed == 'true' && matrix.service == 'ms-becas'
+        uses: actions/download-artifact@v4
+        with:
+          name: test-results-${{ matrix.name }}
+          path: ${{ runner.temp }}/integration-results/unit-tests
+
+      - name: Verificar cobertura Domain y Application
+        if: steps.gate.outputs.changed == 'true' && matrix.service == 'ms-becas'
+        run: python Apps/services/ms-becas/scripts/verify_coverage.py "$RUNNER_TEMP/integration-results"
 
       - name: Publicar resultados de pruebas de integración
         if: always() && steps.gate.outputs.changed == 'true'
