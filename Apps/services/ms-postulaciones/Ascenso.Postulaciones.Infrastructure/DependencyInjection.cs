@@ -36,6 +36,7 @@ public static class DependencyInjection
             proveedor.GetRequiredService<PostulacionesDbContext>());
 
         services.AddScoped<IPostulanteRepository, PostulanteRepository>();
+        services.AddScoped<IRubricaRepository, RubricaRepository>();
 
         if (configuration is not null)
         {

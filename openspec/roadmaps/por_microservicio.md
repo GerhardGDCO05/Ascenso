@@ -24,6 +24,7 @@
 - [ ] **RF-05**: Retiro voluntario de postulación
 - [ ] **RF-06**: Conformación de comités evaluadores
 - [ ] **RF-07**: Configuración de rúbricas de evaluación
+  - [x] HU 7.1: Gestión de criterios, pesos porcentuales y publicación de rúbricas (2026-11-21)
 - [ ] **RF-08**: Registro de puntuaciones y comentarios
 - [ ] **RF-09**: Consolidación y ranking de postulantes
 - [ ] **RF-10**: Resolución de empates y casos límite / Lista de espera

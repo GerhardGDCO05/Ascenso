@@ -2,6 +2,12 @@ using Ascenso.Postulaciones.Application.Interfaces;
 using Ascenso.Postulaciones.Application.Postulantes.Comandos.ActualizarPerfilSocioeconomico;
 using Ascenso.Postulaciones.Application.Postulantes.Comandos.RegistrarPostulante;
 using Ascenso.Postulaciones.Application.Postulantes.Consultas.ObtenerMiPerfil;
+using Ascenso.Postulaciones.Application.Rubricas.Comandos.AgregarCriterio;
+using Ascenso.Postulaciones.Application.Rubricas.Comandos.CrearRubrica;
+using Ascenso.Postulaciones.Application.Rubricas.Comandos.EditarCriterio;
+using Ascenso.Postulaciones.Application.Rubricas.Comandos.EliminarCriterio;
+using Ascenso.Postulaciones.Application.Rubricas.Comandos.PublicarRubrica;
+using Ascenso.Postulaciones.Application.Rubricas.Consultas.ObtenerRubrica;
 using Ascenso.Postulaciones.Domain.Interfaces;
 using FluentAssertions;
 using FluentValidation;
@@ -19,6 +25,7 @@ public sealed class InyeccionDependenciasTests
 
         servicios.AddSingleton(Substitute.For<IUsuarioActual>());
         servicios.AddSingleton(Substitute.For<IPostulanteRepository>());
+        servicios.AddSingleton(Substitute.For<IRubricaRepository>());
         servicios.AddSingleton(Substitute.For<IPeriodoAcademicoClient>());
         servicios.AddSingleton(Substitute.For<ICatalogoAcademicoClient>());
         servicios.AddSingleton(Substitute.For<IUnitOfWork>());
@@ -34,6 +41,18 @@ public sealed class InyeccionDependenciasTests
         alcance.ServiceProvider.GetRequiredService<ActualizarPerfilSocioeconomicoCommandHandler>()
             .Should().NotBeNull();
         alcance.ServiceProvider.GetRequiredService<ObtenerMiPerfilQueryHandler>()
+            .Should().NotBeNull();
+        alcance.ServiceProvider.GetRequiredService<CrearRubricaCommandHandler>()
+            .Should().NotBeNull();
+        alcance.ServiceProvider.GetRequiredService<AgregarCriterioCommandHandler>()
+            .Should().NotBeNull();
+        alcance.ServiceProvider.GetRequiredService<EditarCriterioCommandHandler>()
+            .Should().NotBeNull();
+        alcance.ServiceProvider.GetRequiredService<EliminarCriterioCommandHandler>()
+            .Should().NotBeNull();
+        alcance.ServiceProvider.GetRequiredService<PublicarRubricaCommandHandler>()
+            .Should().NotBeNull();
+        alcance.ServiceProvider.GetRequiredService<ObtenerRubricaQueryHandler>()
             .Should().NotBeNull();
 
         var validadoresRegistro = alcance.ServiceProvider
@@ -53,5 +72,23 @@ public sealed class InyeccionDependenciasTests
 
         validadoresFamiliares.Should().ContainSingle(
             validador => validador is DatosMiembroFamiliarCommandValidator);
+
+        var validadoresCrearRubrica = alcance.ServiceProvider
+            .GetServices<IValidator<CrearRubricaCommand>>();
+
+        validadoresCrearRubrica.Should().ContainSingle(
+            validador => validador is CrearRubricaCommandValidator);
+
+        var validadoresAgregarCriterio = alcance.ServiceProvider
+            .GetServices<IValidator<AgregarCriterioCommand>>();
+
+        validadoresAgregarCriterio.Should().ContainSingle(
+            validador => validador is AgregarCriterioCommandValidator);
+
+        var validadoresEditarCriterio = alcance.ServiceProvider
+            .GetServices<IValidator<EditarCriterioCommand>>();
+
+        validadoresEditarCriterio.Should().ContainSingle(
+            validador => validador is EditarCriterioCommandValidator);
     }
 }

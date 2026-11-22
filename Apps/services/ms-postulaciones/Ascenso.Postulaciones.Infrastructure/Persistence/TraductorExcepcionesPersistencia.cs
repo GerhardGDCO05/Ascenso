@@ -11,6 +11,8 @@ internal static class TraductorExcepcionesPersistencia
 {
     public const string IndiceDocumentoUnico = "ux_postulante_numero_documento_identidad";
     public const string IndiceUsuarioUnico = "ux_postulante_usuario_id";
+    public const string IndiceRubricaProgramaConvocatoriaUnico = "ux_rubricas_programa_convocatoria";
+    public const string IndiceCriterioRubricaOrdenUnico = "ux_criterios_evaluacion_rubrica_orden";
 
     public static Exception? TraducirSiAplica(DbUpdateException excepcion)
     {
@@ -30,6 +32,11 @@ internal static class TraductorExcepcionesPersistencia
         if (string.Equals(pg.ConstraintName, IndiceUsuarioUnico, StringComparison.OrdinalIgnoreCase))
         {
             return new PerfilYaRegistradoException();
+        }
+
+        if (string.Equals(pg.ConstraintName, IndiceRubricaProgramaConvocatoriaUnico, StringComparison.OrdinalIgnoreCase))
+        {
+            return new RubricaDuplicadaException();
         }
 
         return new ExcepcionConflictoConcurrencia(

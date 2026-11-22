@@ -41,6 +41,30 @@ public sealed class TraductorExcepcionesPersistenciaTests
     }
 
     [Fact]
+    public void Debe_TraducirARubricaDuplicada_Cuando_FallaIndiceDeRubricaPorProgramaYConvocatoria()
+    {
+        var excepcion = CrearDbUpdateUnicidad(TraductorExcepcionesPersistencia.IndiceRubricaProgramaConvocatoriaUnico);
+
+        var traducida = TraductorExcepcionesPersistencia.TraducirSiAplica(excepcion);
+
+        var duplicada = traducida.Should().BeOfType<RubricaDuplicadaException>().Subject;
+        duplicada.Codigo.Should().Be(RubricaDuplicadaException.CodigoError);
+        duplicada.EstadoHttp.Should().Be(409);
+    }
+
+    [Fact]
+    public void Debe_TraducirAConflictoConCodigoRestriccionUnicidad_Cuando_FallaIndiceDeOrdenDeCriterio()
+    {
+        var excepcion = CrearDbUpdateUnicidad(TraductorExcepcionesPersistencia.IndiceCriterioRubricaOrdenUnico);
+
+        var traducida = TraductorExcepcionesPersistencia.TraducirSiAplica(excepcion);
+
+        var conflicto = traducida.Should().BeOfType<ExcepcionConflictoConcurrencia>().Subject;
+        conflicto.Codigo.Should().Be(ExcepcionConflictoConcurrencia.CodigoRestriccionUnicidad);
+        conflicto.EstadoHttp.Should().Be(409);
+    }
+
+    [Fact]
     public void Debe_TraducirAConflictoConCodigoRestriccionUnicidad_Cuando_FallaOtraRestriccionUnica()
     {
         var excepcion = CrearDbUpdateUnicidad("ux_otra_restriccion");
