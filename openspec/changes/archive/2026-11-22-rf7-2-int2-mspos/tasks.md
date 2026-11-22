@@ -33,13 +33,13 @@
 
 > Archivos nuevos o modificados para `--include` (completar con los realmente tocados, incluida la migración con su marca de tiempo): `Ascenso.Postulaciones.Domain/Enums/MotivoBloqueoRubrica.cs`, `Ascenso.Postulaciones.Domain/Comun/UsuarioSistema.cs`, `Ascenso.Postulaciones.Domain/Excepciones/RubricaNoPublicadaException.cs`, `Ascenso.Postulaciones.Domain/Excepciones/RubricaBloqueadaException.cs`, `Ascenso.Postulaciones.Domain/Rubricas/Agregados/RubricaEvaluacion.cs`, `Ascenso.Postulaciones.Application/Rubricas/Comandos/BloquearRubrica/BloquearRubricaCommand.cs`, `Ascenso.Postulaciones.Application/Rubricas/Comandos/BloquearRubrica/BloquearRubricaCommandHandler.cs`, `Ascenso.Postulaciones.Application/Rubricas/DTOs/RubricaDto.cs`, `Ascenso.Postulaciones.Application/Rubricas/DTOs/RubricaMapeador.cs`, `Ascenso.Postulaciones.Application/DependencyInjection.cs`, `Ascenso.Postulaciones.Infrastructure/Persistence/Configuraciones/RubricaEvaluacionConfiguracion.cs`, `Ascenso.Postulaciones.Infrastructure/Persistence/Migrations/*_BloqueoRubrica.cs`, `*_BloqueoRubrica.Designer.cs`, `PostulacionesDbContextModelSnapshot.cs`, `Ascenso.Postulaciones.Api/Seguridad/PoliticasAutorizacionRubricas.cs`, `Ascenso.Postulaciones.Api/Program.cs` y los archivos de prueba nuevos o modificados bajo `tests/`.
 
-- [ ] 6.1 Ejecutar `dotnet restore Ascenso.Postulaciones.sln --locked-mode` (desde `Apps/services/ms-postulaciones`) y verificar salida sin errores.
-- [ ] 6.2 Ejecutar `dotnet build Ascenso.Postulaciones.sln --configuration Release` y verificar `0` advertencias y `0` errores.
-- [ ] 6.3 Ejecutar `dotnet test Ascenso.Postulaciones.sln` completo y verificar todas las pruebas en verde, incluidas `ArchitectureTests` sin cambios y las de Testcontainers.
-- [ ] 6.4 Ejecutar `dotnet format Ascenso.Postulaciones.sln --verify-no-changes --no-restore --include <rutas-de-archivos-nuevos-o-modificados>` (nunca sin `--include`) y verificar salida limpia.
-- [ ] 6.5 Ejecutar `openspec validate rf7-2-int2-mspos --strict` y `openspec validate --specs` y verificar que no hay hallazgos.
-- [ ] 6.6 Actualizar `openspec/roadmaps/por_integrante.md` y `openspec/roadmaps/por_microservicio.md` marcando únicamente `HU 7.2` anidada bajo `RF-07` (junto a `HU 7.1`) y manteniendo `RF-07` en `[ ]` hasta completar la HU 7.3; verificar leyendo ambos archivos.
-- [ ] 6.7 **Tarea final:** redactar la bitácora `openspec/changes/rf7-2-int2-mspos/log-2026-11-22-rf7-2-int2-mspos.md` con la evidencia real de comandos y resultados (restore, build, test, format, validación OpenSpec) y las decisiones abiertas de `design.md`.
+- [x] 6.1 Ejecutar `dotnet restore Ascenso.Postulaciones.sln --locked-mode` (desde `Apps/services/ms-postulaciones`) y verificar salida sin errores.
+- [x] 6.2 Ejecutar `dotnet build Ascenso.Postulaciones.sln --configuration Release` y verificar `0` advertencias y `0` errores.
+- [x] 6.3 Ejecutar `dotnet test Ascenso.Postulaciones.sln` completo y verificar todas las pruebas en verde, incluidas `ArchitectureTests` sin cambios y las de Testcontainers.
+- [x] 6.4 Ejecutar `dotnet format Ascenso.Postulaciones.sln --verify-no-changes --no-restore --include <rutas-de-archivos-nuevos-o-modificados>` (nunca sin `--include`) y verificar salida limpia.
+- [x] 6.5 Ejecutar `openspec validate rf7-2-int2-mspos --strict` y `openspec validate --specs` y verificar que no hay hallazgos.
+- [x] 6.6 Actualizar `openspec/roadmaps/por_integrante.md` y `openspec/roadmaps/por_microservicio.md` marcando únicamente `HU 7.2` anidada bajo `RF-07` (junto a `HU 7.1`) y manteniendo `RF-07` en `[ ]` hasta completar la HU 7.3; verificar leyendo ambos archivos.
+- [x] 6.7 **Tarea final:** redactar la bitácora `openspec/changes/rf7-2-int2-mspos/log-2026-11-22-rf7-2-int2-mspos.md` con la evidencia real de comandos y resultados (restore, build, test, format, validación OpenSpec) y las decisiones abiertas de `design.md`.
 
 ## Workflow follow-up
 
