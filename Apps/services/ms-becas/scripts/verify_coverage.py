@@ -4,6 +4,15 @@ import sys
 import xml.etree.ElementTree as ET
 
 
+def normalize_source_path(source: str, project: str) -> str:
+    source = source.replace("\\", "/")
+    project_directory = f"Ascenso.Becas.{project}"
+    parts = source.split("/")
+    if project_directory in parts:
+        return "/".join(parts[parts.index(project_directory) + 1 :])
+    return source
+
+
 def main() -> int:
     if len(sys.argv) != 2:
         print("Usage: verify_coverage.py <test-results-directory>", file=sys.stderr)
@@ -25,7 +34,9 @@ def main() -> int:
                 continue
 
             project = class_name.split(".", 2)[2].split(".", 1)[0]
-            source = class_element.get("filename", "").replace("\\", "/")
+            source = normalize_source_path(
+                class_element.get("filename", ""), project
+            )
             for line in class_element.findall("./lines/line"):
                 key = (project, source, line.get("number", ""))
                 covered = int(line.get("hits", "0")) > 0
