@@ -28,7 +28,19 @@ public static class RedaccionDatosSensibles
         "pasaporte",
         "correo",
         "correoElectronico",
-        "email"
+        "email",
+        "connectionString",
+        "cadenaConexion",
+        "password",
+        "contrasena",
+        "secret",
+        "secreto",
+        "clientSecret",
+        "token",
+        "accessToken",
+        "refreshToken",
+        "authorization",
+        "apiKey"
     ];
 
     private static readonly string[] _clavesNormalizadas = _clavesSensibles

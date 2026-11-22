@@ -40,6 +40,18 @@ public sealed class RedaccionLogsTests
     [InlineData("correo")]
     [InlineData("correoElectronico")]
     [InlineData("email")]
+    [InlineData("connectionString")]
+    [InlineData("cadenaConexion")]
+    [InlineData("password")]
+    [InlineData("contrasena")]
+    [InlineData("secret")]
+    [InlineData("secreto")]
+    [InlineData("clientSecret")]
+    [InlineData("token")]
+    [InlineData("accessToken")]
+    [InlineData("refreshToken")]
+    [InlineData("authorization")]
+    [InlineData("apiKey")]
     public void Debe_Redactar_LasClavesEquivalentes(string clave)
     {
         using var logger = CrearLogger(out var sink);

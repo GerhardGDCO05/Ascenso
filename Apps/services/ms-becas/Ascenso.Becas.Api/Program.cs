@@ -1,9 +1,9 @@
-using System.Globalization;
 using Ascenso.Becas.Api.Contexto;
 using Ascenso.Becas.Api.Correlacion;
 using Ascenso.Becas.Api.Errores;
 using Ascenso.Becas.Api.Idempotencia;
 using Ascenso.Becas.Api.Logging;
+using Ascenso.Becas.Api.Observabilidad;
 using Ascenso.Becas.Api.OpenApi;
 using Ascenso.Becas.Api.Salud;
 using Ascenso.Becas.Api.Seguridad;
@@ -20,12 +20,11 @@ using Serilog;
 
 var builder = WebApplication.CreateBuilder(args);
 
-builder.Host.UseSerilog((_, configuracion) => configuracion
-    .MinimumLevel.Information()
-    .Enrich.FromLogContext()
-    .Enrich.With<RedaccionLogEventEnricher>()
-    .Destructure.With<RedaccionDestructuringPolicy>()
-    .WriteTo.Console(formatProvider: CultureInfo.InvariantCulture));
+builder.Host.UseSerilog((contexto, servicios, configuracion) =>
+    ConfiguracionSerilog.Configurar(
+        configuracion,
+        contexto.HostingEnvironment,
+        servicios.GetRequiredService<IHttpContextAccessor>()));
 
 builder.Services.AddControllers()
     .AgregarProblemDetailsDeValidacion();
@@ -37,6 +36,7 @@ builder.Services.AddOpenApi(opciones =>
 });
 builder.Services.AddProblemDetails();
 builder.Services.AddExceptionHandler<ManejadorExcepcionesApi>();
+builder.Services.AgregarTelemetria(builder.Configuration, builder.Environment);
 builder.Services.AgregarChequeosDeSalud();
 builder.Services.AddHttpContextAccessor();
 builder.Services.AddScoped<ICorrelacionContexto, CorrelacionContexto>();

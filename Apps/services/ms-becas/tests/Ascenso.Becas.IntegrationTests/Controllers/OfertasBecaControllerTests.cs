@@ -223,6 +223,9 @@ public sealed class OfertasBecaControllerTests : IClassFixture<OfertasBecaApiFac
         var programaId = Guid.NewGuid();
         var postulanteId = Guid.NewGuid();
         var oferta = CrearOferta(ofertaId, programaId);
+        var almacenamiento = CrearAlmacenamiento(
+            oferta.UrlCartaPdf,
+            "https://firmada.example/carta.pdf");
 
         var consultas = Substitute.For<IQueryDispatcher>();
         consultas
@@ -245,7 +248,8 @@ public sealed class OfertasBecaControllerTests : IClassFixture<OfertasBecaApiFac
 
         using var fabrica = CrearFabrica(
             consultas: consultas,
-            consultasBeca: consultasBeca);
+            consultasBeca: consultasBeca,
+            almacenamiento: almacenamiento);
         using var cliente = fabrica.CreateClient();
         AutenticarComoPostulante(cliente, postulanteId);
 
@@ -253,7 +257,10 @@ public sealed class OfertasBecaControllerTests : IClassFixture<OfertasBecaApiFac
 
         respuesta.StatusCode.Should().Be(HttpStatusCode.OK);
         var cuerpo = await respuesta.Content.ReadFromJsonAsync<OfertaBecaDto>();
-        cuerpo.Should().Be(oferta);
+        cuerpo.Should().Be(oferta with
+        {
+            UrlCartaPdf = "https://firmada.example/carta.pdf"
+        });
     }
 
     [Fact]
@@ -299,6 +306,7 @@ public sealed class OfertasBecaControllerTests : IClassFixture<OfertasBecaApiFac
         var ofertaId = Guid.NewGuid();
         var programaId = Guid.NewGuid();
         var duenoId = Guid.NewGuid();
+        var almacenamiento = Substitute.For<IAlmacenamientoArchivos>();
 
         var consultasBeca = Substitute.For<IConsultasBeca>();
         consultasBeca
@@ -312,13 +320,18 @@ public sealed class OfertasBecaControllerTests : IClassFixture<OfertasBecaApiFac
                     programaId,
                     duenoId)));
 
-        using var fabrica = CrearFabrica(consultasBeca: consultasBeca);
+        using var fabrica = CrearFabrica(
+            consultasBeca: consultasBeca,
+            almacenamiento: almacenamiento);
         using var cliente = fabrica.CreateClient();
         AutenticarComoPostulante(cliente, Guid.NewGuid());
 
         var respuesta = await cliente.GetAsync($"/api/v1/becas/ofertas/{ofertaId}");
 
         respuesta.StatusCode.Should().Be(HttpStatusCode.Forbidden);
+        await almacenamiento.DidNotReceive().ResolverUrlLecturaAsync(
+            Arg.Any<string>(),
+            Arg.Any<CancellationToken>());
     }
 
     [Fact]
@@ -496,7 +509,8 @@ public sealed class OfertasBecaControllerTests : IClassFixture<OfertasBecaApiFac
         ICommandDispatcher? comandos = null,
         IQueryDispatcher? consultas = null,
         IConsultasBeca? consultasBeca = null,
-        IPostulacionesClient? postulaciones = null)
+        IPostulacionesClient? postulaciones = null,
+        IAlmacenamientoArchivos? almacenamiento = null)
         => _fabricaBase.WithWebHostBuilder(constructor =>
         {
             constructor.ConfigureTestServices(servicios =>
@@ -516,8 +530,33 @@ public sealed class OfertasBecaControllerTests : IClassFixture<OfertasBecaApiFac
                 servicios.RemoveAll<IPostulacionesClient>();
                 servicios.AddSingleton(
                     postulaciones ?? Substitute.For<IPostulacionesClient>());
+
+                servicios.RemoveAll<IAlmacenamientoArchivos>();
+                servicios.AddSingleton(
+                    almacenamiento ?? CrearAlmacenamiento());
             });
         });
+
+    private static IAlmacenamientoArchivos CrearAlmacenamiento(
+        string? referencia = null,
+        string? urlLectura = null)
+    {
+        var almacenamiento = Substitute.For<IAlmacenamientoArchivos>();
+        almacenamiento
+            .ResolverUrlLecturaAsync(
+                Arg.Any<string>(),
+                Arg.Any<CancellationToken>())
+            .Returns(call =>
+            {
+                var referenciaSolicitada = call.Arg<string>();
+                return Task.FromResult(
+                    string.Equals(referenciaSolicitada, referencia, StringComparison.Ordinal)
+                        ? urlLectura!
+                        : referenciaSolicitada);
+            });
+
+        return almacenamiento;
+    }
 
     private static IConsultasBeca CrearConsultasBeca(
         Guid ofertaId,
@@ -657,6 +696,8 @@ public sealed class OfertasBecaApiFactory : WebApplicationFactory<Program>
             "Host=localhost;Port=5432;Database=ascenso_becas_tests;Username=postgres;Password=postgres");
         builder.UseSetting("Mensajeria:Habilitada", "false");
         builder.UseSetting("Hangfire:Dashboard:Habilitado", "false");
+        builder.UseSetting("Observabilidad:Telemetria:Habilitada", "false");
+        builder.UseSetting("Observabilidad:MetricasPendientes:Habilitada", "false");
 
         builder.ConfigureTestServices(servicios =>
         {

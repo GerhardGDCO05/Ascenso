@@ -1,5 +1,6 @@
 using Ascenso.Becas.Domain.Ports;
 using Ascenso.Becas.Infrastructure.Dependencias;
+using Ascenso.Becas.Infrastructure.Observabilidad;
 using Ascenso.Becas.Infrastructure.Persistence.Repositorios;
 using Hangfire;
 using Microsoft.Extensions.Options;
@@ -27,11 +28,14 @@ public sealed class LimpiarIdempotenciaJob
     }
 
     [Queue(RegistroHangfire.ColaPorDefecto)]
-    public async Task Ejecutar(CancellationToken cancellationToken = default)
-    {
-        var retencion = Math.Max(0, _opciones.Value.RetencionIdempotenciaDias);
-        var corte = _reloj.UtcNow.AddDays(-retencion);
+    public Task Ejecutar(CancellationToken cancellationToken = default)
+        => TelemetriaHangfire.EjecutarAsync(
+            nameof(LimpiarIdempotenciaJob),
+            async () =>
+            {
+                var retencion = Math.Max(0, _opciones.Value.RetencionIdempotenciaDias);
+                var corte = _reloj.UtcNow.AddDays(-retencion);
 
-        await _repositorio.EliminarExpiradasAsync(corte, cancellationToken);
-    }
+                await _repositorio.EliminarExpiradasAsync(corte, cancellationToken);
+            });
 }

@@ -1,0 +1,161 @@
+name: ascenso-ms-becas
+
+services:
+  postgres:
+    image: postgres:17-alpine
+    environment:
+      POSTGRES_DB: ${POSTGRES_DB:-ascenso_becas}
+      POSTGRES_USER: ${POSTGRES_USER:-ascenso_becas}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-becas_local_only}
+    ports:
+      - "${POSTGRES_BIND_ADDRESS:-127.0.0.1}:${POSTGRES_PORT:-5433}:5432"
+    volumes:
+      - becas-postgres-data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U \"$${POSTGRES_USER}\" -d \"$${POSTGRES_DB}\""]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 10s
+
+  rabbitmq:
+    image: rabbitmq:4-management
+    environment:
+      RABBITMQ_DEFAULT_USER: ${RABBITMQ_DEFAULT_USER:-becas}
+      RABBITMQ_DEFAULT_PASS: ${RABBITMQ_DEFAULT_PASS:-becas_local_only}
+    ports:
+      - "${RABBITMQ_BIND_ADDRESS:-127.0.0.1}:${RABBITMQ_PORT:-5673}:5672"
+      - "${RABBITMQ_MANAGEMENT_BIND_ADDRESS:-127.0.0.1}:${RABBITMQ_MANAGEMENT_PORT:-15673}:15672"
+    volumes:
+      - becas-rabbitmq-data:/var/lib/rabbitmq
+    healthcheck:
+      test: ["CMD", "rabbitmq-diagnostics", "-q", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 20s
+
+  dev-stubs:
+    image: wiremock/wiremock:3.13.1
+    ports:
+      - "${DEV_STUBS_BIND_ADDRESS:-127.0.0.1}:${DEV_STUBS_PORT:-8082}:8080"
+    volumes:
+      - ./Apps/services/ms-becas/deploy/wiremock:/home/wiremock:ro
+    healthcheck:
+      test: ["CMD-SHELL", "wget -q -O /dev/null http://127.0.0.1:8080/__admin/mappings"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+      start_period: 10s
+
+  firebase-storage:
+    profiles: ["firebase-emulator"]
+    build:
+      context: ./Apps/services/ms-becas/deploy/firebase-storage
+    command:
+      - firebase
+      - emulators:start
+      - --only
+      - storage
+      - --project
+      - demo-ascenso
+      - --config
+      - /opt/firebase/firebase.json
+      - --import
+      - /data/export
+      - --export-on-exit
+      - /data/export
+    ports:
+      - "${FIREBASE_STORAGE_BIND_ADDRESS:-127.0.0.1}:${FIREBASE_STORAGE_PORT:-9199}:9199"
+    volumes:
+      - ./Apps/services/ms-becas/deploy/firebase-storage/firebase.json:/opt/firebase/firebase.json:ro
+      - ./Apps/services/ms-becas/deploy/firebase-storage/storage.rules:/opt/firebase/storage.rules:ro
+      - firebase-storage-data:/data
+    healthcheck:
+      test:
+        - CMD
+        - node
+        - -e
+        - "fetch('http://127.0.0.1:9199').then(() => process.exit(0)).catch(() => process.exit(1))"
+      interval: 5s
+      timeout: 3s
+      retries: 30
+      start_period: 20s
+
+  keycloak:
+    image: quay.io/keycloak/keycloak:26.0
+    command: ["start-dev", "--import-realm"]
+    environment:
+      KC_BOOTSTRAP_ADMIN_USERNAME: ${KEYCLOAK_ADMIN:-admin}
+      KC_BOOTSTRAP_ADMIN_PASSWORD: ${KEYCLOAK_ADMIN_PASSWORD:-becas_local_only}
+      KC_HEALTH_ENABLED: "true"
+    ports:
+      - "${KEYCLOAK_BIND_ADDRESS:-127.0.0.1}:${KEYCLOAK_PORT:-8080}:8080"
+    volumes:
+      - ./Apps/services/ms-becas/deploy/keycloak:/opt/keycloak/data/import:ro
+    healthcheck:
+      test:
+        - CMD-SHELL
+        - >-
+          bash -ec 'exec 3<>/dev/tcp/127.0.0.1/9000;
+          printf "GET /health/ready HTTP/1.1\r\nHost: localhost\r\nConnection: close\r\n\r\n" >&3;
+          IFS= read -r response <&3;
+          [[ "$$response" == *"200"* ]]'
+      interval: 15s
+      timeout: 5s
+      retries: 10
+      start_period: 30s
+
+  api:
+    profiles: ["api"]
+    build:
+      context: ./Apps/services/ms-becas
+      dockerfile: Dockerfile
+    environment:
+      ASPNETCORE_ENVIRONMENT: Development
+      ASPNETCORE_URLS: http://+:8080
+      ConnectionStrings__Becas: Host=postgres;Port=5432;Database=${POSTGRES_DB:-ascenso_becas};Username=${POSTGRES_USER:-ascenso_becas};Password=${POSTGRES_PASSWORD:-becas_local_only}
+      Jwt__Authority: http://keycloak:8080/realms/ascenso
+      Jwt__Issuer: http://localhost:8080/realms/ascenso
+      Keycloak__ServiceToken__Authority: http://keycloak:8080/realms/ascenso
+      Keycloak__ServiceToken__ClientId: ms-bec-internal
+      Keycloak__ServiceToken__ClientSecret: ms_bec_internal_local_only
+      RabbitMq__Host: rabbitmq
+      RabbitMq__Port: 5672
+      RabbitMq__Username: ${RABBITMQ_DEFAULT_USER:-becas}
+      RabbitMq__Password: ${RABBITMQ_DEFAULT_PASS:-becas_local_only}
+      Storage__Local__RutaBase: /app/almacenamiento
+      Clientes__Postulaciones__BaseUrl: http://dev-stubs:8080
+      Clientes__Postulaciones__UsaServiceToken: "false"
+      Clientes__Programas__BaseUrl: http://dev-stubs:8080
+      Clientes__Programas__UsaServiceToken: "false"
+      Storage__Provider: ${STORAGE_PROVIDER:-Firebase}
+      Storage__Firebase__Bucket: ${FIREBASE_STORAGE_BUCKET:-demo-ascenso.firebasestorage.app}
+      Storage__Firebase__UsaEmulador: "${FIREBASE_STORAGE_USE_EMULATOR:-true}"
+      Storage__Firebase__UrlBase: ${FIREBASE_STORAGE_URL_BASE-http://firebase-storage:9199}
+      Storage__Firebase__RutaCredenciales: ${FIREBASE_STORAGE_CREDENTIALS_PATH:+/run/secrets/firebase-storage.json}
+      FIREBASE_STORAGE_CREDENTIALS_PATH: ${FIREBASE_STORAGE_CREDENTIALS_PATH:-}
+      STORAGE_EMULATOR_HOST: ${STORAGE_EMULATOR_HOST:-firebase-storage:9199}
+    ports:
+      - "${API_BIND_ADDRESS:-127.0.0.1}:${API_PORT:-8081}:8080"
+    volumes:
+      - becas-storage:/app/almacenamiento
+      - type: bind
+        source: ${FIREBASE_STORAGE_CREDENTIALS_PATH:-/dev/null}
+        target: /run/secrets/firebase-storage.json
+        read_only: true
+    depends_on:
+      postgres:
+        condition: service_healthy
+      rabbitmq:
+        condition: service_healthy
+      keycloak:
+        condition: service_healthy
+      dev-stubs:
+        condition: service_healthy
+
+volumes:
+  becas-postgres-data:
+  becas-rabbitmq-data:
+  becas-storage:
+  firebase-storage-data:

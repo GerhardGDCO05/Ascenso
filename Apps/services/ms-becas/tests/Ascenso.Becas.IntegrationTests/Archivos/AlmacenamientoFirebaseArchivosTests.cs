@@ -10,7 +10,7 @@ public sealed class AlmacenamientoFirebaseArchivosTests
     private const string Bucket = "bucket-pruebas";
 
     [Fact]
-    public async Task Debe_SubirElObjeto_CalcularHashYTamanioYDevolverLaUrlCanonica()
+    public async Task Debe_SubirElObjeto_CalcularHashYTamanioYDevolverUnaReferenciaEstable()
     {
         var objetos = new AlmacenObjetosNubeFalso();
         var almacenamiento = CrearAlmacenamiento(objetos);
@@ -27,7 +27,7 @@ public sealed class AlmacenamientoFirebaseArchivosTests
         resultado.HashSha256.Should().Be(hashEsperado);
         resultado.TamanioBytes.Should().Be(contenido.Length);
         resultado.Url.Should().Be(
-            $"https://storage.googleapis.com/{Bucket}/becas/beca-1/ofertas/oferta-1/carta-otorgamiento.pdf");
+            $"gs://{Bucket}/becas/beca-1/ofertas/oferta-1/carta-otorgamiento.pdf");
 
         var subida = objetos.Subidas.Should().ContainSingle().Subject;
         subida.Bucket.Should().Be(Bucket);
@@ -47,24 +47,26 @@ public sealed class AlmacenamientoFirebaseArchivosTests
             "application/pdf",
             "becas/beca 1/carta.pdf");
 
-        resultado.Url.Should().Be(
-            $"https://storage.googleapis.com/{Bucket}/becas/beca%201/carta.pdf");
+        resultado.Url.Should().Be($"gs://{Bucket}/becas/beca%201/carta.pdf");
     }
 
     [Fact]
-    public async Task Debe_UsarLaUrlBaseConfigurada_Cuando_SeDefine()
+    public async Task Debe_FirmarElObjetoPorQuinceMinutos_SinCambiarLaReferenciaPersistible()
     {
-        var almacenamiento = CrearAlmacenamiento(
-            new AlmacenObjetosNubeFalso(),
-            urlBase: "https://cdn.example/archivos");
+        var objetos = new AlmacenObjetosNubeFalso();
+        var almacenamiento = CrearAlmacenamiento(objetos);
 
-        var resultado = await almacenamiento.SubirAsync(
+        var archivo = await almacenamiento.SubirAsync(
             new MemoryStream(Encoding.UTF8.GetBytes("carta")),
             "application/pdf",
             "becas/beca-1/carta.pdf");
 
-        resultado.Url.Should().Be(
-            "https://cdn.example/archivos/becas/beca-1/carta.pdf");
+        var urlFirmada = await almacenamiento.ResolverUrlLecturaAsync(archivo.Url);
+
+        urlFirmada.Should().Be("https://firmada.example/bucket-pruebas/becas%2Fbeca-1%2Fcarta.pdf");
+        objetos.Firmas.Should().ContainSingle().Which.Should().Be(
+            new Firma(Bucket, "becas/beca-1/carta.pdf", TimeSpan.FromMinutes(15)));
+        archivo.Url.Should().Be($"gs://{Bucket}/becas/beca-1/carta.pdf");
     }
 
     [Theory]
@@ -150,6 +152,8 @@ public sealed class AlmacenamientoFirebaseArchivosTests
 
         public List<Eliminacion> Eliminaciones { get; } = [];
 
+        public List<Firma> Firmas { get; } = [];
+
         public Task SubirAsync(
             string bucket,
             string objeto,
@@ -181,6 +185,18 @@ public sealed class AlmacenamientoFirebaseArchivosTests
             Eliminaciones.Add(new Eliminacion(bucket, objeto));
             return Task.CompletedTask;
         }
+
+        public Task<string> CrearUrlFirmadaLecturaAsync(
+            string bucket,
+            string objeto,
+            TimeSpan vigencia,
+            CancellationToken cancellationToken)
+        {
+            cancellationToken.ThrowIfCancellationRequested();
+            Firmas.Add(new Firma(bucket, objeto, vigencia));
+            return Task.FromResult(
+                $"https://firmada.example/{bucket}/{Uri.EscapeDataString(objeto)}");
+        }
     }
 
     private sealed record Subida(
@@ -190,4 +206,6 @@ public sealed class AlmacenamientoFirebaseArchivosTests
         byte[] Contenido);
 
     private sealed record Eliminacion(string Bucket, string Objeto);
+
+    private sealed record Firma(string Bucket, string Objeto, TimeSpan Vigencia);
 }

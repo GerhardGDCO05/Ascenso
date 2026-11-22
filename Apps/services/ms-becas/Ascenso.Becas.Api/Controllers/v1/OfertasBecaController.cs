@@ -29,19 +29,22 @@ public sealed class OfertasBecaController : ControllerBase
     private readonly IConsultasBeca _consultasBeca;
     private readonly IAuthorizationService _autorizacion;
     private readonly IPostulacionesClient _postulaciones;
+    private readonly IAlmacenamientoArchivos _almacenamiento;
 
     public OfertasBecaController(
         ICommandDispatcher comandos,
         IQueryDispatcher consultas,
         IConsultasBeca consultasBeca,
         IAuthorizationService autorizacion,
-        IPostulacionesClient postulaciones)
+        IPostulacionesClient postulaciones,
+        IAlmacenamientoArchivos almacenamiento)
     {
         _comandos = comandos ?? throw new ArgumentNullException(nameof(comandos));
         _consultas = consultas ?? throw new ArgumentNullException(nameof(consultas));
         _consultasBeca = consultasBeca ?? throw new ArgumentNullException(nameof(consultasBeca));
         _autorizacion = autorizacion ?? throw new ArgumentNullException(nameof(autorizacion));
         _postulaciones = postulaciones ?? throw new ArgumentNullException(nameof(postulaciones));
+        _almacenamiento = almacenamiento ?? throw new ArgumentNullException(nameof(almacenamiento));
     }
 
     /// <summary>
@@ -127,7 +130,11 @@ public sealed class OfertasBecaController : ControllerBase
             new ObtenerOfertaQuery(ofertaId),
             cancellationToken);
 
-        return Ok(resultado);
+        var urlCarta = await _almacenamiento.ResolverUrlLecturaAsync(
+            resultado.UrlCartaPdf,
+            cancellationToken);
+
+        return Ok(resultado with { UrlCartaPdf = urlCarta });
     }
 
     /// <summary>

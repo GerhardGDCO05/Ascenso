@@ -91,6 +91,9 @@ jobs:
             "NuGet.config",
             "nuget.config",
             ".editorconfig",
+            ".env.example",
+            "Makefile",
+            "compose.yaml",
             "Apps/Directory.Build.props",
             "Apps/Directory.Build.targets",
             "Apps/Directory.Packages.props"
@@ -243,7 +246,7 @@ jobs:
 
       # Los proyectos *IntegrationTests se ejecutan en el job integration-tests.
       - name: Ejecutar pruebas unitarias y de arquitectura
-        if: steps.gate.outputs.changed == 'true'
+        if: steps.gate.outputs.changed == 'true' && matrix.service != 'ms-becas'
         run: |
           dotnet test "${{ matrix.solution }}" \
             --no-build \
@@ -254,11 +257,28 @@ jobs:
             --logger "trx;LogFileName=test-results.trx" \
             --results-directory "$RUNNER_TEMP/test-results"
 
+      - name: Ejecutar pruebas unitarias MS-BEC con cobertura
+        if: steps.gate.outputs.changed == 'true' && matrix.service == 'ms-becas'
+        run: |
+          dotnet test "${{ matrix.solution }}" \
+            --no-build \
+            --no-restore \
+            --configuration "$CONFIGURATION" \
+            --filter "$UNIT_TEST_FILTER" \
+            --collect:"XPlat Code Coverage;Format=cobertura" \
+            --verbosity normal \
+            --logger "trx;LogFileName=test-results.trx" \
+            --results-directory "$RUNNER_TEMP/test-results"
+
+      - name: Construir imagen Docker de MS-BEC
+        if: steps.gate.outputs.changed == 'true' && matrix.service == 'ms-becas'
+        run: docker build --tag ascenso-becas:ci --file Apps/services/ms-becas/Dockerfile Apps/services/ms-becas
+
       - name: Publicar resultados de pruebas
         if: always() && steps.gate.outputs.changed == 'true'
         uses: actions/upload-artifact@v4
         with:
-          name: test-results-${{ matrix.name }}
+          name: test-results-${{ matrix.service }}
           path: ${{ runner.temp }}/test-results
           if-no-files-found: warn
           retention-days: 7
@@ -268,10 +288,10 @@ jobs:
         run: echo "Sin cambios en ${{ matrix.service }}; no se ejecutó compilación ni pruebas."
 
   # Job independiente para Testcontainers (PostgreSQL, RabbitMQ, WireMock...).
-  # Corre en paralelo al job build-and-test y no lo bloquea.
+  # Se ejecuta después de finalizar build-and-test.
   integration-tests:
     name: Integration Tests - ${{ matrix.name }}
-    needs: changes
+    needs: [changes, build-and-test]
     if: needs.changes.outputs.integration_services != '[]'
     runs-on: ubuntu-latest
     timeout-minutes: 45
@@ -324,11 +344,17 @@ jobs:
             dotnet restore "$project" --locked-mode
           done < <(jq -r '.[]' <<< "$PROJECTS")
 
+      - name: Iniciar Firebase Storage Emulator
+        if: steps.gate.outputs.changed == 'true' && matrix.service == 'ms-becas'
+        run: docker compose --profile firebase-emulator up --wait -d firebase-storage
+
       - name: Ejecutar pruebas de integración
         if: steps.gate.outputs.changed == 'true'
         shell: bash
         env:
           PROJECTS: ${{ matrix.integrationProjectsJson }}
+          SERVICE: ${{ matrix.service }}
+          STORAGE_EMULATOR_HOST: ${{ matrix.service == 'ms-becas' && '127.0.0.1:9199' || '' }}
           # Los WebApplicationFactory de las pruebas no deben levantar
           # MassTransit contra el RabbitMQ por defecto (localhost:5672).
           # Las pruebas de mensajería que sí lo necesitan pasan su propia
@@ -339,9 +365,14 @@ jobs:
           mkdir -p "$RUNNER_TEMP/integration-results"
           while IFS= read -r project; do
             echo "Ejecutando pruebas de integración de $project"
+            coverage_args=()
+            if [ "$SERVICE" = 'ms-becas' ]; then
+              coverage_args+=(--collect:"XPlat Code Coverage;Format=cobertura")
+            fi
             dotnet test "$project" \
               --configuration "$CONFIGURATION" \
               --no-restore \
+              "${coverage_args[@]}" \
               --verbosity normal \
               --blame-hang \
               --blame-hang-timeout 5m \
@@ -354,7 +385,7 @@ jobs:
         if: always() && steps.gate.outputs.changed == 'true'
         uses: actions/upload-artifact@v4
         with:
-          name: integration-results-${{ matrix.name }}
+          name: integration-results-${{ matrix.service }}
           path: ${{ runner.temp }}/integration-results
           if-no-files-found: warn
           retention-days: 7
@@ -362,3 +393,28 @@ jobs:
       - name: Job omitido por falta de cambios
         if: steps.gate.outputs.changed != 'true'
         run: echo "Sin cambios en ${{ matrix.service }}; no se ejecutaron pruebas de integración."
+
+  coverage:
+    name: Verificar cobertura Domain y Application - MS-BEC
+    needs: [changes, build-and-test, integration-tests]
+    if: contains(fromJson(needs.changes.outputs.changed), 'ms-becas')
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout del código
+        uses: actions/checkout@v4
+
+      - name: Descargar cobertura unitaria de MS-BEC
+        uses: actions/download-artifact@v4
+        with:
+          name: test-results-ms-becas
+          path: ${{ runner.temp }}/coverage-results/unit-tests
+
+      - name: Descargar cobertura de integración de MS-BEC
+        uses: actions/download-artifact@v4
+        with:
+          name: integration-results-ms-becas
+          path: ${{ runner.temp }}/coverage-results/integration-tests
+
+      - name: Verificar cobertura Domain y Application
+        run: python Apps/services/ms-becas/scripts/verify_coverage.py "$RUNNER_TEMP/coverage-results"

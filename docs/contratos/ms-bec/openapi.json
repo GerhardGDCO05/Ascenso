@@ -1,0 +1,2292 @@
+{
+  "openapi": "3.1.1",
+  "info": {
+    "title": "MS-BEC \u2014 API de Becas",
+    "description": "Otorgamiento, compromisos firmados y consulta interna de becas.",
+    "version": "1.0.0"
+  },
+  "servers": [
+    {
+      "url": "http://localhost/"
+    }
+  ],
+  "paths": {
+    "/api/v1/becas/{becaId}": {
+      "get": {
+        "tags": [
+          "Becas"
+        ],
+        "summary": "Consulta una beca cuando el usuario es el postulante due\u00F1o o un\ncoordinador con alcance sobre el programa.",
+        "parameters": [
+          {
+            "name": "becaId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "text/plain": {
+                "schema": {
+                  "$ref": "#/components/schemas/BecaDto"
+                }
+              },
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/BecaDto"
+                }
+              },
+              "text/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/BecaDto"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Bad Request",
+            "content": {
+              "text/plain": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              },
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              },
+              "text/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthorized",
+            "content": {
+              "text/plain": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              },
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              },
+              "text/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Forbidden",
+            "content": {
+              "text/plain": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              },
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              },
+              "text/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not Found",
+            "content": {
+              "text/plain": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              },
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              },
+              "text/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/becas/{becaId}/compromisos": {
+      "post": {
+        "tags": [
+          "Compromisos"
+        ],
+        "summary": "Carga un compromiso firmado en PDF para una beca del becario\nautenticado.",
+        "parameters": [
+          {
+            "name": "becaId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          {
+            "name": "Idempotency-Key",
+            "in": "header",
+            "description": "Clave \u00FAnica de idempotencia de 8 a 128 caracteres. Reintentar con la misma clave y el mismo payload devuelve la respuesta original.",
+            "required": true,
+            "schema": {
+              "maxLength": 128,
+              "minLength": 8,
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "multipart/form-data": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "Archivo": {
+                    "$ref": "#/components/schemas/IFormFile"
+                  }
+                }
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "description": "Created",
+            "content": {
+              "text/plain": {
+                "schema": {
+                  "$ref": "#/components/schemas/CompromisoCargadoDto"
+                }
+              },
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CompromisoCargadoDto"
+                }
+              },
+              "text/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CompromisoCargadoDto"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Bad Request",
+            "content": {
+              "text/plain": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              },
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              },
+              "text/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthorized",
+            "content": {
+              "text/plain": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              },
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              },
+              "text/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Forbidden",
+            "content": {
+              "text/plain": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              },
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              },
+              "text/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not Found",
+            "content": {
+              "text/plain": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              },
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              },
+              "text/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Conflict",
+            "content": {
+              "text/plain": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              },
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              },
+              "text/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "Service Unavailable",
+            "content": {
+              "text/plain": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              },
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              },
+              "text/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/becas/compromisos/{compromisoId}/revision": {
+      "post": {
+        "tags": [
+          "Compromisos"
+        ],
+        "summary": "Aprueba o rechaza un compromiso en revisi\u00F3n cuando el coordinador tiene\nsegundo factor y alcance sobre el programa de la beca.",
+        "parameters": [
+          {
+            "name": "compromisoId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          {
+            "name": "Idempotency-Key",
+            "in": "header",
+            "description": "Clave \u00FAnica de idempotencia de 8 a 128 caracteres. Reintentar con la misma clave y el mismo payload devuelve la respuesta original.",
+            "required": true,
+            "schema": {
+              "maxLength": 128,
+              "minLength": 8,
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/RevisarCompromisoRequest"
+              },
+              "example": {
+                "aprobar": true,
+                "observaciones": "Documento firmado y legible."
+              }
+            },
+            "text/json": {
+              "schema": {
+                "$ref": "#/components/schemas/RevisarCompromisoRequest"
+              }
+            },
+            "application/*\u002Bjson": {
+              "schema": {
+                "$ref": "#/components/schemas/RevisarCompromisoRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "text/plain": {
+                "schema": {
+                  "$ref": "#/components/schemas/CompromisoRevisadoDto"
+                }
+              },
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CompromisoRevisadoDto"
+                },
+                "example": {
+                  "compromisoId": "0192f0c4-9c5a-7e3c-bd4f-6a7b8c9d0e1f",
+                  "estado": "APROBADO",
+                  "habilitadaParaDesembolso": true
+                }
+              },
+              "text/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CompromisoRevisadoDto"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Bad Request",
+            "content": {
+              "text/plain": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              },
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              },
+              "text/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthorized",
+            "content": {
+              "text/plain": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              },
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              },
+              "text/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Forbidden",
+            "content": {
+              "text/plain": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              },
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              },
+              "text/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not Found",
+            "content": {
+              "text/plain": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              },
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              },
+              "text/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Conflict",
+            "content": {
+              "text/plain": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              },
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              },
+              "text/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/internal/v1/becas/activas": {
+      "get": {
+        "tags": [
+          "InternalBecas"
+        ],
+        "summary": "Devuelve las becas activas del estudiante en el periodo indicado, sin\ndatos personales ni bancarios.",
+        "parameters": [
+          {
+            "name": "postulanteId",
+            "in": "query",
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          {
+            "name": "periodoId",
+            "in": "query",
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "text/plain": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/BecaActivaDto"
+                  }
+                }
+              },
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/BecaActivaDto"
+                  }
+                },
+                "example": [
+                  {
+                    "becaId": "0192f0c4-8b4f-7d2b-ac3e-5f6a7b8c9d0e",
+                    "programaBecaId": "0192f0c4-a1b2-7c3d-8e4f-5a6b7c8d9e0f",
+                    "periodoAcademicoId": "0192f0c4-b2c3-7d4e-9f5a-6b7c8d9e0f10",
+                    "estado": "ACTIVA",
+                    "modalidadCobertura": "PARCIAL",
+                    "porcentajeCobertura": 50,
+                    "montoFijoPeriodo": 0,
+                    "moneda": "USD",
+                    "permiteAcumulacion": false
+                  }
+                ]
+              },
+              "text/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/BecaActivaDto"
+                  }
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Bad Request",
+            "content": {
+              "text/plain": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              },
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              },
+              "text/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthorized",
+            "content": {
+              "text/plain": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              },
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              },
+              "text/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Forbidden",
+            "content": {
+              "text/plain": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              },
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              },
+              "text/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/becas/ofertas": {
+      "post": {
+        "tags": [
+          "OfertasBeca"
+        ],
+        "summary": "Emite una oferta para una postulaci\u00F3n adjudicable.",
+        "parameters": [
+          {
+            "name": "Idempotency-Key",
+            "in": "header",
+            "description": "Clave \u00FAnica de idempotencia de 8 a 128 caracteres. Reintentar con la misma clave y el mismo payload devuelve la respuesta original.",
+            "required": true,
+            "schema": {
+              "maxLength": 128,
+              "minLength": 8,
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/EmitirOfertaRequest"
+              },
+              "example": {
+                "postulacionId": "0192f0c4-1234-7abc-8def-0123456789ab"
+              }
+            },
+            "text/json": {
+              "schema": {
+                "$ref": "#/components/schemas/EmitirOfertaRequest"
+              }
+            },
+            "application/*\u002Bjson": {
+              "schema": {
+                "$ref": "#/components/schemas/EmitirOfertaRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "description": "Created",
+            "content": {
+              "text/plain": {
+                "schema": {
+                  "$ref": "#/components/schemas/OfertaEmitidaDto"
+                }
+              },
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/OfertaEmitidaDto"
+                },
+                "example": {
+                  "ofertaId": "0192f0c4-7a3e-7c1a-9b2d-4f5e6a7b8c9d",
+                  "becaId": "0192f0c4-8b4f-7d2b-ac3e-5f6a7b8c9d0e",
+                  "estado": "PENDIENTE_RESPUESTA",
+                  "fechaVencimientoAceptacion": "2026-12-01T15:30:00\u002B00:00"
+                }
+              },
+              "text/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/OfertaEmitidaDto"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Bad Request",
+            "content": {
+              "text/plain": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              },
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              },
+              "text/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthorized",
+            "content": {
+              "text/plain": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              },
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              },
+              "text/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Forbidden",
+            "content": {
+              "text/plain": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              },
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              },
+              "text/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Conflict",
+            "content": {
+              "text/plain": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              },
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              },
+              "text/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Unprocessable Entity",
+            "content": {
+              "text/plain": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              },
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              },
+              "text/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "Service Unavailable",
+            "content": {
+              "text/plain": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              },
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              },
+              "text/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/becas/ofertas/{ofertaId}": {
+      "get": {
+        "tags": [
+          "OfertasBeca"
+        ],
+        "summary": "Consulta una oferta cuando el usuario es el postulante due\u00F1o o un\ncoordinador con alcance sobre el programa.",
+        "parameters": [
+          {
+            "name": "ofertaId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "text/plain": {
+                "schema": {
+                  "$ref": "#/components/schemas/OfertaBecaDto"
+                }
+              },
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/OfertaBecaDto"
+                }
+              },
+              "text/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/OfertaBecaDto"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Bad Request",
+            "content": {
+              "text/plain": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              },
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              },
+              "text/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthorized",
+            "content": {
+              "text/plain": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              },
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              },
+              "text/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Forbidden",
+            "content": {
+              "text/plain": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              },
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              },
+              "text/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not Found",
+            "content": {
+              "text/plain": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              },
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              },
+              "text/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/becas/ofertas/{ofertaId}/aceptar": {
+      "post": {
+        "tags": [
+          "OfertasBeca"
+        ],
+        "summary": "Acepta la oferta y activa la beca.",
+        "parameters": [
+          {
+            "name": "ofertaId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          {
+            "name": "Idempotency-Key",
+            "in": "header",
+            "description": "Clave \u00FAnica de idempotencia de 8 a 128 caracteres. Reintentar con la misma clave y el mismo payload devuelve la respuesta original.",
+            "required": true,
+            "schema": {
+              "maxLength": 128,
+              "minLength": 8,
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "text/plain": {
+                "schema": {
+                  "$ref": "#/components/schemas/OfertaRespondidaDto"
+                }
+              },
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/OfertaRespondidaDto"
+                }
+              },
+              "text/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/OfertaRespondidaDto"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Bad Request",
+            "content": {
+              "text/plain": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              },
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              },
+              "text/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthorized",
+            "content": {
+              "text/plain": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              },
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              },
+              "text/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Forbidden",
+            "content": {
+              "text/plain": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              },
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              },
+              "text/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not Found",
+            "content": {
+              "text/plain": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              },
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              },
+              "text/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Conflict",
+            "content": {
+              "text/plain": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              },
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              },
+              "text/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/becas/ofertas/{ofertaId}/rechazar": {
+      "post": {
+        "tags": [
+          "OfertasBeca"
+        ],
+        "summary": "Rechaza formalmente una oferta pendiente.",
+        "parameters": [
+          {
+            "name": "ofertaId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          {
+            "name": "Idempotency-Key",
+            "in": "header",
+            "description": "Clave \u00FAnica de idempotencia de 8 a 128 caracteres. Reintentar con la misma clave y el mismo payload devuelve la respuesta original.",
+            "required": true,
+            "schema": {
+              "maxLength": 128,
+              "minLength": 8,
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "oneOf": [
+                  {
+                    "type": "null"
+                  },
+                  {
+                    "$ref": "#/components/schemas/RechazarOfertaRequest"
+                  }
+                ]
+              }
+            },
+            "text/json": {
+              "schema": {
+                "oneOf": [
+                  {
+                    "type": "null"
+                  },
+                  {
+                    "$ref": "#/components/schemas/RechazarOfertaRequest"
+                  }
+                ]
+              }
+            },
+            "application/*\u002Bjson": {
+              "schema": {
+                "oneOf": [
+                  {
+                    "type": "null"
+                  },
+                  {
+                    "$ref": "#/components/schemas/RechazarOfertaRequest"
+                  }
+                ]
+              }
+            }
+          }
+        },
+        "responses": {
+          "204": {
+            "description": "No Content"
+          },
+          "400": {
+            "description": "Bad Request",
+            "content": {
+              "text/plain": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              },
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              },
+              "text/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthorized",
+            "content": {
+              "text/plain": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              },
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              },
+              "text/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Forbidden",
+            "content": {
+              "text/plain": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              },
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              },
+              "text/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not Found",
+            "content": {
+              "text/plain": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              },
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              },
+              "text/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Conflict",
+            "content": {
+              "text/plain": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              },
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              },
+              "text/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/becas/ofertas/{ofertaId}/anular": {
+      "post": {
+        "tags": [
+          "OfertasBeca"
+        ],
+        "summary": "Anula una oferta pendiente con una justificaci\u00F3n de coordinaci\u00F3n.",
+        "parameters": [
+          {
+            "name": "ofertaId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          {
+            "name": "Idempotency-Key",
+            "in": "header",
+            "description": "Clave \u00FAnica de idempotencia de 8 a 128 caracteres. Reintentar con la misma clave y el mismo payload devuelve la respuesta original.",
+            "required": true,
+            "schema": {
+              "maxLength": 128,
+              "minLength": 8,
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/AnularOfertaRequest"
+              },
+              "example": {
+                "justificacion": "La postulaci\u00F3n fue retirada por el estudiante."
+              }
+            },
+            "text/json": {
+              "schema": {
+                "$ref": "#/components/schemas/AnularOfertaRequest"
+              }
+            },
+            "application/*\u002Bjson": {
+              "schema": {
+                "$ref": "#/components/schemas/AnularOfertaRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "204": {
+            "description": "No Content"
+          },
+          "400": {
+            "description": "Bad Request",
+            "content": {
+              "text/plain": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              },
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              },
+              "text/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthorized",
+            "content": {
+              "text/plain": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              },
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              },
+              "text/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Forbidden",
+            "content": {
+              "text/plain": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              },
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              },
+              "text/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not Found",
+            "content": {
+              "text/plain": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              },
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              },
+              "text/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Conflict",
+            "content": {
+              "text/plain": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              },
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              },
+              "text/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+  },
+  "components": {
+    "schemas": {
+      "AnularOfertaRequest": {
+        "required": [
+          "justificacion"
+        ],
+        "type": "object",
+        "properties": {
+          "justificacion": {
+            "type": "string"
+          }
+        },
+        "description": "Cuerpo de la solicitud de anulaci\u00F3n."
+      },
+      "BecaActivaDto": {
+        "examples": [
+          {
+            "becaId": "0192f0c4-8b4f-7d2b-ac3e-5f6a7b8c9d0e",
+            "programaBecaId": "0192f0c4-a1b2-7c3d-8e4f-5a6b7c8d9e0f",
+            "periodoAcademicoId": "0192f0c4-b2c3-7d4e-9f5a-6b7c8d9e0f10",
+            "estado": "ACTIVA",
+            "modalidadCobertura": "PARCIAL",
+            "porcentajeCobertura": 50,
+            "montoFijoPeriodo": 0,
+            "moneda": "USD",
+            "permiteAcumulacion": false
+          }
+        ],
+        "required": [
+          "becaId",
+          "programaBecaId",
+          "periodoAcademicoId",
+          "estado",
+          "modalidadCobertura",
+          "porcentajeCobertura",
+          "montoFijoPeriodo",
+          "moneda",
+          "permiteAcumulacion"
+        ],
+        "type": "object",
+        "properties": {
+          "becaId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "programaBecaId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "periodoAcademicoId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "estado": {
+            "type": "string"
+          },
+          "modalidadCobertura": {
+            "type": "string"
+          },
+          "porcentajeCobertura": {
+            "pattern": "^-?(?:0|[1-9]\\d*)(?:\\.\\d\u002B)?$",
+            "type": [
+              "number",
+              "string"
+            ],
+            "format": "double"
+          },
+          "montoFijoPeriodo": {
+            "pattern": "^-?(?:0|[1-9]\\d*)(?:\\.\\d\u002B)?$",
+            "type": [
+              "number",
+              "string"
+            ],
+            "format": "double"
+          },
+          "moneda": {
+            "type": "string"
+          },
+          "permiteAcumulacion": {
+            "type": "boolean"
+          }
+        },
+        "description": "Vista m\u00EDnima para la consulta interna de becas activas. Solo expone\nidentificadores, estado y datos de cobertura; nunca datos personales ni\nbancarios."
+      },
+      "BecaDto": {
+        "required": [
+          "becaId",
+          "codigoBeca",
+          "postulanteEstudianteId",
+          "postulacionOrigenId",
+          "programaBecaId",
+          "nombrePrograma",
+          "convocatoriaOrigenId",
+          "periodoVigenteActualId",
+          "periodosCursados",
+          "duracionTotalPeriodos",
+          "estado",
+          "tipoCierre",
+          "coberturaAplicada",
+          "montoComprometidoPeriodoActual",
+          "montoDesembolsadoPeriodoActual",
+          "permiteAcumulacion",
+          "requiereCompromisoFirmado",
+          "compromisoFirmadoAprobado",
+          "habilitadaParaDesembolso",
+          "fechaOtorgamiento",
+          "fechaActivacion",
+          "fechaConclusionORevocacion",
+          "oferta",
+          "compromiso",
+          "historial"
+        ],
+        "type": "object",
+        "properties": {
+          "becaId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "codigoBeca": {
+            "type": "string"
+          },
+          "postulanteEstudianteId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "postulacionOrigenId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "programaBecaId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "nombrePrograma": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "convocatoriaOrigenId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "periodoVigenteActualId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "periodosCursados": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ],
+            "format": "int32"
+          },
+          "duracionTotalPeriodos": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ],
+            "format": "int32"
+          },
+          "estado": {
+            "type": "string"
+          },
+          "tipoCierre": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "coberturaAplicada": {
+            "$ref": "#/components/schemas/PoliticaCoberturaDto"
+          },
+          "montoComprometidoPeriodoActual": {
+            "pattern": "^-?(?:0|[1-9]\\d*)(?:\\.\\d\u002B)?$",
+            "type": [
+              "number",
+              "string"
+            ],
+            "format": "double"
+          },
+          "montoDesembolsadoPeriodoActual": {
+            "pattern": "^-?(?:0|[1-9]\\d*)(?:\\.\\d\u002B)?$",
+            "type": [
+              "number",
+              "string"
+            ],
+            "format": "double"
+          },
+          "permiteAcumulacion": {
+            "type": "boolean"
+          },
+          "requiereCompromisoFirmado": {
+            "type": "boolean"
+          },
+          "compromisoFirmadoAprobado": {
+            "type": "boolean"
+          },
+          "habilitadaParaDesembolso": {
+            "type": "boolean"
+          },
+          "fechaOtorgamiento": {
+            "type": "string",
+            "format": "date"
+          },
+          "fechaActivacion": {
+            "type": [
+              "null",
+              "string"
+            ],
+            "format": "date"
+          },
+          "fechaConclusionORevocacion": {
+            "type": [
+              "null",
+              "string"
+            ],
+            "format": "date"
+          },
+          "oferta": {
+            "oneOf": [
+              {
+                "type": "null"
+              },
+              {
+                "$ref": "#/components/schemas/OfertaBecaDto"
+              }
+            ]
+          },
+          "compromiso": {
+            "oneOf": [
+              {
+                "type": "null"
+              },
+              {
+                "$ref": "#/components/schemas/CompromisoBecarioDto"
+              }
+            ]
+          },
+          "historial": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/HistorialEstadoBecaDto"
+            }
+          }
+        },
+        "description": "Vista de lectura de una beca con su oferta, compromiso e historial."
+      },
+      "CompromisoBecarioDto": {
+        "required": [
+          "compromisoId",
+          "becaId",
+          "estado",
+          "numeroIntentoCarga",
+          "urlPlantillaGenerada",
+          "urlPdfFirmado",
+          "fechaCargaFirma",
+          "observacionesRevision",
+          "revisadoPorCoordinadorId",
+          "fechaRevision"
+        ],
+        "type": "object",
+        "properties": {
+          "compromisoId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "becaId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "estado": {
+            "type": "string"
+          },
+          "numeroIntentoCarga": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ],
+            "format": "int32"
+          },
+          "urlPlantillaGenerada": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "urlPdfFirmado": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "fechaCargaFirma": {
+            "type": [
+              "null",
+              "string"
+            ],
+            "format": "date-time"
+          },
+          "observacionesRevision": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "revisadoPorCoordinadorId": {
+            "type": [
+              "null",
+              "string"
+            ],
+            "format": "uuid"
+          },
+          "fechaRevision": {
+            "type": [
+              "null",
+              "string"
+            ],
+            "format": "date-time"
+          }
+        },
+        "description": "Vista de lectura del compromiso firmado del becario."
+      },
+      "CompromisoCargadoDto": {
+        "examples": [
+          {
+            "compromisoId": "0192f0c4-9c5a-7e3c-bd4f-6a7b8c9d0e1f",
+            "numeroIntentoCarga": 1,
+            "estado": "EN_REVISION"
+          }
+        ],
+        "required": [
+          "compromisoId",
+          "numeroIntentoCarga",
+          "estado"
+        ],
+        "type": "object",
+        "properties": {
+          "compromisoId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "numeroIntentoCarga": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ],
+            "format": "int32"
+          },
+          "estado": {
+            "type": "string"
+          }
+        },
+        "description": "Resultado de cargar un compromiso firmado."
+      },
+      "CompromisoRevisadoDto": {
+        "examples": [
+          {
+            "compromisoId": "0192f0c4-9c5a-7e3c-bd4f-6a7b8c9d0e1f",
+            "estado": "APROBADO",
+            "habilitadaParaDesembolso": true
+          }
+        ],
+        "required": [
+          "compromisoId",
+          "estado",
+          "habilitadaParaDesembolso"
+        ],
+        "type": "object",
+        "properties": {
+          "compromisoId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "estado": {
+            "type": "string"
+          },
+          "habilitadaParaDesembolso": {
+            "type": "boolean"
+          }
+        },
+        "description": "Resultado de la revisi\u00F3n de un compromiso firmado."
+      },
+      "CondicionesPermanenciaDto": {
+        "required": [
+          "promedioMinimoRenovacion",
+          "materiasMinimasAprobadas",
+          "maximoMateriasReprobadas",
+          "horasServicioPorPeriodo",
+          "consecuenciaIncumplimiento"
+        ],
+        "type": "object",
+        "properties": {
+          "promedioMinimoRenovacion": {
+            "pattern": "^-?(?:0|[1-9]\\d*)(?:\\.\\d\u002B)?$",
+            "type": [
+              "number",
+              "string"
+            ],
+            "format": "double"
+          },
+          "materiasMinimasAprobadas": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ],
+            "format": "int32"
+          },
+          "maximoMateriasReprobadas": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ],
+            "format": "int32"
+          },
+          "horasServicioPorPeriodo": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ],
+            "format": "int32"
+          },
+          "consecuenciaIncumplimiento": {
+            "type": "string"
+          }
+        },
+        "description": "Condiciones de permanencia capturadas al emitir la oferta."
+      },
+      "EmitirOfertaRequest": {
+        "required": [
+          "postulacionId"
+        ],
+        "type": "object",
+        "properties": {
+          "postulacionId": {
+            "type": "string",
+            "format": "uuid"
+          }
+        },
+        "description": "Cuerpo de la solicitud de emisi\u00F3n."
+      },
+      "HistorialEstadoBecaDto": {
+        "required": [
+          "historialId",
+          "tipoEntidad",
+          "estadoBecaAnterior",
+          "estadoBecaNuevo",
+          "estadoOfertaAnterior",
+          "estadoOfertaNuevo",
+          "estadoCompromisoAnterior",
+          "estadoCompromisoNuevo",
+          "fechaCambio",
+          "usuarioAutorId",
+          "motivo",
+          "justificacionDetallada",
+          "estadoTerminalIrreversible"
+        ],
+        "type": "object",
+        "properties": {
+          "historialId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "tipoEntidad": {
+            "type": "string"
+          },
+          "estadoBecaAnterior": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "estadoBecaNuevo": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "estadoOfertaAnterior": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "estadoOfertaNuevo": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "estadoCompromisoAnterior": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "estadoCompromisoNuevo": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "fechaCambio": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "usuarioAutorId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "motivo": {
+            "type": "string"
+          },
+          "justificacionDetallada": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "estadoTerminalIrreversible": {
+            "type": "boolean"
+          }
+        },
+        "description": "Fila inmutable del historial de estados del agregado de beca."
+      },
+      "IFormFile": {
+        "type": "string",
+        "format": "binary"
+      },
+      "OfertaBecaDto": {
+        "required": [
+          "ofertaId",
+          "becaId",
+          "postulacionId",
+          "programaBecaId",
+          "nombrePrograma",
+          "periodoAcademicoId",
+          "estado",
+          "montoOfertaPorPeriodo",
+          "montoTotalEstimadoDuracion",
+          "duracionPeriodos",
+          "condicionesSnapshot",
+          "urlCartaPdf",
+          "fechaEmision",
+          "fechaVencimientoAceptacion",
+          "fechaRespuesta",
+          "motivoRechazoOAnulacion"
+        ],
+        "type": "object",
+        "properties": {
+          "ofertaId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "becaId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "postulacionId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "programaBecaId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "nombrePrograma": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "periodoAcademicoId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "estado": {
+            "type": "string"
+          },
+          "montoOfertaPorPeriodo": {
+            "pattern": "^-?(?:0|[1-9]\\d*)(?:\\.\\d\u002B)?$",
+            "type": [
+              "number",
+              "string"
+            ],
+            "format": "double"
+          },
+          "montoTotalEstimadoDuracion": {
+            "pattern": "^-?(?:0|[1-9]\\d*)(?:\\.\\d\u002B)?$",
+            "type": [
+              "number",
+              "string"
+            ],
+            "format": "double"
+          },
+          "duracionPeriodos": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ],
+            "format": "int32"
+          },
+          "condicionesSnapshot": {
+            "$ref": "#/components/schemas/CondicionesPermanenciaDto"
+          },
+          "urlCartaPdf": {
+            "type": "string"
+          },
+          "fechaEmision": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "fechaVencimientoAceptacion": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "fechaRespuesta": {
+            "type": [
+              "null",
+              "string"
+            ],
+            "format": "date-time"
+          },
+          "motivoRechazoOAnulacion": {
+            "type": [
+              "null",
+              "string"
+            ]
+          }
+        },
+        "description": "Vista de lectura de una oferta de beca. No contiene datos personales del\npostulante ni informaci\u00F3n bancaria."
+      },
+      "OfertaEmitidaDto": {
+        "examples": [
+          {
+            "ofertaId": "0192f0c4-7a3e-7c1a-9b2d-4f5e6a7b8c9d",
+            "becaId": "0192f0c4-8b4f-7d2b-ac3e-5f6a7b8c9d0e",
+            "estado": "PENDIENTE_RESPUESTA",
+            "fechaVencimientoAceptacion": "2026-12-01T15:30:00\u002B00:00"
+          }
+        ],
+        "required": [
+          "ofertaId",
+          "becaId",
+          "estado",
+          "fechaVencimientoAceptacion"
+        ],
+        "type": "object",
+        "properties": {
+          "ofertaId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "becaId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "estado": {
+            "type": "string"
+          },
+          "fechaVencimientoAceptacion": {
+            "type": "string",
+            "format": "date-time"
+          }
+        },
+        "description": "Resultado de emitir una oferta de beca."
+      },
+      "OfertaRespondidaDto": {
+        "examples": [
+          {
+            "ofertaId": "0192f0c4-7a3e-7c1a-9b2d-4f5e6a7b8c9d",
+            "becaId": "0192f0c4-8b4f-7d2b-ac3e-5f6a7b8c9d0e",
+            "estadoOferta": "ACEPTADA",
+            "estadoBeca": "ACTIVA"
+          }
+        ],
+        "required": [
+          "ofertaId",
+          "becaId",
+          "estadoOferta",
+          "estadoBeca"
+        ],
+        "type": "object",
+        "properties": {
+          "ofertaId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "becaId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "estadoOferta": {
+            "type": "string"
+          },
+          "estadoBeca": {
+            "type": "string"
+          }
+        },
+        "description": "Resultado de aceptar una oferta de beca."
+      },
+      "PoliticaCoberturaDto": {
+        "required": [
+          "modalidad",
+          "porcentajeCobertura",
+          "montoFijoPeriodo",
+          "moneda"
+        ],
+        "type": "object",
+        "properties": {
+          "modalidad": {
+            "type": "string"
+          },
+          "porcentajeCobertura": {
+            "pattern": "^-?(?:0|[1-9]\\d*)(?:\\.\\d\u002B)?$",
+            "type": [
+              "number",
+              "string"
+            ],
+            "format": "double"
+          },
+          "montoFijoPeriodo": {
+            "pattern": "^-?(?:0|[1-9]\\d*)(?:\\.\\d\u002B)?$",
+            "type": [
+              "number",
+              "string"
+            ],
+            "format": "double"
+          },
+          "moneda": {
+            "type": "string"
+          }
+        },
+        "description": "Fotograf\u00EDa de la pol\u00EDtica de cobertura devuelta por las consultas."
+      },
+      "ProblemDetails": {
+        "examples": [
+          {
+            "type": null,
+            "title": "Solicitud inv\u00E1lida",
+            "status": 400,
+            "detail": "La solicitud contiene errores de validaci\u00F3n.",
+            "instance": "/api/v1/becas/ofertas",
+            "code": "SOLICITUD_INVALIDA",
+            "correlationId": "4f2a9c1e8b7d4e3f9a6b5c8d1e2f3a4b",
+            "errors": {
+              "Justificacion": [
+                "La justificaci\u00F3n es obligatoria."
+              ]
+            }
+          }
+        ],
+        "type": "object",
+        "properties": {
+          "type": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "title": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "status": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "null",
+              "integer",
+              "string"
+            ],
+            "format": "int32"
+          },
+          "detail": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "instance": {
+            "type": [
+              "null",
+              "string"
+            ]
+          }
+        }
+      },
+      "RechazarOfertaRequest": {
+        "required": [
+          "motivo"
+        ],
+        "type": "object",
+        "properties": {
+          "motivo": {
+            "type": [
+              "null",
+              "string"
+            ]
+          }
+        },
+        "description": "Cuerpo opcional de la solicitud de rechazo."
+      },
+      "RevisarCompromisoRequest": {
+        "required": [
+          "aprobar",
+          "observaciones"
+        ],
+        "type": "object",
+        "properties": {
+          "aprobar": {
+            "type": "boolean"
+          },
+          "observaciones": {
+            "type": [
+              "null",
+              "string"
+            ]
+          }
+        },
+        "description": "Cuerpo de la solicitud de revisi\u00F3n."
+      }
+    },
+    "securitySchemes": {
+      "Bearer": {
+        "type": "http",
+        "description": "JWT emitido por Keycloak. Los clientes internos usan un Service Token con el alcance becas.internal.read.",
+        "scheme": "bearer",
+        "bearerFormat": "JWT"
+      }
+    }
+  },
+  "security": [
+    {
+      "Bearer": []
+    }
+  ],
+  "tags": [
+    {
+      "name": "Becas"
+    },
+    {
+      "name": "Compromisos"
+    },
+    {
+      "name": "InternalBecas"
+    },
+    {
+      "name": "OfertasBeca"
+    }
+  ]
+}

@@ -10,7 +10,7 @@ Restricciones que condicionan el diseño:
 - Keycloak como IdP único, con 2FA para roles administrativos y *Service Tokens* para `/internal/v1/...`.
 - MassTransit + RabbitMQ con *Transactional Outbox* e *Idempotent Inbox*.
 - Hangfire persistente para temporizadores críticos.
-- Firebase Storage solo para binarios; PostgreSQL guarda URI, hash, tamaño y MIME.
+- Firebase Storage solo para binarios; PostgreSQL guarda la referencia del objeto, hash, tamaño y MIME. El proveedor se selecciona por entorno entre Cloud Storage y el emulador, que es opcional para desarrollo/CI. No se versionan credenciales ni se aprovisiona un bucket real.
 
 ## Goals / Non-Goals
 
@@ -59,7 +59,7 @@ Se usa un despachador propio (`ICommandDispatcher`/`IQueryDispatcher`) en lugar 
 
 - .NET 10 LTS (`net10.0`), C# 14, `Nullable=enable`, `ImplicitUsings=enable`, advertencias como errores y análisis de código en build.
 - `global.json` fija la banda del SDK y `Directory.Packages.props` centraliza versiones. Se usa `packages.lock.json` y `RestoreLockedMode` en CI para builds reproducibles.
-- EF Core 10 con `Npgsql.EntityFrameworkCore.PostgreSQL`; MassTransit con transporte RabbitMQ y Outbox/Inbox EF Core; Hangfire con `Hangfire.PostgreSql`; FluentValidation; OpenTelemetry + Serilog; `PdfSharpCore` (MIT) para la carta; `Google.Cloud.Storage.V1` para Firebase.
+- EF Core 10 con `Npgsql.EntityFrameworkCore.PostgreSQL`; MassTransit con transporte RabbitMQ y Outbox/Inbox EF Core; Hangfire con `Hangfire.PostgreSql`; FluentValidation; OpenTelemetry + Serilog; `PdfSharpCore` (MIT) para la carta; `Google.Cloud.Storage.V1` para Firebase Storage. La configuración selecciona explícitamente Cloud Storage o el emulador; las credenciales se suministran por entorno y nunca se incluyen en el repositorio.
 - Antes de fijar versiones se verifica la licencia de MassTransit (la línea 8.x es Apache 2.0) y de PdfSharpCore (MIT); no se adopta una línea con licenciamiento comercial sin aprobación del equipo.
 - Pruebas: xUnit, FluentAssertions, NSubstitute, Testcontainers para PostgreSQL/RabbitMQ, WireMock.Net para clientes HTTP y `MassTransit.TestFramework` (namespace `MassTransit.Testing`) para consumidores.
 
@@ -128,7 +128,7 @@ La emisión es la única operación que cruza servicios antes de escribir localm
 2. Consultar `GET /internal/v1/postulaciones/{id}/adjudicable` en `MS-POS` con *Service Token* y timeout de 3 s. Si no es adjudicable, `422 POSTULACION_NO_ADJUDICABLE`; si el servicio no responde, `503 DEPENDENCIA_NO_DISPONIBLE`.
 3. Calcular el monto de la oferta según `PoliticaCobertura` y el arancel vigente: `TOTAL` = matrícula; `PARCIAL` = porcentaje de la matrícula; `MONTO_FIJO` = monto fijo por periodo.
 4. Pre-generar `ofertaId` y `becaId` (UUIDv7) y solicitar la reserva a `MS-PRG` con `Idempotency-Key: oferta-{ofertaId}`. La reserva se crea en estado `PENDIENTE` con TTL de 5 minutos. Si `MS-PRG` rechaza por cupo, presupuesto o convenio, se propaga el código y no se escribe localmente.
-5. Abrir la transacción local, persistir `Beca` + `OfertaBeca`, generar la carta PDF, subirla a Firebase, guardar URI/hash, programar el job de expiración y publicar `OfertaBecaEmitida` en el Outbox.
+5. Abrir la transacción local, persistir `Beca` + `OfertaBeca`, generar la carta PDF, subirla al proveedor Firebase Storage seleccionado mediante el adaptador, guardar referencia/hash, programar el job de expiración y publicar `OfertaBecaEmitida` en el Outbox.
 6. Si la transacción local falla, la reserva expira por TTL. Si confirma, `MS-PRG` consume `OfertaBecaEmitida` y transiciona la reserva `PENDIENTE → CONFIRMADA`; al aceptarse la beca, `BecaActivada` la transiciona `CONFIRMADA → ACTIVADA`; al rechazarse, anularse o expirar la oferta, el evento correspondiente la libera. No se implementa compensación síncrona en este corte para no ampliar la lista cerrada de llamadas internas.
 
 La guarda de la Tabla 3.2 (“`ReservaPresupuestoCupo` confirmada en `MS-PRG`”) se satisface con la reserva creada y retenida en `PENDIENTE`; la transición a `CONFIRMADA` se completa por el evento `OfertaBecaEmitida` dentro de la consistencia eventual que ya exige el patrón Outbox/Inbox.
@@ -238,7 +238,11 @@ El dashboard de Hangfire solo se habilita en desarrollo o con política administ
 
 ### 11. Archivos y carta de otorgamiento
 
-El puerto `IAlmacenamientoArchivos` recibe un `Stream`, content type y ruta lógica, calcula SHA-256, sube el objeto y devuelve `{ url, hashSha256, tamanioBytes }`. En producción se implementa con Google Cloud Storage/Firebase; en desarrollo y pruebas se usa un adaptador local o un fake. Las rutas son inmutables:
+El puerto `IAlmacenamientoArchivos` recibe un `Stream`, content type y ruta lógica, calcula SHA-256, sube el objeto y devuelve `{ url, hashSha256, tamanioBytes }`. `Storage:Provider` selecciona explícitamente el proveedor por entorno; Firebase Storage puede operar contra Cloud Storage o contra Firebase Storage Emulator. El emulador es una opción temporal para desarrollo y pruebas sin facturación, no un requisito del adaptador ni el único destino. Si se selecciona, `UsaEmulador` fuerza `EmulatorOnly` y no permite fallback a credenciales cloud. Cloud Storage requiere que el proyecto tenga habilitado Storage (Blaze) y una identidad externa con permisos IAM; Spark no permite operaciones contra buckets. No se provisionan bucket ni credenciales reales en este cambio.
+
+Las credenciales cloud se suministran mediante ADC o una ruta configurada fuera del repositorio. `.env.example` contiene únicamente nombres y rutas de ejemplo. La configuración no descubre ni intenta usar credenciales cuando el emulador está seleccionado, y no cambia de proveedor después de un error.
+
+PostgreSQL conserva una referencia estable al objeto, hash, tamaño y MIME; no almacena URLs firmadas. Al entregar una carta o compromiso, MS-BEC valida primero la propiedad o el alcance Keycloak. Para cloud genera una URL firmada limitada al objeto, con vigencia máxima de 15 minutos; en modo emulador devuelve el enlace local correspondiente. El backend usa IAM para Cloud Storage; las Firebase Security Rules niegan acceso directo desde clientes y no sustituyen IAM. El CI puede seleccionar el emulador explícitamente, pero la aplicación no queda atada a él. El adaptador de filesystem permanece disponible para pruebas unitarias. Las rutas son inmutables:
 
 - `becas/{becaId}/ofertas/{ofertaId}/carta-otorgamiento.pdf`
 - `becas/{becaId}/compromisos/{compromisoId}/intento-{n}.pdf`
@@ -247,7 +251,7 @@ La carta se genera con `PdfSharpCore` a partir de una plantilla simple (datos de
 
 Para el compromiso se valida que el archivo sea PDF, que no supere 5 MB y que el hash no coincida con un intento anterior del mismo compromiso; un intento repetido se registra como nuevo `numeroIntentoCarga` solo si el anterior fue rechazado.
 
-**Alternativa descartada:** almacenar binarios en PostgreSQL. Se descarta por la restricción explícita de usar Firebase Storage.
+**Alternativa descartada:** almacenar binarios en PostgreSQL. Se descarta porque los archivos se mantienen en el proveedor de almacenamiento. Tampoco se selecciona el emulador de forma obligatoria: es una alternativa de desarrollo/CI cuando no se usa un bucket habilitado.
 
 ### 12. Observabilidad, errores y protección de datos
 
@@ -274,7 +278,7 @@ Se usa un `WebApplicationFactory` con un esquema de autenticación de prueba par
 
 - `compose.yaml` con PostgreSQL 17, RabbitMQ 4 (management), Keycloak 26, un perfil opcional para la API y un servicio `dev-stubs` (WireMock o API mínima) que simula `MS-POS`/`MS-PRG` con datos semilla. Healthchecks y volúmenes persistentes.
 - `deploy/keycloak/ascenso-realm.json` con realm `ascenso`, clientes `ms-bec` y `ms-bec-internal`, roles base y usuarios de prueba. El client interno usa *client credentials* y scopes `becas.internal.read`.
-- En desarrollo, el almacenamiento local es el modo por defecto (`Storage:Provider=Local`) y no requiere credenciales de Firebase. Firebase se usa en integración/producción con bucket y service account fuera del repositorio.
+- Compose ofrece el Firebase Storage Emulator como opción para desarrollo y CI, con proyecto `demo-ascenso`, volumen persistente y sin credenciales de GCP. Las pruebas de integración pueden seleccionarlo explícitamente; el modo emulador usa `EmulatorOnly` y no hace fallback a ADC. En otros entornos se puede seleccionar Cloud Storage cuando el proyecto permita Storage y se configure identidad externa. GitHub Actions prueba el emulador sin secretos ni llamadas a proyectos reales. Los demás microservicios podrán adoptar el contrato en cambios propios; este cambio no modifica su código.
 - `Makefile` con `up`, `down`, `migrate`, `run`, `test`, `format`; `README.md` con requisitos y pasos.
 - `Dockerfile` multi-stage, usuario no root y `HEALTHCHECK`.
 - CI en GitHub Actions: restore bloqueado, build `-warnaserror`, `dotnet format --verify-no-changes`, pruebas unitarias/arquitectura, pruebas de integración con Docker, cobertura y build de imagen. Se publica el artefacto de cobertura.
@@ -289,7 +293,7 @@ Se usa un `WebApplicationFactory` con un esquema de autenticación de prueba par
 | Los claims `postulante_id` y `programa_ids` requieren cambios en `MS-PLT`/Keycloak. | Se definen como contrato de identidad y se valida en pruebas; si faltan, el servicio falla cerrado (`401`/`403`), nunca autoriza de más. |
 | La emisión hace una llamada síncrona a `MS-PRG` antes de escribir; si el broker o la red fallan, la reserva puede quedar creada sin oferta. | La reserva nace `PENDIENTE` con TTL de 5 minutos y la clave de idempotencia evita duplicados; `OfertaBecaEmitida` la confirma y los eventos de oferta terminal la liberan. Se monitorea el Outbox y las reservas huérfanas. |
 | El índice único parcial no cubre todos los casos de acumulación (una beca acumulable y otra no). | La regla se valida en el dominio con aislamiento `Serializable` y bloqueo por estudiante; el índice es una defensa adicional, no la única. |
-| La generación de PDF y Firebase agrega latencia y dependencia externa a la emisión. | Se sube el archivo antes del commit y se falla cerrado; en desarrollo se usa almacenamiento local y en pruebas un fake. |
+| El emulador puede no reproducir IAM ni todos los comportamientos de Firebase real, y sus URLs son locales a cada entorno. | Se prueban las operaciones locales en CI, se valida el firmador cloud con pruebas aisladas y se documenta que Cloud Storage requiere Blaze e IAM; no se usan credenciales reales en CI. |
 | Hangfire y MassTransit comparten PostgreSQL y pueden competir por conexiones. | Se usan pools separados, límites de workers y healthchecks; el esquema `hangfire` se mantiene aislado. |
 | El bloqueo `FOR UPDATE` puede aumentar la contención en becas muy activas. | Las operaciones son por beca/estudiante y de corta duración; se monitorea la latencia y se mantiene el timeout de 3 s para dependencias. |
 | La proyección local de configuración puede quedar desactualizada si se pierde un evento. | Inbox idempotente, control de `occurredAt`/`ultimo_evento_id`, métrica de configuración faltante que bloquea la emisión y procedimiento documentado para que `MS-PRG` reemita el evento. |
@@ -298,7 +302,7 @@ Se usa un `WebApplicationFactory` con un esquema de autenticación de prueba par
 
 1. Crear la base `ascenso_becas`, el usuario de aplicación y los esquemas `becas` y `hangfire` en el entorno destino.
 2. Registrar el cliente `ms-bec` y el cliente de servicio `ms-bec-internal` en Keycloak; cargar roles, scopes y mappers de claims.
-3. Crear el bucket de Firebase y el service account; cargar las credenciales como secreto.
+3. Seleccionar el emulador solo en los entornos locales/CI que lo necesiten. Para usar Cloud Storage, el propietario debe habilitar un plan con Storage, acordar región/bucket y conceder IAM mínimo; este cambio no aprovisiona esos recursos ni usa credenciales reales.
 4. Declarar exchanges/colas de `MS-BEC` y suscribir los consumidores de `MS-PRG`.
 5. Ejecutar `dotnet ef database update` como paso previo al despliegue de la API.
 6. Desplegar la API y verificar `/health/ready`, el dashboard de Hangfire y la publicación de un evento de prueba en Outbox.
