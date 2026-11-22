@@ -19,6 +19,12 @@ internal sealed class RubricaEvaluacionConfiguracion : IEntityTypeConfiguration<
             tabla.HasCheckConstraint(
                 "ck_rubricas_estado_valido",
                 $"estado IN ({ConfiguracionPersistencia.ValoresSql<EstadoRubrica>()})");
+            tabla.HasCheckConstraint(
+                "ck_rubricas_motivo_bloqueo_valido",
+                $"motivo_bloqueo IS NULL OR motivo_bloqueo IN ({ConfiguracionPersistencia.ValoresSql<MotivoBloqueoRubrica>()})");
+            tabla.HasCheckConstraint(
+                "ck_rubricas_bloqueo_coherente",
+                "(estado = 'BLOQUEADA' AND motivo_bloqueo IS NOT NULL AND fecha_bloqueo IS NOT NULL) OR (estado IN ('BORRADOR', 'PUBLICADA') AND motivo_bloqueo IS NULL AND fecha_bloqueo IS NULL)");
         });
 
         builder.HasKey(rubrica => rubrica.Id)
@@ -53,6 +59,15 @@ internal sealed class RubricaEvaluacionConfiguracion : IEntityTypeConfiguration<
 
         builder.Property(rubrica => rubrica.FechaPublicacion)
             .HasColumnName("fecha_publicacion")
+            .HasColumnType("timestamptz");
+
+        builder.Property(rubrica => rubrica.MotivoBloqueo)
+            .HasColumnName("motivo_bloqueo")
+            .ComoCodigoEnumOpcional()
+            .HasMaxLength(30);
+
+        builder.Property(rubrica => rubrica.FechaBloqueo)
+            .HasColumnName("fecha_bloqueo")
             .HasColumnType("timestamptz");
 
         builder.HasMany(rubrica => rubrica.Criterios)

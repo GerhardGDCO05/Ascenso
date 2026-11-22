@@ -1,3 +1,5 @@
+using Ascenso.Postulaciones.Domain.Comun;
+using Ascenso.Postulaciones.Domain.Enums;
 using Ascenso.Postulaciones.Domain.Interfaces;
 using Ascenso.Postulaciones.Domain.Rubricas.Agregados;
 using Ascenso.Postulaciones.Infrastructure;
@@ -113,6 +115,55 @@ public sealed class RubricaRepositoryTests
 
         porId.Expression.ToString().Should().Contain("AsNoTracking");
         paraActualizar.Expression.ToString().Should().NotContain("AsNoTracking");
+    }
+
+    [Fact]
+    public void Debe_ConservarYProyectarCamposDeBloqueo_Cuando_LaRubricaEsBloqueadaYConsultada()
+    {
+        using var contexto = CrearContexto();
+        var repositorio = new RubricaRepository(contexto);
+        var ahora = DateTimeOffset.UtcNow;
+        var usuarioId = Guid.NewGuid();
+        var rubrica = RubricaEvaluacion.Crear(
+            Guid.NewGuid(),
+            Guid.NewGuid(),
+            "Rúbrica Bloqueo",
+            ahora,
+            usuarioId);
+        rubrica.AgregarCriterio(
+            "Promedio académico",
+            "Evaluación del promedio ponderado",
+            100.00m,
+            0.00m,
+            20.00m,
+            ahora.AddMinutes(1),
+            usuarioId);
+        rubrica.Publicar(ahora.AddMinutes(2), usuarioId);
+
+        contexto.Attach(rubrica);
+        contexto.Entry(rubrica).State.Should().Be(EntityState.Unchanged);
+
+        var fechaBloqueo = new DateTimeOffset(2026, 11, 22, 15, 0, 0, TimeSpan.Zero);
+        rubrica.Bloquear(MotivoBloqueoRubrica.InicioEvaluacion, fechaBloqueo, UsuarioSistema.Id)
+            .Should().BeTrue();
+
+        contexto.ChangeTracker.DetectChanges();
+
+        var entrada = contexto.Entry(rubrica);
+        entrada.State.Should().Be(EntityState.Modified);
+        entrada.Property(r => r.Estado).CurrentValue.Should().Be(EstadoRubrica.Bloqueada);
+        entrada.Property(r => r.MotivoBloqueo).CurrentValue.Should().Be(MotivoBloqueoRubrica.InicioEvaluacion);
+        entrada.Property(r => r.FechaBloqueo).CurrentValue.Should().Be(fechaBloqueo);
+        entrada.Property(r => r.MotivoBloqueo).IsModified.Should().BeTrue();
+        entrada.Property(r => r.FechaBloqueo).IsModified.Should().BeTrue();
+
+        var sqlLectura = repositorio.ConsultarPorId(rubrica.Id).ToQueryString();
+        var sqlActualizacion = repositorio.ConsultarParaActualizarPorId(rubrica.Id).ToQueryString();
+
+        sqlLectura.Should().Contain("motivo_bloqueo");
+        sqlLectura.Should().Contain("fecha_bloqueo");
+        sqlActualizacion.Should().Contain("motivo_bloqueo");
+        sqlActualizacion.Should().Contain("fecha_bloqueo");
     }
 
     [Fact]

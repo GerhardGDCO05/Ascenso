@@ -81,7 +81,9 @@ builder.Services.AddAuthorization(options =>
 
     options.AddPolicy(
         PoliticasAutorizacionRubricas.LecturaRubrica,
-        policy => policy.RequireRole(PoliticasAutorizacionRubricas.RolCoordinadorPrograma));
+        policy => policy.RequireRole(
+            PoliticasAutorizacionRubricas.RolCoordinadorPrograma,
+            PoliticasAutorizacionRubricas.RolMiembroComite));
 });
 builder.Services.AddSingleton<IAuthorizationMiddlewareResultHandler, ManejadorResultadoAutorizacionRubricas>();
 
