@@ -1,6 +1,7 @@
 using Ascenso.Becas.Application.Despacho;
 using Ascenso.Becas.Application.Otorgamiento.Comandos.ExpirarOfertaBeca;
 using Ascenso.Becas.Infrastructure.Dependencias;
+using Ascenso.Becas.Infrastructure.Observabilidad;
 using Hangfire;
 
 namespace Ascenso.Becas.Infrastructure.Trabajos;
@@ -20,7 +21,9 @@ public sealed class ExpirarOfertaBecaJob
 
     [Queue(RegistroHangfire.ColaCritica)]
     public Task Ejecutar(Guid ofertaId, CancellationToken cancellationToken = default)
-        => _despachador.EnviarAsync<ExpirarOfertaBecaCommand, bool>(
-            new ExpirarOfertaBecaCommand(ofertaId),
-            cancellationToken);
+        => TelemetriaHangfire.EjecutarAsync<bool>(
+            nameof(ExpirarOfertaBecaJob),
+            () => _despachador.EnviarAsync<ExpirarOfertaBecaCommand, bool>(
+                new ExpirarOfertaBecaCommand(ofertaId),
+                cancellationToken));
 }

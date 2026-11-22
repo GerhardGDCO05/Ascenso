@@ -183,3 +183,24 @@ El servicio SHALL publicar los eventos `OfertaBecaEmitida`, `BecaActivada`, `Ofe
 - **WHEN** RabbitMQ no está disponible al confirmar la transición
 - **THEN** el evento queda en Outbox y se publica cuando el broker se recupera
 - **AND** el estado de la beca no se revierte
+
+### Requirement: Referencias estables y entrega autorizada de documentos
+
+MS-BEC SHALL conservar referencias estables, no firmadas, para cartas y compromisos. SHALL emitir URLs cloud firmadas solo después de autorizar la consulta y con vigencia máxima de 15 minutos.
+
+#### Scenario: Usuario autorizado consulta un documento en cloud
+
+- **WHEN** el propietario del documento o un coordinador con alcance consulta una carta o compromiso
+- **THEN** MS-BEC devuelve una URL firmada limitada al objeto y con expiración no mayor a 15 minutos
+- **AND** la referencia persistida no cambia ni contiene esa URL firmada
+
+#### Scenario: Usuario sin acceso consulta un documento
+
+- **WHEN** un usuario autenticado no es propietario ni tiene alcance sobre el recurso
+- **THEN** MS-BEC rechaza la consulta y no emite una URL de descarga
+
+#### Scenario: Emulador seleccionado para desarrollo o pruebas
+
+- **WHEN** el entorno selecciona Firebase Storage Emulator para consultar un documento autorizado
+- **THEN** MS-BEC devuelve la URL local del objeto sin requerir credenciales cloud
+- **AND** no se intenta acceder a Cloud Storage

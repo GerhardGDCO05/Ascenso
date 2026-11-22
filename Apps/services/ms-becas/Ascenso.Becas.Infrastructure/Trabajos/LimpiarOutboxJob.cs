@@ -1,5 +1,6 @@
 using Ascenso.Becas.Domain.Ports;
 using Ascenso.Becas.Infrastructure.Dependencias;
+using Ascenso.Becas.Infrastructure.Observabilidad;
 using Ascenso.Becas.Infrastructure.Persistence;
 using Hangfire;
 using Microsoft.EntityFrameworkCore;
@@ -29,7 +30,12 @@ public sealed class LimpiarOutboxJob
     }
 
     [Queue(RegistroHangfire.ColaPorDefecto)]
-    public async Task Ejecutar(CancellationToken cancellationToken = default)
+    public Task Ejecutar(CancellationToken cancellationToken = default)
+        => TelemetriaHangfire.EjecutarAsync(
+            nameof(LimpiarOutboxJob),
+            () => EjecutarAsync(cancellationToken));
+
+    private async Task EjecutarAsync(CancellationToken cancellationToken)
     {
         var retencion = Math.Max(0, _opciones.Value.RetencionOutboxDias);
         var corte = _reloj.UtcNow.AddDays(-retencion);

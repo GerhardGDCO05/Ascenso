@@ -48,6 +48,8 @@ internal sealed class EscenarioOtorgamiento
 
     public MetricaConfiguracionFaltanteFalsa MetricaConfiguracion { get; } = new();
 
+    public MetricasOtorgamientoFalsas Metricas { get; } = new();
+
     public GeneradorCartaFalso Generador { get; } = new();
 
     public GeneradorPlantillaFalso GeneradorPlantilla { get; } = new();
@@ -105,6 +107,7 @@ internal sealed class EscenarioOtorgamiento
             Postulaciones,
             Proyecciones,
             MetricaConfiguracion,
+            Metricas,
             Programas,
             Generador,
             GeneradorPlantilla,
@@ -115,16 +118,16 @@ internal sealed class EscenarioOtorgamiento
             Outbox);
 
     public AceptarOfertaBecaHandler CrearAceptar()
-        => new(Contexto, Reloj, Repositorio, Unidad, Outbox);
+        => new(Contexto, Reloj, Metricas, Repositorio, Unidad, Outbox);
 
     public RechazarOfertaBecaHandler CrearRechazar()
-        => new(Contexto, Reloj, Repositorio, Unidad, Outbox);
+        => new(Contexto, Reloj, Metricas, Repositorio, Unidad, Outbox);
 
     public AnularOfertaBecaHandler CrearAnular()
         => new(Contexto, Reloj, Repositorio, Unidad, Outbox);
 
     public ExpirarOfertaBecaHandler CrearExpirar()
-        => new(Contexto, Reloj, Repositorio, Unidad, Outbox);
+        => new(Contexto, Reloj, Metricas, Repositorio, Unidad, Outbox);
 
     public CargarCompromisoBecarioHandler CrearCargarCompromiso()
         => new(Contexto, Reloj, Repositorio, Almacenamiento, Unidad, Outbox);

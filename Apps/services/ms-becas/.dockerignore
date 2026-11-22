@@ -1,0 +1,13 @@
+**/bin/
+**/obj/
+**/TestResults/
+.git/
+.env
+.env.*
+**/secrets/
+**/.firebase/
+**/firebase-service-account*.json
+**/*.pem
+**/*.p12
+almacenamiento/
+tests/

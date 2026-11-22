@@ -94,4 +94,12 @@ public sealed class AlmacenamientoArchivosFalso : IAlmacenamientoArchivos
         UrlsEliminadas.Add(url);
         return Task.CompletedTask;
     }
+
+    public Task<string> ResolverUrlLecturaAsync(
+        string referencia,
+        CancellationToken cancellationToken = default)
+    {
+        cancellationToken.ThrowIfCancellationRequested();
+        return Task.FromResult(referencia);
+    }
 }

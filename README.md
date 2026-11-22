@@ -50,29 +50,26 @@ Apps/services/ms-becas/
     └── Ascenso.Becas.IntegrationTests/    # Persistencia, mensajería y API
 ```
 
+La guía de incorporación, entorno local, tokens de prueba y solución de
+problemas está en [`Apps/services/ms-becas/README.md`](Apps/services/ms-becas/README.md).
+
 ## Comandos de desarrollo
 
 Desde la raíz del repositorio:
 
 ```bash
-# Restaurar dependencias
-dotnet restore Apps/services/ms-becas/Ascenso.Becas.sln
+# Configurar .env y preparar PostgreSQL, RabbitMQ, Keycloak y las migraciones
+cp .env.example .env
+make dev-up
 
-# Restaurar en modo CI, usando los lock files
-dotnet restore Apps/services/ms-becas/Ascenso.Becas.sln --locked-mode
-
-# Compilar con warnings como errores
-dotnet build Apps/services/ms-becas/Ascenso.Becas.sln \
-  --configuration Release --warnaserror
-
-# Ejecutar todas las pruebas
-dotnet test Apps/services/ms-becas/Ascenso.Becas.sln \
-  --configuration Release --no-build --no-restore
-
-# Verificar formato
-dotnet format Apps/services/ms-becas/Ascenso.Becas.sln \
-  --verify-no-changes --no-restore
+# Ejecutar la API y las pruebas
+make run
+make test
+make format
 ```
+
+Para los comandos directos de `dotnet`, el perfil Docker de la API y la
+obtención de tokens, consulta la guía de [desarrollo local de MS-BEC](Apps/services/ms-becas/README.md).
 
 ## Herramientas
 
@@ -90,33 +87,11 @@ En las terminales nuevas, `~/.bashrc` y `~/.profile` cargan el SDK y `~/.dotnet/
 
 ### Base de datos local
 
-Las migraciones de EF Core viven en
+El entorno local se administra con Docker Compose y `make dev-up`; este crea
+la base `ascenso_becas` y aplica las migraciones de
 `Apps/services/ms-becas/Ascenso.Becas.Infrastructure/Persistence/Migraciones/`.
-Para crearlas o aplicarlas se usa `BecasDbContext` con la cadena local
-`Host=localhost;Port=5432;Database=ascenso_becas;Username=postgres;Password=postgres`:
-
-```bash
-# Crear la base si no existe
-PGPASSWORD=postgres psql -h localhost -p 5432 -U postgres \
-  -c "CREATE DATABASE ascenso_becas;"
-
-# Aplicar todas las migraciones
-dotnet ef database update \
-  --project Apps/services/ms-becas/Ascenso.Becas.Infrastructure \
-  --startup-project Apps/services/ms-becas/Ascenso.Becas.Infrastructure \
-  --context BecasDbContext
-
-# Generar el script SQL equivalente
-dotnet ef migrations script \
-  --project Apps/services/ms-becas/Ascenso.Becas.Infrastructure \
-  --startup-project Apps/services/ms-becas/Ascenso.Becas.Infrastructure \
-  --context BecasDbContext \
-  -o /tmp/migracion-becas.sql
-```
-
-La cadena puede sustituirse con la variable `ConnectionStrings__Becas`.
-La migración crea el esquema `becas`; Hangfire crea su propio esquema
-`hangfire` al arrancar la API.
+La guía de MS-BEC documenta cómo configurar la conexión y depurar errores de
+migración.
 
 ## Licencias de terceros
 

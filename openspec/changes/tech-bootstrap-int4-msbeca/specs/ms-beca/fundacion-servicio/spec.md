@@ -120,3 +120,37 @@ Cada solicitud SHALL propagar un `correlationId` y registrarlo en logs estructur
 
 - **WHEN** una operación incluye un código OTP o un número de cuenta
 - **THEN** los logs y trazas los enmascaran o los omiten por completo
+
+### Requirement: Selección de proveedor de Firebase Storage
+
+MS-BEC SHALL permitir seleccionar por entorno Cloud Storage o Firebase Storage Emulator. El modo cloud requiere identidad externa válida y acceso habilitado al bucket; los errores no SHALL cambiar automáticamente de proveedor.
+
+#### Scenario: Emulador seleccionado
+
+- **WHEN** el entorno selecciona explícitamente el emulador
+- **THEN** las operaciones de archivos se ejecutan contra el emulador sin credenciales cloud
+- **AND** una falla del emulador se informa sin intentar acceder a un bucket real
+
+#### Scenario: Cloud Storage seleccionado sin identidad
+
+- **WHEN** el entorno selecciona Cloud Storage sin una identidad utilizable
+- **THEN** MS-BEC informa el error de configuración y no usa el emulador como fallback
+
+#### Scenario: Proyecto sin acceso a Cloud Storage
+
+- **WHEN** Cloud Storage está seleccionado pero el proyecto no tiene acceso al bucket
+- **THEN** MS-BEC informa el error del proveedor y no cambia al emulador
+
+### Requirement: Acceso privado a Firebase Storage
+
+El bucket SHALL rechazar operaciones directas de clientes Firebase; las operaciones del backend SHALL usar una identidad IAM autorizada y permisos mínimos.
+
+#### Scenario: Cliente sin autorización intenta acceder al bucket
+
+- **WHEN** un cliente Firebase intenta leer o escribir directamente un objeto
+- **THEN** las reglas de Storage rechazan la operación
+
+#### Scenario: Backend con identidad autorizada accede al objeto
+
+- **WHEN** MS-BEC ejecuta una operación mediante su identidad IAM autorizada
+- **THEN** Storage procesa la operación sin hacer público el bucket
