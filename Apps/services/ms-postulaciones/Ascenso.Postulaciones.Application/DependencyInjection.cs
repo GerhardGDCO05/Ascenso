@@ -2,6 +2,7 @@ using Ascenso.Postulaciones.Application.Postulantes.Comandos.ActualizarPerfilSoc
 using Ascenso.Postulaciones.Application.Postulantes.Comandos.RegistrarPostulante;
 using Ascenso.Postulaciones.Application.Postulantes.Consultas.ObtenerMiPerfil;
 using Ascenso.Postulaciones.Application.Rubricas.Comandos.AgregarCriterio;
+using Ascenso.Postulaciones.Application.Rubricas.Comandos.BloquearRubrica;
 using Ascenso.Postulaciones.Application.Rubricas.Comandos.CrearRubrica;
 using Ascenso.Postulaciones.Application.Rubricas.Comandos.EditarCriterio;
 using Ascenso.Postulaciones.Application.Rubricas.Comandos.EliminarCriterio;
@@ -28,6 +29,7 @@ public static class DependencyInjection
         services.AddScoped<EditarCriterioCommandHandler>();
         services.AddScoped<EliminarCriterioCommandHandler>();
         services.AddScoped<PublicarRubricaCommandHandler>();
+        services.AddScoped<BloquearRubricaCommandHandler>();
         services.AddScoped<ObtenerRubricaQueryHandler>();
 
         return services;

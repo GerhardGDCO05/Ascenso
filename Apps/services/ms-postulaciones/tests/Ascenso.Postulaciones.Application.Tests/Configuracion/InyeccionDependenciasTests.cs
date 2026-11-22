@@ -3,6 +3,7 @@ using Ascenso.Postulaciones.Application.Postulantes.Comandos.ActualizarPerfilSoc
 using Ascenso.Postulaciones.Application.Postulantes.Comandos.RegistrarPostulante;
 using Ascenso.Postulaciones.Application.Postulantes.Consultas.ObtenerMiPerfil;
 using Ascenso.Postulaciones.Application.Rubricas.Comandos.AgregarCriterio;
+using Ascenso.Postulaciones.Application.Rubricas.Comandos.BloquearRubrica;
 using Ascenso.Postulaciones.Application.Rubricas.Comandos.CrearRubrica;
 using Ascenso.Postulaciones.Application.Rubricas.Comandos.EditarCriterio;
 using Ascenso.Postulaciones.Application.Rubricas.Comandos.EliminarCriterio;
@@ -51,6 +52,8 @@ public sealed class InyeccionDependenciasTests
         alcance.ServiceProvider.GetRequiredService<EliminarCriterioCommandHandler>()
             .Should().NotBeNull();
         alcance.ServiceProvider.GetRequiredService<PublicarRubricaCommandHandler>()
+            .Should().NotBeNull();
+        alcance.ServiceProvider.GetRequiredService<BloquearRubricaCommandHandler>()
             .Should().NotBeNull();
         alcance.ServiceProvider.GetRequiredService<ObtenerRubricaQueryHandler>()
             .Should().NotBeNull();

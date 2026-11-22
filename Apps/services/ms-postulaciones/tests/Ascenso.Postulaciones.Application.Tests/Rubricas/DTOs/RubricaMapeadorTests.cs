@@ -1,4 +1,6 @@
 using Ascenso.Postulaciones.Application.Rubricas.DTOs;
+using Ascenso.Postulaciones.Domain.Comun;
+using Ascenso.Postulaciones.Domain.Enums;
 using Ascenso.Postulaciones.Domain.Rubricas.Agregados;
 using FluentAssertions;
 
@@ -30,6 +32,9 @@ public sealed class RubricaMapeadorTests
         dto.Nombre.Should().Be("Rúbrica Beca Excelencia 2026-II");
         dto.Estado.Should().Be("BORRADOR");
         dto.FechaPublicacion.Should().BeNull();
+        dto.MotivoBloqueo.Should().BeNull();
+        dto.FechaBloqueo.Should().BeNull();
+        dto.SoloLectura.Should().BeFalse();
         dto.Criterios.Should().BeEmpty();
         dto.SumaPesos.Should().Be(0.00m);
         dto.DiferenciaPara100.Should().Be(100.00m);
@@ -124,6 +129,49 @@ public sealed class RubricaMapeadorTests
 
         dto.Estado.Should().Be("PUBLICADA");
         dto.FechaPublicacion.Should().Be(fechaPublicacion);
+        dto.MotivoBloqueo.Should().BeNull();
+        dto.FechaBloqueo.Should().BeNull();
+        dto.SoloLectura.Should().BeTrue();
+        dto.SumaPesos.Should().Be(100.00m);
+        dto.DiferenciaPara100.Should().Be(0.00m);
+    }
+
+    [Theory]
+    [InlineData(MotivoBloqueoRubrica.InicioEvaluacion, "INICIO_EVALUACION")]
+    [InlineData(MotivoBloqueoRubrica.PrimeraCalificacion, "PRIMERA_CALIFICACION")]
+    public void Debe_MapearMotivoFechaBloqueoYSoloLectura_Cuando_LaRubricaEstaBloqueada(
+        MotivoBloqueoRubrica motivo,
+        string codigoMotivoEsperado)
+    {
+        var rubrica = RubricaEvaluacion.Crear(
+            _programaBecaId,
+            _convocatoriaId,
+            "Rúbrica Bloqueada",
+            _fechaCreacion,
+            _usuarioId);
+
+        rubrica.AgregarCriterio(
+            "Mérito académico",
+            "Promedio ponderado acumulado",
+            100.00m,
+            0.00m,
+            20.00m,
+            _fechaCreacion.AddMinutes(5),
+            _usuarioId);
+
+        var fechaPublicacion = _fechaCreacion.AddHours(1);
+        rubrica.Publicar(fechaPublicacion, _usuarioId);
+
+        var fechaBloqueo = _fechaCreacion.AddHours(2);
+        rubrica.Bloquear(motivo, fechaBloqueo, UsuarioSistema.Id);
+
+        var dto = rubrica.ADto();
+
+        dto.Estado.Should().Be("BLOQUEADA");
+        dto.FechaPublicacion.Should().Be(fechaPublicacion);
+        dto.MotivoBloqueo.Should().Be(codigoMotivoEsperado);
+        dto.FechaBloqueo.Should().Be(fechaBloqueo);
+        dto.SoloLectura.Should().BeTrue();
         dto.SumaPesos.Should().Be(100.00m);
         dto.DiferenciaPara100.Should().Be(0.00m);
     }

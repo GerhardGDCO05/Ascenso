@@ -45,6 +45,10 @@ public sealed class RubricaEvaluacion : AggregateRoot
 
     public DateTimeOffset? FechaPublicacion { get; private set; }
 
+    public MotivoBloqueoRubrica? MotivoBloqueo { get; private set; }
+
+    public DateTimeOffset? FechaBloqueo { get; private set; }
+
     public IReadOnlyCollection<CriterioEvaluacion> Criterios => _criterios.AsReadOnly();
 
     public decimal SumaPesos => _criterios.Count == 0
@@ -171,12 +175,67 @@ public sealed class RubricaEvaluacion : AggregateRoot
         FechaPublicacion = FechaUltimaModificacion;
     }
 
+    public bool Bloquear(
+        MotivoBloqueoRubrica motivo,
+        DateTimeOffset fechaBloqueo,
+        Guid usuarioBloqueoId)
+    {
+        if (!Enum.IsDefined(motivo))
+        {
+            throw new ArgumentOutOfRangeException(
+                nameof(motivo),
+                motivo,
+                "El motivo de bloqueo de la rúbrica no es válido.");
+        }
+
+        if (fechaBloqueo == default)
+        {
+            throw new ArgumentException("La fecha de bloqueo es obligatoria.", nameof(fechaBloqueo));
+        }
+
+        if (usuarioBloqueoId == Guid.Empty)
+        {
+            throw new ArgumentException("El usuario de bloqueo es obligatorio.", nameof(usuarioBloqueoId));
+        }
+
+        if (Estado == EstadoRubrica.Bloqueada)
+        {
+            return false;
+        }
+
+        if (Estado != EstadoRubrica.Publicada)
+        {
+            throw new RubricaNoPublicadaException();
+        }
+
+        ActualizarAuditoria(usuarioBloqueoId, fechaBloqueo);
+        Estado = EstadoRubrica.Bloqueada;
+        MotivoBloqueo = motivo;
+        FechaBloqueo = FechaUltimaModificacion;
+
+        return true;
+    }
+
     private void AsegurarEstadoBorrador()
     {
-        if (Estado != EstadoRubrica.Borrador)
+        if (Estado == EstadoRubrica.Borrador)
         {
-            throw new RubricaBloqueadaException();
+            return;
         }
+
+        if (Estado == EstadoRubrica.Publicada)
+        {
+            throw RubricaBloqueadaException.Publicada();
+        }
+
+        if (Estado == EstadoRubrica.Bloqueada
+            && FechaBloqueo.HasValue
+            && MotivoBloqueo.HasValue)
+        {
+            throw RubricaBloqueadaException.Bloqueada(FechaBloqueo.Value, MotivoBloqueo.Value);
+        }
+
+        throw new RubricaBloqueadaException();
     }
 
     private CriterioEvaluacion ObtenerCriterioRequerido(Guid criterioId)

@@ -9,4 +9,7 @@ public sealed record class RubricaDto(
     DateTimeOffset? FechaPublicacion,
     IReadOnlyList<CriterioEvaluacionDto> Criterios,
     decimal SumaPesos,
-    decimal DiferenciaPara100);
+    decimal DiferenciaPara100,
+    string? MotivoBloqueo,
+    DateTimeOffset? FechaBloqueo,
+    bool SoloLectura);
