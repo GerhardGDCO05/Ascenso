@@ -1,8 +1,8 @@
 # Registro de Auditoría — Secciones 12–14: Calidad, Firebase y contratos
 
 - **Fecha y hora de ejecución:** 22 de noviembre de 2026, 17:33 (UTC-4)
-- **Rama:** `Gerhard`
-- **Commit de las secciones:** ninguno; los cambios permanecen locales y sin commit.
+- **Rama:** `ms-beca-firebase-iniciacion`
+- **Commits de las secciones:** `88b703c`, `10bca3d` y `b790815`; merge `d1ebd26`.
 - **Alcance:** tareas completadas 12.1–12.11, 13.1–13.15 y 14.1, 14.4–14.5 del cambio `tech-bootstrap-int4-msbeca`.
 - **Microservicio intervenido:** solo `Apps/services/ms-becas/`; no se modificaron otros microservicios.
 - **Trabajo local:** este histórico se crea dentro de `openspec/changes/archive/` siguiendo el precedente de la sección 11. No se movió ni archivó el cambio activo y no se sincronizaron sus deltas con las especificaciones principales.
@@ -42,4 +42,4 @@ Conservar el avance completado de las secciones 12–14 de MS-BEC sin cerrar el 
 - Este histórico parcial no sincroniza `specs/ms-beca/fundacion-servicio` ni `specs/ms-beca/otorgamiento-beca`; ambos deltas permanecen en el cambio activo.
 - Las validaciones de identidad con MS-PLT y de integraciones con MS-POS/MS-PRG quedan pendientes; no se modificaron esos servicios.
 - El cambio activo conserva 14.2, 14.3 y las secciones 15–22.
-- El histórico y los cambios de implementación quedan locales y sin commit.
+- El histórico y los cambios de implementación quedaron versionados en los commits `88b703c`, `10bca3d` y `b790815`, integrados con el merge `d1ebd26`.
