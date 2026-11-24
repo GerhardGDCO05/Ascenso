@@ -23,6 +23,94 @@ namespace Ascenso.Postulaciones.Infrastructure.Persistence.Migrations
 
             NpgsqlModelBuilderExtensions.UseIdentityByDefaultColumns(modelBuilder);
 
+            modelBuilder.Entity("Ascenso.Postulaciones.Domain.Asignaciones.Agregados.AsignacionEvaluacion", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .HasColumnType("uuid")
+                        .HasColumnName("id");
+
+                    b.Property<Guid>("ComiteEvaluadorId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("comite_evaluador_id");
+
+                    b.Property<Guid>("ConvocatoriaId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("convocatoria_id");
+
+                    b.Property<string>("Estado")
+                        .IsRequired()
+                        .HasMaxLength(30)
+                        .HasColumnType("varchar")
+                        .HasColumnName("estado");
+
+                    b.Property<DateTimeOffset>("FechaAsignacion")
+                        .HasColumnType("timestamptz")
+                        .HasColumnName("fecha_asignacion");
+
+                    b.Property<DateTimeOffset>("FechaCreacion")
+                        .HasColumnType("timestamptz")
+                        .HasColumnName("fecha_creacion");
+
+                    b.Property<DateTimeOffset>("FechaLimiteEvaluacion")
+                        .HasColumnType("timestamptz")
+                        .HasColumnName("fecha_limite_evaluacion");
+
+                    b.Property<DateTimeOffset>("FechaUltimaModificacion")
+                        .HasColumnType("timestamptz")
+                        .HasColumnName("fecha_ultima_modificacion");
+
+                    b.Property<Guid>("MiembroComiteId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("miembro_comite_id");
+
+                    b.Property<Guid>("PostulacionId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("postulacion_id");
+
+                    b.Property<Guid>("UsuarioCreacionId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("usuario_creacion_id");
+
+                    b.Property<Guid>("UsuarioEvaluadorId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("usuario_evaluador_id");
+
+                    b.Property<Guid>("UsuarioModificacionId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("usuario_modificacion_id");
+
+                    b.Property<int>("Version")
+                        .IsConcurrencyToken()
+                        .HasColumnType("integer")
+                        .HasColumnName("version");
+
+                    b.HasKey("Id")
+                        .HasName("pk_asignaciones_evaluacion");
+
+                    b.HasIndex("MiembroComiteId");
+
+                    b.HasIndex("PostulacionId")
+                        .HasDatabaseName("ix_asignaciones_postulacion");
+
+                    b.HasIndex("ComiteEvaluadorId", "Estado")
+                        .HasDatabaseName("ix_asignaciones_comite_estado");
+
+                    b.HasIndex("PostulacionId", "UsuarioEvaluadorId")
+                        .IsUnique()
+                        .HasDatabaseName("ux_asignaciones_postulacion_evaluador_vigente")
+                        .HasFilter("estado <> 'REASIGNADA_POR_CONFLICTO'");
+
+                    b.HasIndex("UsuarioEvaluadorId", "Estado", "FechaLimiteEvaluacion")
+                        .HasDatabaseName("ix_asignaciones_evaluador_estado");
+
+                    b.ToTable("asignaciones_evaluacion", "postulaciones", t =>
+                        {
+                            t.HasCheckConstraint("ck_asignaciones_estado_valido", "estado IN ('PENDIENTE', 'EN_PROGRESO', 'COMPLETADA', 'REASIGNADA_POR_CONFLICTO')");
+
+                            t.HasCheckConstraint("ck_asignaciones_fecha_limite_posterior", "fecha_limite_evaluacion > fecha_asignacion");
+                        });
+                });
+
             modelBuilder.Entity("Ascenso.Postulaciones.Domain.Comites.Agregados.ComiteEvaluador", b =>
                 {
                     b.Property<Guid>("Id")
@@ -553,6 +641,23 @@ namespace Ascenso.Postulaciones.Infrastructure.Persistence.Migrations
 
                             t.HasCheckConstraint("ck_criterios_evaluacion_puntaje_rango", "puntaje_minimo >= 0 AND puntaje_maximo <= 1000 AND puntaje_minimo < puntaje_maximo");
                         });
+                });
+
+            modelBuilder.Entity("Ascenso.Postulaciones.Domain.Asignaciones.Agregados.AsignacionEvaluacion", b =>
+                {
+                    b.HasOne("Ascenso.Postulaciones.Domain.Comites.Agregados.ComiteEvaluador", null)
+                        .WithMany()
+                        .HasForeignKey("ComiteEvaluadorId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired()
+                        .HasConstraintName("fk_asignaciones_comites");
+
+                    b.HasOne("Ascenso.Postulaciones.Domain.Comites.Entidades.MiembroComite", null)
+                        .WithMany()
+                        .HasForeignKey("MiembroComiteId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired()
+                        .HasConstraintName("fk_asignaciones_miembros_comite");
                 });
 
             modelBuilder.Entity("Ascenso.Postulaciones.Domain.Comites.Entidades.MiembroComite", b =>

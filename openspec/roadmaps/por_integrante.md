@@ -17,6 +17,7 @@
 ## 👥 Integrante 2 (Evaluación, Comités y Selección de Mérito)
 - [ ] **RF-06**: Conformación de comités evaluadores (Microservicio POS)
   - [x] HU 6.1: Conformación del comité evaluador por programa y convocatoria (2026-11-22)
+  - [x] HU 6.2: Asignación de postulaciones a evaluadores del comité (2026-11-24)
 - [ ] **RF-07**: Configuración de rúbricas de evaluación (Microservicio POS)
   - [x] HU 7.1: Gestión de criterios, pesos porcentuales y publicación de rúbricas (2026-11-21)
   - [x] HU 7.2: Bloqueo de rúbricas publicadas al iniciar evaluación o primera calificación (2026-11-22)

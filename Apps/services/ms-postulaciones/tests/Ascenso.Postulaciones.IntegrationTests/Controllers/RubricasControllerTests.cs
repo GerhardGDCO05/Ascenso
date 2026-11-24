@@ -817,6 +817,7 @@ public sealed class RubricasControllerTests : IClassFixture<WebApplicationFactor
                 servicios.RemoveAll<IPostulanteRepository>();
                 servicios.RemoveAll<IRubricaRepository>();
                 servicios.RemoveAll<IComiteEvaluadorRepository>();
+                servicios.RemoveAll<IAsignacionEvaluacionRepository>();
                 servicios.RemoveAll<IPeriodoAcademicoClient>();
                 servicios.RemoveAll<ICatalogoAcademicoClient>();
                 servicios.RemoveAll<IUnitOfWork>();
@@ -824,6 +825,7 @@ public sealed class RubricasControllerTests : IClassFixture<WebApplicationFactor
                 servicios.AddSingleton(Substitute.For<IPostulanteRepository>());
                 servicios.AddSingleton(repo ?? Substitute.For<IRubricaRepository>());
                 servicios.AddSingleton(Substitute.For<IComiteEvaluadorRepository>());
+                servicios.AddSingleton(Substitute.For<IAsignacionEvaluacionRepository>());
                 servicios.AddSingleton(Substitute.For<IPeriodoAcademicoClient>());
                 servicios.AddSingleton(Substitute.For<ICatalogoAcademicoClient>());
                 servicios.AddSingleton(uow ?? Substitute.For<IUnitOfWork>());

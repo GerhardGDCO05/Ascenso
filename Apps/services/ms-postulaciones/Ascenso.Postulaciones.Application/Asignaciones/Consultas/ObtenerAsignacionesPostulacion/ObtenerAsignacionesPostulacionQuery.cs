@@ -1,0 +1,3 @@
+namespace Ascenso.Postulaciones.Application.Asignaciones.Consultas.ObtenerAsignacionesPostulacion;
+
+public sealed record class ObtenerAsignacionesPostulacionQuery(Guid PostulacionId);

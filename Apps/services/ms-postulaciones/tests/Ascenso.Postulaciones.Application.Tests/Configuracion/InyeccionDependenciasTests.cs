@@ -1,3 +1,7 @@
+using Ascenso.Postulaciones.Application.Asignaciones.Comandos.AsignarEvaluadoresPostulacion;
+using Ascenso.Postulaciones.Application.Asignaciones.Consultas.ObtenerAsignacionesPostulacion;
+using Ascenso.Postulaciones.Application.Asignaciones.Consultas.ObtenerCargaEvaluadoresComite;
+using Ascenso.Postulaciones.Application.Asignaciones.Consultas.ObtenerMisAsignaciones;
 using Ascenso.Postulaciones.Application.Comites.Comandos.AgregarMiembroComite;
 using Ascenso.Postulaciones.Application.Comites.Comandos.CrearComiteEvaluador;
 using Ascenso.Postulaciones.Application.Comites.Comandos.DesvincularMiembroComite;
@@ -33,6 +37,7 @@ public sealed class InyeccionDependenciasTests
         servicios.AddSingleton(Substitute.For<IPostulanteRepository>());
         servicios.AddSingleton(Substitute.For<IRubricaRepository>());
         servicios.AddSingleton(Substitute.For<IComiteEvaluadorRepository>());
+        servicios.AddSingleton(Substitute.For<IAsignacionEvaluacionRepository>());
         servicios.AddSingleton(Substitute.For<IPeriodoAcademicoClient>());
         servicios.AddSingleton(Substitute.For<ICatalogoAcademicoClient>());
         servicios.AddSingleton(Substitute.For<IUnitOfWork>());
@@ -72,6 +77,14 @@ public sealed class InyeccionDependenciasTests
         alcance.ServiceProvider.GetRequiredService<ObtenerComiteEvaluadorQueryHandler>()
             .Should().NotBeNull();
         alcance.ServiceProvider.GetRequiredService<ObtenerComitePorProgramaQueryHandler>()
+            .Should().NotBeNull();
+        alcance.ServiceProvider.GetRequiredService<AsignarEvaluadoresPostulacionCommandHandler>()
+            .Should().NotBeNull();
+        alcance.ServiceProvider.GetRequiredService<ObtenerAsignacionesPostulacionQueryHandler>()
+            .Should().NotBeNull();
+        alcance.ServiceProvider.GetRequiredService<ObtenerCargaEvaluadoresComiteQueryHandler>()
+            .Should().NotBeNull();
+        alcance.ServiceProvider.GetRequiredService<ObtenerMisAsignacionesQueryHandler>()
             .Should().NotBeNull();
 
         var validadoresRegistro = alcance.ServiceProvider
@@ -127,5 +140,29 @@ public sealed class InyeccionDependenciasTests
 
         validadoresDesvincularMiembro.Should().ContainSingle(
             validador => validador is DesvincularMiembroComiteCommandValidator);
+
+        var validadoresAsignarEvaluadores = alcance.ServiceProvider
+            .GetServices<IValidator<AsignarEvaluadoresPostulacionCommand>>();
+
+        validadoresAsignarEvaluadores.Should().ContainSingle(
+            validador => validador is AsignarEvaluadoresPostulacionCommandValidator);
+
+        var validadoresObtenerAsignaciones = alcance.ServiceProvider
+            .GetServices<IValidator<ObtenerAsignacionesPostulacionQuery>>();
+
+        validadoresObtenerAsignaciones.Should().ContainSingle(
+            validador => validador is ObtenerAsignacionesPostulacionQueryValidator);
+
+        var validadoresObtenerCarga = alcance.ServiceProvider
+            .GetServices<IValidator<ObtenerCargaEvaluadoresComiteQuery>>();
+
+        validadoresObtenerCarga.Should().ContainSingle(
+            validador => validador is ObtenerCargaEvaluadoresComiteQueryValidator);
+
+        var validadoresMisAsignaciones = alcance.ServiceProvider
+            .GetServices<IValidator<ObtenerMisAsignacionesQuery>>();
+
+        validadoresMisAsignaciones.Should().ContainSingle(
+            validador => validador is ObtenerMisAsignacionesQueryValidator);
     }
 }
