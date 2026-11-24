@@ -1,3 +1,7 @@
+using Ascenso.Postulaciones.Application.Asignaciones.Comandos.AsignarEvaluadoresPostulacion;
+using Ascenso.Postulaciones.Application.Asignaciones.Consultas.ObtenerAsignacionesPostulacion;
+using Ascenso.Postulaciones.Application.Asignaciones.Consultas.ObtenerCargaEvaluadoresComite;
+using Ascenso.Postulaciones.Application.Asignaciones.Consultas.ObtenerMisAsignaciones;
 using Ascenso.Postulaciones.Application.Comites.Comandos.AgregarMiembroComite;
 using Ascenso.Postulaciones.Application.Comites.Comandos.CrearComiteEvaluador;
 using Ascenso.Postulaciones.Application.Comites.Comandos.DesvincularMiembroComite;
@@ -41,6 +45,10 @@ public static class DependencyInjection
         services.AddScoped<DesvincularMiembroComiteCommandHandler>();
         services.AddScoped<ObtenerComiteEvaluadorQueryHandler>();
         services.AddScoped<ObtenerComitePorProgramaQueryHandler>();
+        services.AddScoped<AsignarEvaluadoresPostulacionCommandHandler>();
+        services.AddScoped<ObtenerAsignacionesPostulacionQueryHandler>();
+        services.AddScoped<ObtenerCargaEvaluadoresComiteQueryHandler>();
+        services.AddScoped<ObtenerMisAsignacionesQueryHandler>();
 
         return services;
     }
