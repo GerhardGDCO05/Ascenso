@@ -111,6 +111,47 @@ namespace Ascenso.Postulaciones.Infrastructure.Persistence.Migrations
                         });
                 });
 
+            modelBuilder.Entity("Ascenso.Postulaciones.Domain.Asignaciones.Entidades.AutorizacionExcepcionEvaluadorUnico", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .HasColumnType("uuid")
+                        .HasColumnName("id");
+
+                    b.Property<Guid>("CorrelacionId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("correlacion_id");
+
+                    b.Property<DateTimeOffset>("FechaCreacion")
+                        .HasColumnType("timestamptz")
+                        .HasColumnName("fecha_autorizacion");
+
+                    b.Property<string>("Justificacion")
+                        .IsRequired()
+                        .HasMaxLength(1000)
+                        .HasColumnType("varchar(1000)")
+                        .HasColumnName("justificacion");
+
+                    b.Property<Guid>("PostulacionId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("postulacion_id");
+
+                    b.Property<Guid>("UsuarioAutorId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("usuario_autorizador_id");
+
+                    b.HasKey("Id")
+                        .HasName("pk_excepciones_evaluador_unico");
+
+                    b.HasIndex("PostulacionId")
+                        .IsUnique()
+                        .HasDatabaseName("ux_excepciones_evaluador_unico_postulacion");
+
+                    b.ToTable("excepciones_evaluador_unico", "postulaciones", t =>
+                        {
+                            t.HasCheckConstraint("ck_excepciones_justificacion_no_vacia", "char_length(btrim(justificacion)) >= 10");
+                        });
+                });
+
             modelBuilder.Entity("Ascenso.Postulaciones.Domain.Comites.Agregados.ComiteEvaluador", b =>
                 {
                     b.Property<Guid>("Id")

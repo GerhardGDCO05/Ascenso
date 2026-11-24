@@ -110,8 +110,7 @@ public sealed class AsignarEvaluadoresPostulacionCommandValidatorTests
     [Theory]
     [InlineData(-1)]
     [InlineData(0)]
-    [InlineData(1)]
-    public void Debe_Rechazar_Cuando_CantidadEvaluadoresEsMenorQueDos(int cantidadInvalida)
+    public void Debe_Rechazar_Cuando_CantidadEvaluadoresEsMenorQueUno(int cantidadInvalida)
     {
         var comando = new AsignarEvaluadoresPostulacionCommand(
             Guid.NewGuid(),

@@ -1,6 +1,7 @@
 using Ascenso.Postulaciones.Application.Asignaciones.Comandos.AsignarEvaluadoresPostulacion;
 using Ascenso.Postulaciones.Application.Interfaces;
 using Ascenso.Postulaciones.Domain.Asignaciones.Agregados;
+using Ascenso.Postulaciones.Domain.Asignaciones.Entidades;
 using Ascenso.Postulaciones.Domain.Comites.Agregados;
 using Ascenso.Postulaciones.Domain.Comites.Entidades;
 using Ascenso.Postulaciones.Domain.Enums;
@@ -29,6 +30,7 @@ public sealed class AsignarEvaluadoresPostulacionCommandHandlerTests
     private readonly IUsuarioActual _usuarioActual = Substitute.For<IUsuarioActual>();
     private readonly IComiteEvaluadorRepository _comiteRepository = Substitute.For<IComiteEvaluadorRepository>();
     private readonly IAsignacionEvaluacionRepository _asignacionRepository = Substitute.For<IAsignacionEvaluacionRepository>();
+    private readonly IExcepcionEvaluadorUnicoRepository _excepcionRepository = Substitute.For<IExcepcionEvaluadorUnicoRepository>();
     private readonly IUnitOfWork _unitOfWork = Substitute.For<IUnitOfWork>();
     private readonly AsignarEvaluadoresPostulacionCommandHandler _handler;
 
@@ -46,6 +48,9 @@ public sealed class AsignarEvaluadoresPostulacionCommandHandlerTests
         _asignacionRepository
             .AgregarRangoAsync(Arg.Any<IReadOnlyCollection<AsignacionEvaluacion>>(), Arg.Any<CancellationToken>())
             .Returns(Task.CompletedTask);
+        _excepcionRepository
+            .ObtenerPorPostulacionAsync(Arg.Any<Guid>(), Arg.Any<CancellationToken>())
+            .Returns(Task.FromResult<AutorizacionExcepcionEvaluadorUnico?>(null));
         _unitOfWork
             .GuardarCambiosAsync(Arg.Any<CancellationToken>())
             .Returns(Task.FromResult(2));
@@ -54,6 +59,7 @@ public sealed class AsignarEvaluadoresPostulacionCommandHandlerTests
             _usuarioActual,
             _comiteRepository,
             _asignacionRepository,
+            _excepcionRepository,
             _unitOfWork,
             new AsignarEvaluadoresPostulacionCommandValidator(),
             new RelojFijo(_ahora));

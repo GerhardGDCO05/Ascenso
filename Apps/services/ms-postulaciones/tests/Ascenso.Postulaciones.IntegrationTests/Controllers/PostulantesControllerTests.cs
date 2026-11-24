@@ -583,6 +583,7 @@ public sealed class PostulantesControllerTests : IClassFixture<WebApplicationFac
                 servicios.RemoveAll<IRubricaRepository>();
                 servicios.RemoveAll<IComiteEvaluadorRepository>();
                 servicios.RemoveAll<IAsignacionEvaluacionRepository>();
+                servicios.RemoveAll<IExcepcionEvaluadorUnicoRepository>();
                 servicios.RemoveAll<IPeriodoAcademicoClient>();
                 servicios.RemoveAll<ICatalogoAcademicoClient>();
                 servicios.RemoveAll<IUnitOfWork>();
@@ -591,6 +592,7 @@ public sealed class PostulantesControllerTests : IClassFixture<WebApplicationFac
                 servicios.AddSingleton(Substitute.For<IRubricaRepository>());
                 servicios.AddSingleton(Substitute.For<IComiteEvaluadorRepository>());
                 servicios.AddSingleton(Substitute.For<IAsignacionEvaluacionRepository>());
+                servicios.AddSingleton(Substitute.For<IExcepcionEvaluadorUnicoRepository>());
                 servicios.AddSingleton(periodoClient ?? Substitute.For<IPeriodoAcademicoClient>());
                 servicios.AddSingleton(catalogoClient ?? Substitute.For<ICatalogoAcademicoClient>());
                 servicios.AddSingleton(uow ?? Substitute.For<IUnitOfWork>());

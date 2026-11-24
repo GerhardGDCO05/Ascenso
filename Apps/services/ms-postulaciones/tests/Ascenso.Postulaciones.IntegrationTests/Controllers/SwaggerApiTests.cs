@@ -33,6 +33,7 @@ public sealed class SwaggerApiTests : IClassFixture<WebApplicationFactory<Progra
                 servicios.AddSingleton(Substitute.For<IRubricaRepository>());
                 servicios.AddSingleton(Substitute.For<IComiteEvaluadorRepository>());
                 servicios.AddSingleton(Substitute.For<IAsignacionEvaluacionRepository>());
+                servicios.AddSingleton(Substitute.For<IExcepcionEvaluadorUnicoRepository>());
                 servicios.AddSingleton(Substitute.For<IPeriodoAcademicoClient>());
                 servicios.AddSingleton(Substitute.For<ICatalogoAcademicoClient>());
                 servicios.AddSingleton(Substitute.For<IUnitOfWork>());
@@ -93,6 +94,7 @@ public sealed class SwaggerApiTests : IClassFixture<WebApplicationFactory<Progra
                 servicios.AddSingleton(Substitute.For<IRubricaRepository>());
                 servicios.AddSingleton(Substitute.For<IComiteEvaluadorRepository>());
                 servicios.AddSingleton(Substitute.For<IAsignacionEvaluacionRepository>());
+                servicios.AddSingleton(Substitute.For<IExcepcionEvaluadorUnicoRepository>());
                 servicios.AddSingleton(Substitute.For<IPeriodoAcademicoClient>());
                 servicios.AddSingleton(Substitute.For<ICatalogoAcademicoClient>());
                 servicios.AddSingleton(Substitute.For<IUnitOfWork>());
@@ -145,6 +147,7 @@ public sealed class SwaggerApiTests : IClassFixture<WebApplicationFactory<Progra
                 servicios.AddSingleton(Substitute.For<IRubricaRepository>());
                 servicios.AddSingleton(Substitute.For<IComiteEvaluadorRepository>());
                 servicios.AddSingleton(Substitute.For<IAsignacionEvaluacionRepository>());
+                servicios.AddSingleton(Substitute.For<IExcepcionEvaluadorUnicoRepository>());
                 servicios.AddSingleton(Substitute.For<IPeriodoAcademicoClient>());
                 servicios.AddSingleton(Substitute.For<ICatalogoAcademicoClient>());
                 servicios.AddSingleton(Substitute.For<IUnitOfWork>());
@@ -207,6 +210,7 @@ public sealed class SwaggerApiTests : IClassFixture<WebApplicationFactory<Progra
                 servicios.AddSingleton(Substitute.For<IRubricaRepository>());
                 servicios.AddSingleton(Substitute.For<IComiteEvaluadorRepository>());
                 servicios.AddSingleton(Substitute.For<IAsignacionEvaluacionRepository>());
+                servicios.AddSingleton(Substitute.For<IExcepcionEvaluadorUnicoRepository>());
                 servicios.AddSingleton(Substitute.For<IPeriodoAcademicoClient>());
                 servicios.AddSingleton(Substitute.For<ICatalogoAcademicoClient>());
                 servicios.AddSingleton(Substitute.For<IUnitOfWork>());
@@ -249,12 +253,27 @@ public sealed class SwaggerApiTests : IClassFixture<WebApplicationFactory<Progra
             ["200", "400", "401", "403"],
             "MiAsignacionDto");
 
+        var rutaExcepcion = rutas.GetProperty(
+            "/api/v1/asignaciones-evaluacion/postulaciones/{postulacionId}/excepcion-evaluador-unico");
+        VerificarRespuestasConEsquema(
+            rutaExcepcion.GetProperty("post"),
+            "201",
+            ["201", "400", "401", "403", "409", "422"],
+            "ExcepcionEvaluadorUnicoDto");
+        VerificarRespuestasConEsquema(
+            rutaExcepcion.GetProperty("get"),
+            "200",
+            ["200", "401", "403", "404"],
+            "ExcepcionEvaluadorUnicoDto");
+
         var esquemas = raiz.GetProperty("components").GetProperty("schemas");
         esquemas.TryGetProperty("AsignarEvaluadoresPostulacionRequest", out _).Should().BeTrue();
+        esquemas.TryGetProperty("AutorizarExcepcionEvaluadorUnicoRequest", out _).Should().BeTrue();
         esquemas.TryGetProperty("AsignacionesPostulacionDto", out _).Should().BeTrue();
         esquemas.TryGetProperty("AsignacionEvaluacionDto", out _).Should().BeTrue();
         esquemas.TryGetProperty("CargaEvaluadorDto", out _).Should().BeTrue();
         esquemas.TryGetProperty("MiAsignacionDto", out _).Should().BeTrue();
+        esquemas.TryGetProperty("ExcepcionEvaluadorUnicoDto", out _).Should().BeTrue();
     }
 
     private static void VerificarRespuestas(
