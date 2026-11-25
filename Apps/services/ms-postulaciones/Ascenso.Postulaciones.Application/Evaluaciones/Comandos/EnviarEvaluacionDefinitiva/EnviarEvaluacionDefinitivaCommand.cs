@@ -1,0 +1,3 @@
+namespace Ascenso.Postulaciones.Application.Evaluaciones.Comandos.EnviarEvaluacionDefinitiva;
+
+public sealed record class EnviarEvaluacionDefinitivaCommand(Guid AsignacionEvaluacionId);

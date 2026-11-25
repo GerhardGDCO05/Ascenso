@@ -2,6 +2,8 @@ using Ascenso.Postulaciones.Domain.Asignaciones.Agregados;
 using Ascenso.Postulaciones.Domain.Asignaciones.Entidades;
 using Ascenso.Postulaciones.Domain.Comites.Agregados;
 using Ascenso.Postulaciones.Domain.Comites.Entidades;
+using Ascenso.Postulaciones.Domain.Evaluaciones.Agregados;
+using Ascenso.Postulaciones.Domain.Evaluaciones.Entidades;
 using Ascenso.Postulaciones.Domain.Excepciones;
 using Ascenso.Postulaciones.Domain.Interfaces;
 using Ascenso.Postulaciones.Domain.Postulantes.Agregados;
@@ -39,6 +41,10 @@ public sealed class PostulacionesDbContext : DbContext, IUnitOfWork
     public DbSet<AsignacionEvaluacion> AsignacionesEvaluacion => Set<AsignacionEvaluacion>();
 
     public DbSet<AutorizacionExcepcionEvaluadorUnico> ExcepcionesEvaluadorUnico => Set<AutorizacionExcepcionEvaluadorUnico>();
+
+    public DbSet<Evaluacion> Evaluaciones => Set<Evaluacion>();
+
+    public DbSet<CalificacionCriterio> CalificacionesCriterio => Set<CalificacionCriterio>();
 
     public async Task<int> GuardarCambiosAsync(CancellationToken cancellationToken = default)
     {

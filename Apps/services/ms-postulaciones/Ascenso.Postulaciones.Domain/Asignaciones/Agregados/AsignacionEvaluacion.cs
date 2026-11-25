@@ -110,4 +110,74 @@ public sealed class AsignacionEvaluacion : AggregateRoot
             fechaLimiteEvaluacion,
             usuarioAsignaId);
     }
+
+    public bool IniciarEvaluacion(DateTimeOffset fechaModificacion, Guid usuarioEvaluadorId)
+    {
+        ValidarParametrosTransicion(fechaModificacion, usuarioEvaluadorId);
+
+        if (usuarioEvaluadorId != UsuarioEvaluadorId)
+        {
+            throw new EvaluacionConfidencialException();
+        }
+
+        switch (Estado)
+        {
+            case EstadoAsignacionEvaluacion.Pendiente:
+                ActualizarAuditoria(usuarioEvaluadorId, fechaModificacion);
+                Estado = EstadoAsignacionEvaluacion.EnProgreso;
+                return true;
+
+            case EstadoAsignacionEvaluacion.EnProgreso:
+                return false;
+
+            case EstadoAsignacionEvaluacion.Completada:
+                throw new EvaluacionYaEnviadaException();
+
+            default:
+                throw new AsignacionNoEvaluableException();
+        }
+    }
+
+    public void CompletarEvaluacion(DateTimeOffset fechaModificacion, Guid usuarioEvaluadorId)
+    {
+        ValidarParametrosTransicion(fechaModificacion, usuarioEvaluadorId);
+
+        if (usuarioEvaluadorId != UsuarioEvaluadorId)
+        {
+            throw new EvaluacionConfidencialException();
+        }
+
+        switch (Estado)
+        {
+            case EstadoAsignacionEvaluacion.EnProgreso:
+                ActualizarAuditoria(usuarioEvaluadorId, fechaModificacion);
+                Estado = EstadoAsignacionEvaluacion.Completada;
+                return;
+
+            case EstadoAsignacionEvaluacion.Completada:
+                throw new EvaluacionYaEnviadaException();
+
+            default:
+                throw new AsignacionNoEvaluableException();
+        }
+    }
+
+    private static void ValidarParametrosTransicion(
+        DateTimeOffset fechaModificacion,
+        Guid usuarioEvaluadorId)
+    {
+        if (fechaModificacion == default)
+        {
+            throw new ArgumentException(
+                "La fecha de modificación es obligatoria.",
+                nameof(fechaModificacion));
+        }
+
+        if (usuarioEvaluadorId == Guid.Empty)
+        {
+            throw new ArgumentException(
+                "El usuario evaluador es obligatorio.",
+                nameof(usuarioEvaluadorId));
+        }
+    }
 }

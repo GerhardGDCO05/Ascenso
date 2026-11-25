@@ -34,6 +34,9 @@ public sealed class SwaggerApiTests : IClassFixture<WebApplicationFactory<Progra
                 servicios.AddSingleton(Substitute.For<IComiteEvaluadorRepository>());
                 servicios.AddSingleton(Substitute.For<IAsignacionEvaluacionRepository>());
                 servicios.AddSingleton(Substitute.For<IExcepcionEvaluadorUnicoRepository>());
+                servicios.AddSingleton(Substitute.For<IEvaluacionRepository>());
+                servicios.AddSingleton(Substitute.For<IConsultaAsignacionParaEvaluacionRepository>());
+                servicios.AddSingleton(Substitute.For<IConsultaRubricaParaEvaluacionRepository>());
                 servicios.AddSingleton(Substitute.For<IPeriodoAcademicoClient>());
                 servicios.AddSingleton(Substitute.For<ICatalogoAcademicoClient>());
                 servicios.AddSingleton(Substitute.For<IUnitOfWork>());
@@ -95,6 +98,9 @@ public sealed class SwaggerApiTests : IClassFixture<WebApplicationFactory<Progra
                 servicios.AddSingleton(Substitute.For<IComiteEvaluadorRepository>());
                 servicios.AddSingleton(Substitute.For<IAsignacionEvaluacionRepository>());
                 servicios.AddSingleton(Substitute.For<IExcepcionEvaluadorUnicoRepository>());
+                servicios.AddSingleton(Substitute.For<IEvaluacionRepository>());
+                servicios.AddSingleton(Substitute.For<IConsultaAsignacionParaEvaluacionRepository>());
+                servicios.AddSingleton(Substitute.For<IConsultaRubricaParaEvaluacionRepository>());
                 servicios.AddSingleton(Substitute.For<IPeriodoAcademicoClient>());
                 servicios.AddSingleton(Substitute.For<ICatalogoAcademicoClient>());
                 servicios.AddSingleton(Substitute.For<IUnitOfWork>());
@@ -148,6 +154,9 @@ public sealed class SwaggerApiTests : IClassFixture<WebApplicationFactory<Progra
                 servicios.AddSingleton(Substitute.For<IComiteEvaluadorRepository>());
                 servicios.AddSingleton(Substitute.For<IAsignacionEvaluacionRepository>());
                 servicios.AddSingleton(Substitute.For<IExcepcionEvaluadorUnicoRepository>());
+                servicios.AddSingleton(Substitute.For<IEvaluacionRepository>());
+                servicios.AddSingleton(Substitute.For<IConsultaAsignacionParaEvaluacionRepository>());
+                servicios.AddSingleton(Substitute.For<IConsultaRubricaParaEvaluacionRepository>());
                 servicios.AddSingleton(Substitute.For<IPeriodoAcademicoClient>());
                 servicios.AddSingleton(Substitute.For<ICatalogoAcademicoClient>());
                 servicios.AddSingleton(Substitute.For<IUnitOfWork>());
@@ -211,6 +220,9 @@ public sealed class SwaggerApiTests : IClassFixture<WebApplicationFactory<Progra
                 servicios.AddSingleton(Substitute.For<IComiteEvaluadorRepository>());
                 servicios.AddSingleton(Substitute.For<IAsignacionEvaluacionRepository>());
                 servicios.AddSingleton(Substitute.For<IExcepcionEvaluadorUnicoRepository>());
+                servicios.AddSingleton(Substitute.For<IEvaluacionRepository>());
+                servicios.AddSingleton(Substitute.For<IConsultaAsignacionParaEvaluacionRepository>());
+                servicios.AddSingleton(Substitute.For<IConsultaRubricaParaEvaluacionRepository>());
                 servicios.AddSingleton(Substitute.For<IPeriodoAcademicoClient>());
                 servicios.AddSingleton(Substitute.For<ICatalogoAcademicoClient>());
                 servicios.AddSingleton(Substitute.For<IUnitOfWork>());
@@ -274,6 +286,75 @@ public sealed class SwaggerApiTests : IClassFixture<WebApplicationFactory<Progra
         esquemas.TryGetProperty("CargaEvaluadorDto", out _).Should().BeTrue();
         esquemas.TryGetProperty("MiAsignacionDto", out _).Should().BeTrue();
         esquemas.TryGetProperty("ExcepcionEvaluadorUnicoDto", out _).Should().BeTrue();
+    }
+
+    [Fact]
+    public async Task Debe_DocumentarEndpointsDeEvaluacionesYSusEsquemas_Cuando_EntornoEsDevelopment()
+    {
+        using var fabrica = _fabricaBase.WithWebHostBuilder(constructor =>
+        {
+            constructor.UseEnvironment("Development");
+            constructor.ConfigureTestServices(servicios =>
+            {
+                servicios.AddSingleton(Substitute.For<IUsuarioActual>());
+                servicios.AddSingleton(Substitute.For<IPostulanteRepository>());
+                servicios.AddSingleton(Substitute.For<IRubricaRepository>());
+                servicios.AddSingleton(Substitute.For<IComiteEvaluadorRepository>());
+                servicios.AddSingleton(Substitute.For<IAsignacionEvaluacionRepository>());
+                servicios.AddSingleton(Substitute.For<IExcepcionEvaluadorUnicoRepository>());
+                servicios.AddSingleton(Substitute.For<IEvaluacionRepository>());
+                servicios.AddSingleton(Substitute.For<IConsultaAsignacionParaEvaluacionRepository>());
+                servicios.AddSingleton(Substitute.For<IConsultaRubricaParaEvaluacionRepository>());
+                servicios.AddSingleton(Substitute.For<IPeriodoAcademicoClient>());
+                servicios.AddSingleton(Substitute.For<ICatalogoAcademicoClient>());
+                servicios.AddSingleton(Substitute.For<IUnitOfWork>());
+                servicios.AddSingleton(TimeProvider.System);
+            });
+        });
+        using var cliente = fabrica.CreateClient();
+
+        var respuesta = await cliente.GetAsync("/swagger/v1/swagger.json");
+
+        respuesta.StatusCode.Should().Be(HttpStatusCode.OK);
+
+        using var documento = JsonDocument.Parse(await respuesta.Content.ReadAsStringAsync());
+        var raiz = documento.RootElement;
+        var rutas = raiz.GetProperty("paths");
+
+        VerificarRespuestasConEsquema(
+            rutas.GetProperty("/api/v1/evaluaciones/asignaciones/{asignacionEvaluacionId}/borrador").GetProperty("put"),
+            "200",
+            ["200", "201", "400", "401", "403", "404", "409", "422"],
+            "EvaluacionDto");
+        VerificarRespuestasConEsquema(
+            rutas.GetProperty("/api/v1/evaluaciones/asignaciones/{asignacionEvaluacionId}/enviar").GetProperty("post"),
+            "200",
+            ["200", "400", "401", "403", "404", "409", "422"],
+            "EvaluacionDto");
+        VerificarRespuestasConEsquema(
+            rutas.GetProperty("/api/v1/evaluaciones/asignaciones/{asignacionEvaluacionId}").GetProperty("get"),
+            "200",
+            ["200", "400", "401", "403", "404"],
+            "EvaluacionDto");
+        VerificarRespuestasConEsquema(
+            rutas.GetProperty("/api/v1/evaluaciones/mis-evaluaciones").GetProperty("get"),
+            "200",
+            ["200", "400", "401", "403"],
+            "ResumenMiEvaluacionDto");
+        VerificarRespuestasConEsquema(
+            rutas.GetProperty("/api/v1/evaluaciones/postulaciones/{postulacionId}").GetProperty("get"),
+            "200",
+            ["200", "400", "401", "403"],
+            "EvaluacionesPostulacionDto");
+
+        var esquemas = raiz.GetProperty("components").GetProperty("schemas");
+        esquemas.TryGetProperty("GuardarBorradorEvaluacionRequest", out _).Should().BeTrue();
+        esquemas.TryGetProperty("CalificacionCriterioRequest", out _).Should().BeTrue();
+        esquemas.TryGetProperty("EvaluacionDto", out _).Should().BeTrue();
+        esquemas.TryGetProperty("CalificacionCriterioDto", out _).Should().BeTrue();
+        esquemas.TryGetProperty("ResumenMiEvaluacionDto", out _).Should().BeTrue();
+        esquemas.TryGetProperty("EvaluacionSupervisionDto", out _).Should().BeTrue();
+        esquemas.TryGetProperty("EvaluacionesPostulacionDto", out _).Should().BeTrue();
     }
 
     private static void VerificarRespuestas(
