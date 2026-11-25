@@ -1,4 +1,6 @@
 using Ascenso.Programas.Domain.Comun;
+using Ascenso.Programas.Domain.Convocatorias.Agregados;
+using Ascenso.Programas.Domain.Convocatorias.Entidades;
 using Ascenso.Programas.Domain.Donantes.Agregados;
 using Ascenso.Programas.Domain.Donantes.Entidades;
 using Ascenso.Programas.Domain.Donantes.ObjetosValor;
@@ -13,6 +15,7 @@ using Ascenso.Programas.Infrastructure.Persistence;
 using FluentAssertions;
 using MassTransit.EntityFrameworkCoreIntegration;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.EntityFrameworkCore.Infrastructure;
 using Microsoft.EntityFrameworkCore.Metadata;
 
 namespace Ascenso.Programas.IntegrationTests.Persistencia;
@@ -29,6 +32,8 @@ public sealed class ModeloPersistenciaProgramasTests
     [InlineData(typeof(Convenio), "convenios_universidad")]
     [InlineData(typeof(CarreraElegible), "carreras_elegibles")]
     [InlineData(typeof(CostoMatriculaReferencia), "costos_matricula_referencia")]
+    [InlineData(typeof(Convocatoria), "convocatorias")]
+    [InlineData(typeof(DocumentoRequerido), "documentos_requeridos")]
     [InlineData(typeof(InboxState), "inbox_state")]
     [InlineData(typeof(OutboxState), "outbox_state")]
     [InlineData(typeof(OutboxMessage), "outbox_message")]
@@ -56,6 +61,10 @@ public sealed class ModeloPersistenciaProgramasTests
     [InlineData(typeof(AporteDonante), nameof(AporteDonante.NumeroReferenciaBancaria), "numero_referencia_bancaria")]
     [InlineData(typeof(AporteDonante), nameof(AporteDonante.UrlComprobanteFirebase), "url_comprobante_firebase")]
     [InlineData(typeof(AporteDonante), nameof(AporteDonante.PeriodoAcademicoId), "periodo_academico_id")]
+    [InlineData(typeof(Convocatoria), nameof(Convocatoria.PeriodoAcademicoId), "periodo_academico_id")]
+    [InlineData(typeof(Convocatoria), nameof(Convocatoria.FechaApertura), "fecha_apertura")]
+    [InlineData(typeof(DocumentoRequerido), nameof(DocumentoRequerido.TamanioMaximoMb), "tamanio_maximo_mb")]
+    [InlineData(typeof(Convocatoria), "CriteriosElegibilidad.UniversidadesPermitidasIds", "criterio_universidades_permitidas_ids")]
     public void Debe_MapearColumnasEnSnakeCase(
         Type tipo,
         string rutaPropiedad,
@@ -74,6 +83,8 @@ public sealed class ModeloPersistenciaProgramasTests
     [InlineData(typeof(Donante), nameof(Donante.SaldoDisponibleAsignacion), "numeric(18,2)")]
     [InlineData(typeof(AporteDonante), nameof(AporteDonante.MontoAporte), "numeric(18,2)")]
     [InlineData(typeof(AporteDonante), nameof(AporteDonante.FechaAporte), "timestamptz")]
+    [InlineData(typeof(Convocatoria), nameof(Convocatoria.FechaApertura), "timestamptz")]
+    [InlineData(typeof(DocumentoRequerido), nameof(DocumentoRequerido.TiposMimePermitidos), "jsonb")]
     public void Debe_ConfigurarTiposDeAlmacenamientoDelContrato(
         Type tipo,
         string rutaPropiedad,
@@ -309,6 +320,43 @@ public sealed class ModeloPersistenciaProgramasTests
         contexto.Entry(asignacion).State.Should().Be(EntityState.Added);
         contexto.Entry(programa).State.Should().Be(EntityState.Modified);
         programa.Estado.Should().Be(EstadoProgramaBeca.Configurado);
+    }
+
+    [Fact]
+    public void Debe_ConfigurarRestriccionesEIndicesDelModeloDeConvocatorias()
+    {
+        using var contexto = CrearContextoModelo();
+        var modelo = contexto.GetService<IDesignTimeModel>().Model;
+        var convocatoria = modelo.FindEntityType(typeof(Convocatoria))!;
+        var documento = modelo.FindEntityType(typeof(DocumentoRequerido))!;
+
+        convocatoria.GetIndexes()
+            .Should().Contain(indice => indice.IsUnique
+                && indice.GetDatabaseName() == "ux_convocatoria_codigo");
+        convocatoria.GetCheckConstraints().Select(restriccion => restriccion.Name)
+            .Should().Contain([
+                "ck_convocatoria_estado_valido",
+                "ck_convocatoria_cupos_positivos",
+                "ck_convocatoria_edades_ordenadas",
+                "ck_convocatoria_promedio_valido",
+                "ck_convocatoria_fechas_ordenadas",
+                "ck_convocatoria_subsanacion_despues_del_cierre",
+                "ck_convocatoria_evaluacion_ordenada",
+                "ck_convocatoria_evaluacion_despues_de_subsanacion"
+            ]);
+        documento.GetCheckConstraints().Select(restriccion => restriccion.Name)
+            .Should().Contain("ck_documento_requerido_tamanio_positivo");
+        documento.GetForeignKeys()
+            .Should().Contain(llave => llave.PrincipalEntityType.ClrType == typeof(Convocatoria)
+                && llave.DeleteBehavior == DeleteBehavior.Cascade);
+        convocatoria.GetForeignKeys()
+            .Should().Contain(llave => llave.PrincipalEntityType.ClrType == typeof(ProgramaBeca)
+                && llave.DeleteBehavior == DeleteBehavior.Restrict);
+        convocatoria.FindProperty(nameof(Convocatoria.PeriodoAcademicoId))!.GetMaxLength().Should().Be(36);
+
+        var version = convocatoria.FindProperty(nameof(Convocatoria.Version));
+        version.Should().NotBeNull();
+        version!.IsConcurrencyToken.Should().BeTrue();
     }
 
     private static IProperty ObtenerPropiedad(

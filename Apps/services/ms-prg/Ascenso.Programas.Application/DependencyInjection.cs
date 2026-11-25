@@ -1,3 +1,15 @@
+using Ascenso.Programas.Application.Convocatorias;
+using Ascenso.Programas.Application.Convocatorias.Abstracciones;
+using Ascenso.Programas.Application.Convocatorias.Comandos.AgregarDocumentoRequerido;
+using Ascenso.Programas.Application.Convocatorias.Comandos.CerrarConvocatoriasVencidas;
+using Ascenso.Programas.Application.Convocatorias.Comandos.CrearConvocatoriaBorrador;
+using Ascenso.Programas.Application.Convocatorias.Comandos.EditarConvocatoriaBorrador;
+using Ascenso.Programas.Application.Convocatorias.Comandos.EliminarDocumentoRequerido;
+using Ascenso.Programas.Application.Convocatorias.Comandos.PublicarConvocatoria;
+using Ascenso.Programas.Application.Convocatorias.Consultas.ConsultarConvocatorias;
+using Ascenso.Programas.Application.Convocatorias.Consultas.ConsultarConvocatoriasAbiertas;
+using Ascenso.Programas.Application.Convocatorias.Consultas.ObtenerConvocatoriaPorId;
+using Ascenso.Programas.Application.Convocatorias.Servicios;
 using Ascenso.Programas.Application.Donantes.Comandos.ActualizarContactoDonante;
 using Ascenso.Programas.Application.Donantes.Comandos.DesactivarDonante;
 using Ascenso.Programas.Application.Donantes.Comandos.ReactivarDonante;
@@ -72,6 +84,20 @@ public static class DependencyInjection
         services.AddScoped<ObtenerProgramaPorIdQueryHandler>();
         services.AddScoped<ObtenerBalanceProgramaQueryHandler>();
         services.AddScoped<ConsultarMovimientosPresupuestariosQueryHandler>();
+
+        services.AddSingleton<IRelojConvocatorias, RelojSistema>();
+        services.AddScoped<ValidadorDisponibilidadConvocatoria>();
+
+        services.AddScoped<CrearConvocatoriaBorradorCommandHandler>();
+        services.AddScoped<EditarConvocatoriaBorradorCommandHandler>();
+        services.AddScoped<PublicarConvocatoriaCommandHandler>();
+        services.AddScoped<AgregarDocumentoRequeridoCommandHandler>();
+        services.AddScoped<EliminarDocumentoRequeridoCommandHandler>();
+        services.AddScoped<CerrarConvocatoriasVencidasCommandHandler>();
+
+        services.AddScoped<ConsultarConvocatoriasQueryHandler>();
+        services.AddScoped<ObtenerConvocatoriaPorIdQueryHandler>();
+        services.AddScoped<ConsultarConvocatoriasAbiertasQueryHandler>();
 
         return services;
     }
