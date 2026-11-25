@@ -122,18 +122,21 @@ El bloqueo pesimista se implementa con SQL parametrizado sobre `becas.beca` y se
 
 ### 5. Flujo de emisión y reserva de presupuesto
 
-La emisión es la única operación que cruza servicios antes de escribir localmente:
+La emisión prepara la configuración local y coordina las validaciones síncronas antes de confirmar el agregado:
 
-1. Validar que exista `programa_beca_ref`, `costo_matricula_ref` vigente y `convenio_ref` en estado `VIGENTE` para la universidad de la postulación. Si falta configuración, responder `422 CONFIGURACION_PROGRAMA_NO_DISPONIBLE`.
-2. Consultar `GET /internal/v1/postulaciones/{id}/adjudicable` en `MS-POS` con *Service Token* y timeout de 3 s. Si no es adjudicable, `422 POSTULACION_NO_ADJUDICABLE`; si el servicio no responde, `503 DEPENDENCIA_NO_DISPONIBLE`.
-3. Calcular el monto de la oferta según `PoliticaCobertura` y el arancel vigente: `TOTAL` = matrícula; `PARCIAL` = porcentaje de la matrícula; `MONTO_FIJO` = monto fijo por periodo.
-4. Pre-generar `ofertaId` y `becaId` (UUIDv7) y solicitar la reserva a `MS-PRG` con `Idempotency-Key: oferta-{ofertaId}`. La reserva se crea en estado `PENDIENTE` con TTL de 5 minutos. Si `MS-PRG` rechaza por cupo, presupuesto o convenio, se propaga el código y no se escribe localmente.
-5. Abrir la transacción local, persistir `Beca` + `OfertaBeca`, generar la carta PDF, subirla al proveedor Firebase Storage seleccionado mediante el adaptador, guardar referencia/hash, programar el job de expiración y publicar `OfertaBecaEmitida` en el Outbox.
-6. Si la transacción local falla, la reserva expira por TTL. Si confirma, `MS-PRG` consume `OfertaBecaEmitida` y transiciona la reserva `PENDIENTE → CONFIRMADA`; al aceptarse la beca, `BecaActivada` la transiciona `CONFIRMADA → ACTIVADA`; al rechazarse, anularse o expirar la oferta, el evento correspondiente la libera. No se implementa compensación síncrona en este corte para no ampliar la lista cerrada de llamadas internas.
+1. Consultar `GET /internal/v1/postulaciones/{id}/adjudicable` en `MS-POS` con *Service Token* y timeout máximo de 3 s. Si no es adjudicable, responder `422 POSTULACION_NO_ADJUDICABLE`; si el servicio no responde, `503 DEPENDENCIA_NO_DISPONIBLE`.
+2. Consultar `GET /internal/v1/periodos-academicos/actual` en `MS-PLT`. La emisión falla cerrada con `503` si el periodo o código devuelto no coincide con los de la postulación.
+3. Leer la proyección local de programa y conservarla como caché de metadatos. Consultar `GET /internal/v1/programas/{id}/condiciones?carreraId=&periodoId=` en `MS-PRG` para obtener la política de cobertura, las condiciones de permanencia, el arancel vigente y la vigencia del convenio; usar esos valores actuales para la oferta. Un `404` o una configuración incompleta produce `422 CONFIGURACION_PROGRAMA_NO_DISPONIBLE`; un convenio vencido conserva `422 CONVENIO_VENCIDO`; una dependencia no disponible produce `503`.
+4. Calcular el monto de la oferta según `PoliticaCobertura` y el arancel vigente: `TOTAL` = matrícula; `PARCIAL` = porcentaje de la matrícula; `MONTO_FIJO` = monto fijo por periodo.
+5. Pre-generar `ofertaId` y `becaId` (UUIDv7) y solicitar la reserva a `MS-PRG` con `Idempotency-Key: oferta-{ofertaId}`. La reserva se crea en estado `PENDIENTE` con TTL de 5 minutos. Si MS-PRG rechaza por cupo o presupuesto, se propaga el código y no se escribe localmente.
+6. Generar y subir los documentos, programar la expiración y construir el agregado. Antes de guardar la transacción local, invocar `POST /internal/v1/postulaciones/{postulacionId}/otorgar` en `MS-POS` con `Idempotency-Key: otorgar-{ofertaId}`. Si MS-POS devuelve `409`/`422` o no está disponible, se eliminan los documentos y el job, no se guarda el agregado ni el Outbox y la reserva `PENDIENTE` expira por TTL.
+7. Abrir la transacción local y persistir `Beca` + `OfertaBeca`. Completar la transición de la reserva mediante los endpoints REST idempotentes de `MS-PRG`: `PENDIENTE → CONFIRMADA` al emitir, `CONFIRMADA → ACTIVADA` al aceptar y liberación al rechazar, anular o expirar. La coordinación entre el commit local y esas llamadas requiere recuperación duradera ante fallos y sigue pendiente en 15.4. `OfertaBecaEmitida` y los demás eventos informan hechos de negocio a los consumidores desacoplados.
 
-La guarda de la Tabla 3.2 (“`ReservaPresupuestoCupo` confirmada en `MS-PRG`”) se satisface con la reserva creada y retenida en `PENDIENTE`; la transición a `CONFIRMADA` se completa por el evento `OfertaBecaEmitida` dentro de la consistencia eventual que ya exige el patrón Outbox/Inbox.
+La llamada a MS-POS y la transacción local no son atómicas. El contrato de `MS-POS` debe honrar `Idempotency-Key`; si el otorgamiento remoto se confirma y luego falla la persistencia local, esta sección no define una operación compensatoria en MS-POS. Ese caso requiere reconciliación entre los servicios y no se resuelve modificando el microservicio proveedor.
 
-La liberación de cupo/presupuesto al rechazar, anular o expirar se comunica mediante los eventos `OfertaBecaRechazada`, `OfertaBecaAnulada` y `OfertaBecaExpirada`; `MS-PRG` los consume y libera la reserva. Esto evita una llamada síncrona de liberación no contemplada en la lista cerrada.
+La guarda de la Tabla 3.2 (“`ReservaPresupuestoCupo` confirmada en `MS-PRG`”) exige la confirmación efectiva por REST; una reserva `PENDIENTE` por sí sola no la satisface. La implementación actual aún no cumple esta guarda y permanece abierta en 15.4.
+
+**Pendiente de 15.4:** DEC-08 y el contrato 6.2 del DDD establecen operaciones REST `confirmar`, `activar` y `liberar` en `MS-PRG`; los eventos de oferta sirven para auditoría y comunicaciones, no sustituyen esas mutaciones. `ProgramasClient` ya expone las tres rutas con claves de idempotencia estables y pruebas de contrato. Falta conectar las operaciones a los handlers y definir una recuperación duradera para la caída entre la llamada REST y el commit local. Hasta resolver esa coordinación y verificarla con MS-PRG, la emisión y las transiciones terminales no satisfacen el ciclo completo de reservas ni se puede afirmar que no haya reservas huérfanas.
 
 ### 6. Contratos de integración
 
@@ -143,6 +146,8 @@ La liberación de cupo/presupuesto al rechazar, anular o expirar se comunica med
 - `postulante_id`: UUID de `Postulante`, obligatorio para `POSTULANTE` y `BECARIO`.
 - `programa_ids`: UUIDs de programas donde el coordinador tiene alcance; `DIRECCION` puede operar globalmente.
 - `acr`/`amr`: evidencia de segundo factor. La política `Requiere2FA` acepta un valor configurable de `acr` o la presencia de `otp`/`totp` en `amr`.
+
+**Política OTP de otorgamiento:** según DEC-07, emitir y anular una oferta no requieren consumo OTP adicional; la anulación administrativa sigue protegida por 2FA de Keycloak. `AutorizacionOtpEmisionId` permanece opcional y no se agrega una autorización OTP de anulación en este cambio.
 - Si un endpoint administrativo recibe un token sin 2FA, responde `401 SEGUNDO_FACTOR_REQUERIDO`; si un coordinador no tiene alcance sobre el programa, `403 PERMISO_DENEGADO`.
 
 **`MS-POS` — `GET /internal/v1/postulaciones/{id}/adjudicable`:**
@@ -173,7 +178,7 @@ La liberación de cupo/presupuesto al rechazar, anular o expirar se comunica med
 }
 ```
 
-Respuesta `201`: `{ "reservaId": "uuid", "estado": "PENDIENTE", "monto": 1234.56, "cupos": 1, "expiraEn": "..." }`. La confirmación y liberación se resuelven por los eventos de oferta y de activación descritos en este diseño. Errores: `409 SIN_CUPO_O_PRESUPUESTO`, `422 CONVENIO_VENCIDO`.
+Respuesta `201`: `{ "reservaId": "uuid", "estado": "PENDIENTE", "monto": 1234.56, "cupos": 1, "expiraEn": "..." }`. La confirmación, activación y liberación requieren `POST` a `/internal/v1/programas/{id}/reservas/{reservaId}/{confirmar|activar|liberar}` con `Idempotency-Key: {operacion}-{ofertaId}`. Errores de la creación: `409 SIN_CUPO_O_PRESUPUESTO`, `422 CONVENIO_VENCIDO`.
 
 **`MS-PLT` — `POST /internal/v1/otp/consumir`:** se implementa el puerto y el cliente, pero no se invoca en este cambio. El contrato queda documentado para el cambio de revocación y desembolsos.
 
@@ -232,6 +237,8 @@ Hangfire usa PostgreSQL con esquema `hangfire`, cola `critical` para expiracione
 
 Para cubrir la ventana entre el commit y la programación del job, un job recurrente `ReconciliarOfertasPendientesJob` (cada 5 minutos) busca ofertas `PENDIENTE_RESPUESTA` con `fecha_vencimiento_aceptacion <= now()` y ejecuta la misma lógica. Ambos caminos son idempotentes y usan `SELECT ... FOR UPDATE`; si la oferta ya no está pendiente, no hacen nada.
 
+Al aceptar, rechazar o anular una oferta, MS-BEC intenta borrar su job de expiración después del commit local. Si Hangfire no confirma la cancelación o falla, se registra una advertencia y el job/reconciliador vuelve a leer el estado; una oferta que ya no esté pendiente no se expira.
+
 El dashboard de Hangfire solo se habilita en desarrollo o con política administrativa; en producción se protege con el mismo esquema de Keycloak y no se expone por el gateway.
 
 **Alternativa descartada:** un `Timer` en memoria. Se descarta porque no sobrevive reinicios ni despliegues.
@@ -287,14 +294,14 @@ Se usa un `WebApplicationFactory` con un esquema de autenticación de prueba par
 
 | Riesgo | Mitigación |
 | :--- | :--- |
-| Los contratos de `ProgramaBecaConfigurado`, `CostoMatriculaActualizado`, `adjudicable` y `reservas` no están definidos al detalle en la especificación maestra. | Se documentan en este diseño, se implementan detrás de puertos/adaptadores y se cubren con pruebas de contrato y WireMock; cualquier ajuste queda localizado en `Infrastructure`. |
+| Los contratos HTTP de condiciones de `MS-PRG`, periodo actual de `MS-PLT` y transición a otorgada de `MS-POS` no incluyen esquemas JSON completos en la especificación maestra. | MS-BEC documenta y prueba los payloads esperados con WireMock; se mantienen pendientes de validación por los equipos propietarios antes de considerarlos contratos confirmados. |
 | Los claims `postulante_id` y `programa_ids` requieren cambios en `MS-PLT`/Keycloak. | Se definen como contrato de identidad y se valida en pruebas; si faltan, el servicio falla cerrado (`401`/`403`), nunca autoriza de más. |
-| La emisión hace una llamada síncrona a `MS-PRG` antes de escribir; si el broker o la red fallan, la reserva puede quedar creada sin oferta. | La reserva nace `PENDIENTE` con TTL de 5 minutos y la clave de idempotencia evita duplicados; `OfertaBecaEmitida` la confirma y los eventos de oferta terminal la liberan. Se monitorea el Outbox y las reservas huérfanas. |
+| La emisión hace una llamada síncrona a `MS-PRG` antes de escribir; una caída entre el commit local y la mutación remota puede dejar estados divergentes. | La reserva nace `PENDIENTE` con TTL de 5 minutos y la clave de idempotencia evita duplicados. Falta implementar en 15.4 la recuperación duradera y comprobar la ausencia de reservas huérfanas; los eventos no sustituyen las operaciones REST. |
 | El índice único parcial no cubre todos los casos de acumulación (una beca acumulable y otra no). | La regla se valida en el dominio con aislamiento `Serializable` y bloqueo por estudiante; el índice es una defensa adicional, no la única. |
 | La integración cloud aún no se ha ejercitado contra un bucket real. | Se prueban las operaciones locales y el adaptador cloud con dobles aislados; antes de activarlo se verifican Blaze, IAM, cuotas y contratos en un entorno controlado. |
 | Hangfire y MassTransit comparten PostgreSQL y pueden competir por conexiones. | Se usan pools separados, límites de workers y healthchecks; el esquema `hangfire` se mantiene aislado. |
 | El bloqueo `FOR UPDATE` puede aumentar la contención en becas muy activas. | Las operaciones son por beca/estudiante y de corta duración; se monitorea la latencia y se mantiene el timeout de 3 s para dependencias. |
-| La proyección local de configuración puede quedar desactualizada si se pierde un evento. | Inbox idempotente, control de `occurredAt`/`ultimo_evento_id`, métrica de configuración faltante que bloquea la emisión y procedimiento documentado para que `MS-PRG` reemita el evento. |
+| La proyección local de configuración puede quedar desactualizada si se pierde un evento, y el endpoint de condiciones puede no estar disponible. | MS-BEC conserva la proyección como caché de metadatos, consulta a MS-PRG para los valores vigentes usados en la oferta y falla cerrado si la dependencia no responde; se mantienen Inbox idempotente y procedimiento para reemitir eventos. |
 
 ## Migration Plan
 
@@ -310,4 +317,5 @@ Se usa un `WebApplicationFactory` con un esquema de autenticación de prueba par
 
 - Confirmar con `MS-PRG` el payload exacto de `ProgramaBecaConfigurado` y `CostoMatriculaActualizado`; el diseño asume que incluyen la política de cobertura y las condiciones de permanencia completas.
 - Confirmar con `MS-POS` que `adjudicable` devuelve `carreraId` y `universidadAliadaId`, necesarios para seleccionar el arancel y validar el convenio.
+- Confirmar con `MS-POS`, `MS-PRG` y `MS-PLT` los ejemplos HTTP añadidos a `docs/contratos/ms-bec/identidad-integraciones.md`, incluyendo la URL base de MS-PLT para el entorno de ejecución.
 - Confirmar con `MS-PLT` el nombre final de los claims `postulante_id` y `programa_ids` y el valor de `acr` para 2FA. Se mantienen configurables para no bloquear el desarrollo.

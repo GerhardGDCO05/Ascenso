@@ -8,4 +8,9 @@ public interface IPostulacionesClient
     Task<ResultadoAdjudicabilidad> ObtenerAdjudicabilidadAsync(
         Guid postulacionId,
         CancellationToken cancellationToken = default);
+
+    Task OtorgarAsync(
+        Guid postulacionId,
+        Guid ofertaId,
+        CancellationToken cancellationToken = default);
 }

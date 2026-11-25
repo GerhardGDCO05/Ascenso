@@ -3,10 +3,12 @@ using Ascenso.Becas.Application.Despacho;
 using Ascenso.Becas.Application.Excepciones;
 using Ascenso.Becas.Application.Otorgamiento.Dtos;
 using Ascenso.Becas.Application.Otorgamiento.Puertos;
+using Ascenso.Becas.Application.Otorgamiento.Servicios;
 using Ascenso.Becas.Domain.Enums;
 using Ascenso.Becas.Domain.Otorgamiento.Agregados;
 using Ascenso.Becas.Domain.Otorgamiento.Servicios;
 using Ascenso.Becas.Domain.Ports;
+using Microsoft.Extensions.Logging;
 
 namespace Ascenso.Becas.Application.Otorgamiento.Comandos.AceptarOfertaBeca;
 
@@ -23,6 +25,8 @@ public sealed class AceptarOfertaBecaHandler
     private readonly IBecaRepository _repositorio;
     private readonly IUnitOfWork _unidadDeTrabajo;
     private readonly IOutboxBeca _outbox;
+    private readonly IProgramadorExpiracionOfertas _programador;
+    private readonly ILogger<AceptarOfertaBecaHandler> _logger;
 
     public AceptarOfertaBecaHandler(
         IContextoOperacionActual contextoActual,
@@ -30,7 +34,9 @@ public sealed class AceptarOfertaBecaHandler
         IMetricasOtorgamiento metricas,
         IBecaRepository repositorio,
         IUnitOfWork unidadDeTrabajo,
-        IOutboxBeca outbox)
+        IOutboxBeca outbox,
+        IProgramadorExpiracionOfertas programador,
+        ILogger<AceptarOfertaBecaHandler> logger)
     {
         _contextoActual = contextoActual ?? throw new ArgumentNullException(nameof(contextoActual));
         _reloj = reloj ?? throw new ArgumentNullException(nameof(reloj));
@@ -38,6 +44,8 @@ public sealed class AceptarOfertaBecaHandler
         _repositorio = repositorio ?? throw new ArgumentNullException(nameof(repositorio));
         _unidadDeTrabajo = unidadDeTrabajo ?? throw new ArgumentNullException(nameof(unidadDeTrabajo));
         _outbox = outbox ?? throw new ArgumentNullException(nameof(outbox));
+        _programador = programador ?? throw new ArgumentNullException(nameof(programador));
+        _logger = logger ?? throw new ArgumentNullException(nameof(logger));
     }
 
     public async Task<OfertaRespondidaDto> HandleAsync(
@@ -92,6 +100,11 @@ public sealed class AceptarOfertaBecaHandler
 
         if (resultado is not null)
         {
+            await CanceladorExpiracionOferta.CancelarAsync(
+                _programador,
+                _logger,
+                command.OfertaId,
+                referencia.Oferta?.ReferenciaJobExpiracionHangfireId);
             _metricas.OfertaAceptada();
         }
 

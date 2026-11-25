@@ -26,7 +26,7 @@ Ascenso/
 
 ## 2. Microservicios de la Plataforma
 
-| Microservicio | Carpeta de código | Solución .NET | Especificación duradera |
+| Microservicio | Carpeta de código | Solución .NET | Visión general del dominio |
 | :--- | :--- | :--- | :--- |
 | **MS-PLT** | `Apps/services/ms-plt/` | `Ascenso.Plataforma.sln` | `openspec/specs/ms-plt/spec_plt.md` (contexto) |
 | **MS-PRG** | `Apps/services/ms-prg/` | `Ascenso.Programas.sln` | `openspec/specs/ms-prg/spec_prg.md` |
@@ -45,7 +45,9 @@ Estado actual:
 | Contenido | Ubicación | Regla |
 | :--- | :--- | :--- |
 | Contexto general, PRD, DDD y convenciones | `docs/` | Fuente única compartida; no duplicar en `openspec/specs/`. |
-| Especificaciones duraderas | `openspec/specs/<microservicio>/` | Una carpeta por microservicio; archivo principal `spec_<código>.md`. |
+| Visión general del dominio | `openspec/specs/<microservicio>/spec_<código>.md` | Contexto e invariantes del microservicio; este archivo no aparece en `openspec list --specs`. |
+| Especificaciones OpenSpec duraderas | `openspec/specs/<microservicio>/<capacidad>/spec.md` | Requisitos y escenarios por capacidad; se incorporan desde los deltas de un cambio al sincronizar o archivar. |
+| Deltas de un cambio activo | `openspec/changes/<cambio>/specs/<microservicio>/<capacidad>/spec.md` | Propuesta de requisitos nuevos o modificados; permanecen junto al cambio mientras esté activo. |
 | Cambios activos | `openspec/changes/[ID-Cambio]-[Integrante]-[Microservicio]/` | Solo el microservicio afectado. |
 | Históricos de sesión | `openspec/changes/archive/YYYY-MM-DD-[ID-Cambio]-[Integrante]-[Microservicio]/` | Sin hora `HHMM`; incluye `.openspec.yaml`, `proposal.md`, `design.md`, `tasks.md` y `log-...md`. |
 | Planificación general | `openspec/roadmaps/` | Roadmaps por integrante y por microservicio. |
@@ -64,7 +66,7 @@ Estado actual:
 ## 4. Reglas de Convivencia
 
 1. **Aislamiento por microservicio:** cada equipo modifica su carpeta de código, su especificación y su configuración. Los cambios que crucen límites se coordinan con el equipo responsable.
-2. **Especificaciones separadas:** cada microservicio mantiene su propia carpeta en `openspec/specs/`; no se mezclan escenarios de contextos distintos.
+2. **Especificaciones separadas:** cada microservicio mantiene su propia carpeta en `openspec/specs/`; las capacidades usan `<capacidad>/spec.md` y no se mezclan escenarios de contextos distintos.
 3. **Contexto general único:** el PRD, la explicación del DDD y las convenciones viven en `docs/` y se referencian desde `openspec/config.yaml`.
 4. **Cambios trazables:** los cambios se nombran `[ID-Cambio]-[Integrante]-[Microservicio]` y los históricos se archivan como `YYYY-MM-DD-[ID-Cambio]-[Integrante]-[Microservicio]`, sin hora.
 5. **Trabajo activo:** cada equipo desarrolla en su microservicio; el trabajo compartido se documenta en `docs/` y en los roadmaps.
@@ -74,7 +76,7 @@ Estado actual:
 ## 5. Cómo Incorporar un Nuevo Microservicio
 
 1. Crear `Apps/services/<microservicio>/` con su solución y los cuatro proyectos hexagonales.
-2. Crear `openspec/specs/<microservicio>/spec_<código>.md` con el contexto y las invariantes del dominio.
+2. Crear `openspec/specs/<microservicio>/spec_<código>.md` con la visión general y las invariantes del dominio. Definir los requisitos verificables en los deltas `specs/<microservicio>/<capacidad>/spec.md` del cambio activo; al sincronizar o archivar pasarán a las especificaciones duraderas.
 3. Crear el cambio activo en `openspec/changes/[ID-Cambio]-[Integrante]-[Microservicio]/`.
 4. Definir la configuración del microservicio dentro de su carpeta (`Directory.Build.props`, `Directory.Packages.props` y `.editorconfig`) para no acoplar versiones ni reglas con otros equipos.
 5. Generar los `packages.lock.json` y verificar que `dotnet restore --locked-mode` funciona.
@@ -98,4 +100,4 @@ Apps/services/ms-becas/
     └── Ascenso.Becas.IntegrationTests/    # Persistencia, mensajería y API
 ```
 
-El cambio activo es `tech-bootstrap-int4-msbeca` y la especificación duradera vive en `openspec/specs/ms-beca/spec_beca.md`.
+El cambio activo es `tech-bootstrap-int4-msbeca`. `openspec/specs/ms-beca/spec_beca.md` contiene la visión general, igual que `spec_pos.md` y `spec_prg.md`. Los deltas de `fundacion-servicio` y `otorgamiento-beca` permanecen en `openspec/changes/tech-bootstrap-int4-msbeca/specs/ms-beca/` hasta que el cambio se sincronice o archive; por eso todavía no aparecen como capacidades duraderas en `openspec list --specs`.

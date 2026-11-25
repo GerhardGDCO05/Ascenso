@@ -47,8 +47,8 @@
 
 *Otorgamiento, ciclo de vida de la beca, desembolsos y seguimiento académico.*
 
-- [x] **RF-15**: Emisión de carta de otorgamiento / Oferta
-- [x] **RF-16**: Aceptación o rechazo formal de la beca
+- [ ] **RF-15**: Emisión de carta de otorgamiento / Oferta (flujo base implementado; integraciones pendientes)
+- [ ] **RF-16**: Aceptación o rechazo formal de la beca (flujo base implementado; cierre de reserva pendiente)
 - [x] **RF-17**: Firma de compromiso del becario
 - [ ] **RF-19**: Programación de calendarios de desembolsos
 - [ ] **RF-20**: Registro y confirmación de pagos con OTP
