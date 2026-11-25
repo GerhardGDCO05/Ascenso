@@ -121,25 +121,25 @@ Cada solicitud SHALL propagar un `correlationId` y registrarlo en logs estructur
 - **WHEN** una operación incluye un código OTP o un número de cuenta
 - **THEN** los logs y trazas los enmascaran o los omiten por completo
 
-### Requirement: Selección de proveedor de Firebase Storage
+### Requirement: Preparación de almacenamiento cloud sin conexión real
 
-MS-BEC SHALL permitir seleccionar por entorno Cloud Storage o Firebase Storage Emulator. El modo cloud requiere identidad externa válida y acceso habilitado al bucket; los errores no SHALL cambiar automáticamente de proveedor.
+MS-BEC SHALL usar almacenamiento local por defecto en desarrollo y pruebas. SHALL conservar un adaptador de Google Cloud Storage para una integración futura con el bucket de Firebase, activable solo mediante configuración explícita de bucket e identidad externa; el repositorio y CI no SHALL conectar con un proyecto real.
 
-#### Scenario: Emulador seleccionado
+#### Scenario: Desarrollo local sin conexión cloud
 
-- **WHEN** el entorno selecciona explícitamente el emulador
-- **THEN** las operaciones de archivos se ejecutan contra el emulador sin credenciales cloud
-- **AND** una falla del emulador se informa sin intentar acceder a un bucket real
+- **WHEN** el servicio arranca con la configuración local predeterminada
+- **THEN** los archivos se guardan localmente sin credenciales cloud
+- **AND** no se solicita acceso a Firebase ni a Google Cloud
 
 #### Scenario: Cloud Storage seleccionado sin identidad
 
 - **WHEN** el entorno selecciona Cloud Storage sin una identidad utilizable
-- **THEN** MS-BEC informa el error de configuración y no usa el emulador como fallback
+- **THEN** MS-BEC informa el error de configuración y no cambia automáticamente de proveedor
 
 #### Scenario: Proyecto sin acceso a Cloud Storage
 
 - **WHEN** Cloud Storage está seleccionado pero el proyecto no tiene acceso al bucket
-- **THEN** MS-BEC informa el error del proveedor y no cambia al emulador
+- **THEN** MS-BEC informa el error del proveedor y no cambia automáticamente al almacenamiento local
 
 ### Requirement: Acceso privado a Firebase Storage
 

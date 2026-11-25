@@ -11,7 +11,7 @@ up:
 	$(COMPOSE) up --wait -d
 
 down:
-	$(COMPOSE) --profile api --profile firebase-emulator down
+	$(COMPOSE) --profile api down
 
 dev-up:
 	./Apps/services/ms-becas/scripts/dev-up.sh
@@ -28,7 +28,7 @@ migrate: up
 
 run: dev-up
 	@set -eu; \
-	config="$$($(COMPOSE) --profile api --profile firebase-emulator config --format json)"; \
+	config="$$($(COMPOSE) --profile api config --format json)"; \
 	value() { printf '%s' "$$config" | jq -r "$$1"; }; \
 	db=$$(value '.services.postgres.environment.POSTGRES_DB'); \
 	db_user=$$(value '.services.postgres.environment.POSTGRES_USER'); \
@@ -39,18 +39,8 @@ run: dev-up
 	rabbit_port=$$(value '.services.rabbitmq.ports[] | select((.target | tonumber) == 5672) | .published'); \
 	keycloak_port=$$(value '.services.keycloak.ports[] | select((.target | tonumber) == 8080) | .published'); \
 	dev_stubs_port=$$(value '.services["dev-stubs"].ports[] | select((.target | tonumber) == 8080) | .published'); \
-	firebase_storage_port=$$(value '.services["firebase-storage"].ports[] | select((.target | tonumber) == 9199) | .published'); \
 	storage_provider=$$(value '.services.api.environment.Storage__Provider'); \
 	firebase_bucket=$$(value '.services.api.environment.Storage__Firebase__Bucket'); \
-	firebase_use_emulator=$$(value '.services.api.environment.Storage__Firebase__UsaEmulador'); \
-	firebase_credentials_path=$$(value '.services.api.environment.FIREBASE_STORAGE_CREDENTIALS_PATH'); \
-	firebase_url_base=$$(value '.services.api.environment.Storage__Firebase__UrlBase'); \
-	emulator_host=; \
-	if [ "$$storage_provider" = "Firebase" ] && [ "$$firebase_use_emulator" = "true" ]; then \
-		$(COMPOSE) --profile firebase-emulator up --wait -d firebase-storage; \
-		emulator_host="localhost:$$firebase_storage_port"; \
-		firebase_url_base="http://$$emulator_host"; \
-	fi; \
 	ConnectionStrings__Becas="Host=localhost;Port=$$db_port;Database=$$db;Username=$$db_user;Password=$$db_password" \
 	RabbitMq__Host=localhost \
 	RabbitMq__Port="$$rabbit_port" \
@@ -67,19 +57,10 @@ run: dev-up
 	Clientes__Programas__UsaServiceToken=false \
 	Storage__Provider="$$storage_provider" \
 	Storage__Firebase__Bucket="$$firebase_bucket" \
-	Storage__Firebase__UsaEmulador="$$firebase_use_emulator" \
-	Storage__Firebase__RutaCredenciales="$$firebase_credentials_path" \
-	Storage__Firebase__UrlBase="$$firebase_url_base" \
-	STORAGE_EMULATOR_HOST="$$emulator_host" \
 		ASPNETCORE_ENVIRONMENT=Development $(DOTNET) run --project "$(API_PROJECT)"
 
 test:
-	$(COMPOSE) --profile firebase-emulator up --wait -d firebase-storage
-	@set -eu; \
-	config="$$($(COMPOSE) --profile firebase-emulator config --format json)"; \
-	port=$$(printf '%s' "$$config" | jq -r '.services["firebase-storage"].ports[] | select((.target | tonumber) == 9199) | .published'); \
-	STORAGE_EMULATOR_HOST="127.0.0.1:$$port" \
-		$(DOTNET) test "$(SOLUTION)" --configuration Release
+	$(DOTNET) test "$(SOLUTION)" --configuration Release
 
 format:
 	$(DOTNET) format "$(SOLUTION)" --no-restore

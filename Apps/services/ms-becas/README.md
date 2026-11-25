@@ -31,7 +31,6 @@ Puertos predeterminados:
 | RabbitMQ Management | <http://localhost:15673> |
 | Keycloak | <http://localhost:8080> |
 | Stubs locales de MS-POS/MS-PRG | <http://localhost:8082> |
-| Firebase Storage Emulator (opcional) | <http://localhost:9199> |
 
 El usuario y contraseña de RabbitMQ, así como la contraseña inicial del
 administrador de Keycloak, se toman de `.env`.
@@ -45,8 +44,7 @@ Variables principales de `.env`:
 | `KEYCLOAK_ADMIN`, `KEYCLOAK_ADMIN_PASSWORD`, `KEYCLOAK_PORT` | Administrador inicial y puerto de Keycloak. |
 | `DEV_STUBS_BIND_ADDRESS`, `DEV_STUBS_PORT` | Dirección y puerto local de WireMock para simular MS-POS y MS-PRG. |
 | `STORAGE_PROVIDER`, `FIREBASE_STORAGE_BUCKET` | Selección del proveedor y bucket cuando se usa Firebase Storage. |
-| `FIREBASE_STORAGE_USE_EMULATOR`, `FIREBASE_STORAGE_URL_BASE` | Selección y endpoint del emulador local; no son necesarios para Cloud Storage. |
-| `FIREBASE_STORAGE_CREDENTIALS_PATH` | Ruta externa a credenciales de servicio; déjala vacía para ADC. Nunca guardes la clave en Git. |
+| `Storage__Firebase__RutaCredenciales` | Configuración futura del runtime cloud para una ruta externa de credenciales; si se omite, se usa ADC. No se configura en el entorno local. |
 | `API_PORT` | Puerto publicado cuando se usa el perfil Docker `api`. |
 | `*_BIND_ADDRESS` | Dirección local donde se publican los puertos; por defecto `127.0.0.1`. |
 
@@ -62,12 +60,8 @@ La API estará disponible en <http://localhost:5120>. También puedes ejecutar
 la imagen en Compose en <http://localhost:8081>:
 
 ```bash
-docker compose --profile api --profile firebase-emulator up --build --wait -d api
+docker compose --profile api up --build --wait -d api
 ```
-
-El segundo perfil solo se necesita cuando `FIREBASE_STORAGE_USE_EMULATOR=true`.
-Si seleccionas `Local` o Cloud Storage, usa `docker compose --profile api ...`
-sin el perfil del emulador.
 
 Comprobaciones de salud:
 
@@ -87,7 +81,7 @@ make format   # aplica el formato de .NET
 make down     # detiene servicios, incluidos los del perfil api
 ```
 
-`make down` conserva los volúmenes de PostgreSQL, RabbitMQ y Firebase Storage.
+`make down` conserva los volúmenes de PostgreSQL, RabbitMQ y archivos locales.
 Eliminar los volúmenes con `docker compose down -v` borra los datos locales.
 
 ## Emisión local de una oferta
@@ -99,66 +93,23 @@ MS-POS y MS-PRG. La postulación adjudicable disponible es
 están en `deploy/wiremock/mappings/`. Esta configuración es solo para
 desarrollo y no cambia ni requiere los otros microservicios.
 
-## Firebase Storage
+## Almacenamiento de documentos y preparación de Firebase Storage
 
-MS-BEC permite seleccionar `Local` o `Firebase` mediante `STORAGE_PROVIDER`.
-Cuando el proveedor es Firebase, `FIREBASE_STORAGE_USE_EMULATOR` elige entre
-Firebase Storage Emulator y Cloud Storage. El emulador es una opción temporal
-para desarrollo/pruebas sin facturación, no un requisito del adaptador.
+El desarrollo local usa `STORAGE_PROVIDER=Local`: las cartas y los compromisos se guardan en el volumen local y no se solicita ninguna credencial ni se contacta Firebase o Google Cloud. Las pruebas de archivos usan adaptadores falsos y almacenamiento local; CI tampoco usa un proyecto cloud.
 
-El `.env.example` configura el emulador para el flujo local sin credenciales.
-`make run` inicia el perfil `firebase-emulator` solo si esa opción está
-seleccionada; `make test` lo inicia para las pruebas de integración. El API
-contenedorizado usa el host `firebase-storage`; los procesos del host usan
-`localhost`. Los datos del emulador persisten en `firebase-storage-data` y no
-se comparten con otros desarrolladores.
+El código conserva el adaptador de Google Cloud Storage para una integración futura con el bucket de Firebase que ya utiliza la Fundación. Para activarlo en otro momento deberán configurarse externamente el nombre real del bucket y una identidad con permisos mínimos. No se incluyen credenciales, bucket ni conexión real en este repositorio. `STORAGE_PROVIDER=Firebase` activa ese adaptador solo cuando el entorno se configure expresamente.
 
-Cloud Storage requiere que el proyecto Firebase tenga habilitado Storage
-(plan Blaze); en Spark las operaciones cloud no están disponibles. Para
-preparar un entorno cloud, configura externamente el bucket y la identidad:
+Cloud Storage for Firebase requiere el plan Blaze con cuenta de facturación; Spark no permite acceso al bucket. Blaze incluye cuotas sin cargo, pero el consumo que las supere puede generar cargos. Antes de activar el proveedor cloud, el equipo debe verificar el plan, el bucket, la región, los permisos IAM y las alertas de presupuesto según la [documentación oficial](https://firebase.google.com/docs/storage/faqs-storage-changes-announced-sept-2024) y los [precios vigentes](https://firebase.google.com/pricing/).
+
+La configuración prevista es:
 
 ```dotenv
 STORAGE_PROVIDER=Firebase
-FIREBASE_STORAGE_BUCKET=nombre-del-bucket
-FIREBASE_STORAGE_USE_EMULATOR=false
-FIREBASE_STORAGE_URL_BASE=
-FIREBASE_STORAGE_CREDENTIALS_PATH=/ruta/externa/service-account.json
+FIREBASE_STORAGE_BUCKET=nombre-real-del-bucket
+# La identidad se configura fuera del repositorio mediante ADC/Workload Identity.
 ```
 
-La ruta debe ser absoluta y apuntar a un archivo externo al repositorio. `make
-run` la usa en el proceso del host; Compose la monta en modo solo lectura como
-`/run/secrets/firebase-storage.json`. En un runtime administrado puede usarse
-ADC/Workload Identity. No se incluyen claves en `.env.example`, imágenes ni CI.
-Al seleccionar el emulador se usa `EmulatorOnly`; una falla del proveedor
-seleccionado no activa otro proveedor automáticamente.
-
-MS-BEC conserva referencias estables en PostgreSQL. Las respuestas de lectura
-emiten enlaces cloud firmados por un máximo de 15 minutos, solo después de
-validar propiedad o alcance con Keycloak. El emulador devuelve enlaces locales
-para pruebas. Firebase Security Rules deniega acceso directo de clientes; las
-operaciones del backend se autorizan mediante IAM, no mediante esas reglas.
-
-Para configurar Firebase Console, publica estas reglas en **Storage >
-Rules**. Mantienen privado el bucket y no habilitan Firebase Authentication:
-
-```javascript
-rules_version = '2';
-service firebase.storage {
-  match /b/{bucket}/o {
-    match /{allPaths=**} {
-      allow read, write: if false;
-    }
-  }
-}
-```
-
-Concede al backend solo permisos de objetos necesarios para crear, leer y
-eliminar (`storage.objects.create`, `storage.objects.get`,
-`storage.objects.delete`). Si el firmador usa IAM en vez de una clave de
-servicio, también necesita permiso `iam.serviceAccounts.signBlob`. Antes de
-habilitar cloud, acuerda región y bucket, revisa cuotas/precios de Blaze y
-configura alertas de presupuesto. CI no usa credenciales ni llama al proyecto
-real; sus pruebas de archivos se ejecutan contra el emulador.
+En un entorno administrado puede usarse Application Default Credentials o Workload Identity sin archivo de clave. La referencia persistida del objeto es `gs://...`; la URL firmada de lectura se genera por un máximo de 15 minutos después de validar la autorización. Las Firebase Security Rules previstas para el bucket están en `deploy/firebase-storage.rules` y deniegan acceso directo de clientes; el backend se autoriza mediante IAM. Estas reglas todavía no se han publicado en Firebase.
 
 ## Tokens de prueba de Keycloak
 
