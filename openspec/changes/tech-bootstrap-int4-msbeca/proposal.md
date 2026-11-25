@@ -14,7 +14,7 @@
 - Persistir en PostgreSQL `ascenso_becas` con migraciones EF Core, concurrencia optimista, bloqueo pesimista por fila e índices únicos parciales de no doble beneficio.
 - Configurar Hangfire (`critical`) para `ExpirarOfertaBecaJob`, observabilidad, health checks y un entorno local con Docker Compose.
 - Incorporar pruebas unitarias de dominio, pruebas de integración con Testcontainers y pipeline de CI.
-- Integrar Firebase Storage para cartas y compromisos con selección explícita de proveedor por entorno: Cloud Storage como destino cuando el proyecto lo permita y el emulador como opción temporal para desarrollo/CI sin facturación. Las credenciales serán externas al repositorio y no habrá fallback automático.
+- Preparar el adaptador de Google Cloud Storage para el bucket Firebase existente, sin conectarlo a un proyecto real en este cambio. El desarrollo y CI usarán almacenamiento local; las credenciales cloud serán externas al repositorio.
 
 **Fuera de alcance de este cambio (se entregará en cambios posteriores):** `CalendarioDesembolso`, `Desembolso`, `DatosPagoBecario`, `IncidenciaDesembolso`, `SuspensionDesembolso`, revocación definitiva, `ReporteAcademico`, `EvaluacionPermanencia`, `SolicitudRenovacion`, `PausaAplazamiento`, reportería y despliegue productivo.
 
@@ -33,7 +33,7 @@
 
 - **Código nuevo:** solución `Ascenso.Becas.sln` en `Apps/services/ms-becas/` y proyectos de pruebas en `Apps/services/ms-becas/tests/`; no se modifica código existente porque el repositorio no contiene implementación.
 - **Base de datos:** nueva base `ascenso_becas` con esquema `becas`, tablas de MassTransit Outbox/Inbox y Hangfire.
-- **Infraestructura:** RabbitMQ (exchange/colas de `MS-BEC`), PostgreSQL, Keycloak (cliente `ms-bec`, roles y *service accounts*) y Firebase Storage para cartas y compromisos. El emulador queda como proveedor opcional de desarrollo/CI; Cloud Storage requiere un proyecto con Blaze. Este cambio no provisiona buckets ni credenciales reales, y el proveedor se selecciona explícitamente por entorno.
+- **Infraestructura:** RabbitMQ (exchange/colas de `MS-BEC`), PostgreSQL, Keycloak (cliente `ms-bec`, roles y *service accounts*) y almacenamiento local para desarrollo/CI. Queda preparado el adaptador de Google Cloud Storage para cartas y compromisos, sin conectar ni aprovisionar un bucket real. Cloud Storage for Firebase exige Blaze, que puede tener uso sin cargo dentro de sus cuotas, y una identidad externa autorizada.
 - **Integraciones salientes:** `GET /internal/v1/postulaciones/{id}/adjudicable` (`MS-POS`), `POST /internal/v1/programas/{id}/reservas` (`MS-PRG`), `POST /internal/v1/otp/consumir` (`MS-PLT`, solo se deja el puerto y el adaptador listos; se activa en el cambio de revocación).
 - **Integraciones entrantes:** `MS-POS` consume `GET /internal/v1/becas/activas`; `MS-POS`, `MS-PLT` y `MS-AUD` consumen los eventos `OfertaBecaEmitida`, `OfertaBecaRechazada`, `OfertaBecaExpirada`, `OfertaBecaAnulada`, `BecaActivada`, `CompromisoBecarioCargado/Aprobado/Rechazado`.
 - **Eventos consumidos:** `ProgramaBecaConfigurado`, `CostoMatriculaActualizado`, `ConvenioUniversidadRegistrado` y `ConvenioUniversidadVencido` de `MS-PRG`, para alimentar las proyecciones locales de configuración.

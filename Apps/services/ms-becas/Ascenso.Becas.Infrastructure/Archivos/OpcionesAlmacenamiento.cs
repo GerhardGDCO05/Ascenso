@@ -33,9 +33,7 @@ public sealed class OpcionesAlmacenamiento
             Firebase = new OpcionesAlmacenamientoFirebase
             {
                 Bucket = seccion["Firebase:Bucket"] ?? string.Empty,
-                RutaCredenciales = VacioComoNulo(seccion["Firebase:RutaCredenciales"]),
-                UrlBase = VacioComoNulo(seccion["Firebase:UrlBase"]),
-                UsaEmulador = seccion.GetValue<bool?>("Firebase:UsaEmulador") ?? false
+                RutaCredenciales = VacioComoNulo(seccion["Firebase:RutaCredenciales"])
             }
         };
     }
@@ -72,8 +70,4 @@ public sealed class OpcionesAlmacenamientoFirebase
     public string Bucket { get; init; } = string.Empty;
 
     public string? RutaCredenciales { get; init; }
-
-    public string? UrlBase { get; init; }
-
-    public bool UsaEmulador { get; init; }
 }
