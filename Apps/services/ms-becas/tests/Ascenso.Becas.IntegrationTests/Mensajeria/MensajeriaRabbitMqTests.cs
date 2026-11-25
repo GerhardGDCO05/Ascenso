@@ -14,8 +14,8 @@ namespace Ascenso.Becas.IntegrationTests.Mensajeria;
 [Collection(ColeccionMensajeria.Nombre)]
 public sealed class MensajeriaRabbitMqTests
 {
-    private static readonly TimeSpan TiempoMaximoEspera = TimeSpan.FromSeconds(60);
-    private static readonly TimeSpan IntervaloEspera = TimeSpan.FromMilliseconds(250);
+    private static readonly TimeSpan _tiempoMaximoEspera = TimeSpan.FromSeconds(60);
+    private static readonly TimeSpan _intervaloEspera = TimeSpan.FromMilliseconds(250);
 
     private readonly MensajeriaFixture _fixture;
 
@@ -61,7 +61,7 @@ public sealed class MensajeriaRabbitMqTests
 
             aplicado.Should().BeTrue(
                 "el consumidor RabbitMQ debe aplicar el evento en menos de {0}",
-                TiempoMaximoEspera);
+                _tiempoMaximoEspera);
         }
         finally
         {
@@ -93,7 +93,7 @@ public sealed class MensajeriaRabbitMqTests
 
             aplicado.Should().BeTrue(
                 "el consumidor RabbitMQ debe aplicar el evento en menos de {0}",
-                TiempoMaximoEspera);
+                _tiempoMaximoEspera);
 
             await bus.Publish(mensaje, contexto => contexto.MessageId = eventoId);
             await Task.Delay(TimeSpan.FromSeconds(2));
@@ -180,14 +180,14 @@ public sealed class MensajeriaRabbitMqTests
     {
         var cronometro = Stopwatch.StartNew();
 
-        while (cronometro.Elapsed < TiempoMaximoEspera)
+        while (cronometro.Elapsed < _tiempoMaximoEspera)
         {
             if (await condicion())
             {
                 return true;
             }
 
-            await Task.Delay(IntervaloEspera);
+            await Task.Delay(_intervaloEspera);
         }
 
         return await condicion();
