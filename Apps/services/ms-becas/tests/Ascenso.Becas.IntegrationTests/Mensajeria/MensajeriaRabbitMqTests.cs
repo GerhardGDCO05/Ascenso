@@ -1,3 +1,4 @@
+using System.Diagnostics;
 using Ascenso.Becas.Application.IntegracionEventos;
 using Ascenso.Becas.Infrastructure.Dependencias;
 using Ascenso.Becas.Infrastructure.Persistence;
@@ -13,6 +14,9 @@ namespace Ascenso.Becas.IntegrationTests.Mensajeria;
 [Collection(ColeccionMensajeria.Nombre)]
 public sealed class MensajeriaRabbitMqTests
 {
+    private static readonly TimeSpan TiempoMaximoEspera = TimeSpan.FromSeconds(60);
+    private static readonly TimeSpan IntervaloEspera = TimeSpan.FromMilliseconds(250);
+
     private readonly MensajeriaFixture _fixture;
 
     public MensajeriaRabbitMqTests(MensajeriaFixture fixture)
@@ -55,7 +59,9 @@ public sealed class MensajeriaRabbitMqTests
                     && programa.UltimoEventoId == eventoId);
             });
 
-            aplicado.Should().BeTrue();
+            aplicado.Should().BeTrue(
+                "el consumidor RabbitMQ debe aplicar el evento en menos de {0}",
+                TiempoMaximoEspera);
         }
         finally
         {
@@ -85,7 +91,9 @@ public sealed class MensajeriaRabbitMqTests
                     programa.ProgramaBecaId == programaId);
             });
 
-            aplicado.Should().BeTrue();
+            aplicado.Should().BeTrue(
+                "el consumidor RabbitMQ debe aplicar el evento en menos de {0}",
+                TiempoMaximoEspera);
 
             await bus.Publish(mensaje, contexto => contexto.MessageId = eventoId);
             await Task.Delay(TimeSpan.FromSeconds(2));
@@ -168,20 +176,20 @@ public sealed class MensajeriaRabbitMqTests
             .SingleAsync();
 
     private static async Task<bool> EsperarAsync(
-        Func<Task<bool>> condicion,
-        int intentos = 60,
-        int esperaMilisegundos = 250)
+        Func<Task<bool>> condicion)
     {
-        for (var intento = 0; intento < intentos; intento++)
+        var cronometro = Stopwatch.StartNew();
+
+        while (cronometro.Elapsed < TiempoMaximoEspera)
         {
             if (await condicion())
             {
                 return true;
             }
 
-            await Task.Delay(esperaMilisegundos);
+            await Task.Delay(IntervaloEspera);
         }
 
-        return false;
+        return await condicion();
     }
 }
