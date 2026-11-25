@@ -5,6 +5,18 @@ using Ascenso.Programas.Application.Donantes.Comandos.RegistrarAporteDonante;
 using Ascenso.Programas.Application.Donantes.Comandos.RegistrarDonante;
 using Ascenso.Programas.Application.Donantes.Consultas.ConsultarDonantes;
 using Ascenso.Programas.Application.Donantes.Consultas.ConsultarHistorialAportes;
+using Ascenso.Programas.Application.Convocatorias;
+using Ascenso.Programas.Application.Convocatorias.Abstracciones;
+using Ascenso.Programas.Application.Convocatorias.Comandos.AgregarDocumentoRequerido;
+using Ascenso.Programas.Application.Convocatorias.Comandos.CerrarConvocatoriasVencidas;
+using Ascenso.Programas.Application.Convocatorias.Comandos.CrearConvocatoriaBorrador;
+using Ascenso.Programas.Application.Convocatorias.Comandos.EditarConvocatoriaBorrador;
+using Ascenso.Programas.Application.Convocatorias.Comandos.EliminarDocumentoRequerido;
+using Ascenso.Programas.Application.Convocatorias.Comandos.PublicarConvocatoria;
+using Ascenso.Programas.Application.Convocatorias.Consultas.ConsultarConvocatorias;
+using Ascenso.Programas.Application.Convocatorias.Consultas.ConsultarConvocatoriasAbiertas;
+using Ascenso.Programas.Application.Convocatorias.Consultas.ObtenerConvocatoriaPorId;
+using Ascenso.Programas.Application.Convocatorias.Servicios;
 using Ascenso.Programas.Application.Donantes.Consultas.ObtenerDonantePorId;
 using Ascenso.Programas.Application.Programas.Comandos.AsignarPresupuestoDonantes;
 using Ascenso.Programas.Application.Programas.Comandos.CerrarPeriodoPrograma;
@@ -72,6 +84,20 @@ public static class DependencyInjection
         services.AddScoped<ObtenerProgramaPorIdQueryHandler>();
         services.AddScoped<ObtenerBalanceProgramaQueryHandler>();
         services.AddScoped<ConsultarMovimientosPresupuestariosQueryHandler>();
+
+        services.AddSingleton<IRelojConvocatorias, RelojSistema>();
+        services.AddScoped<ValidadorDisponibilidadConvocatoria>();
+
+        services.AddScoped<CrearConvocatoriaBorradorCommandHandler>();
+        services.AddScoped<EditarConvocatoriaBorradorCommandHandler>();
+        services.AddScoped<PublicarConvocatoriaCommandHandler>();
+        services.AddScoped<AgregarDocumentoRequeridoCommandHandler>();
+        services.AddScoped<EliminarDocumentoRequeridoCommandHandler>();
+        services.AddScoped<CerrarConvocatoriasVencidasCommandHandler>();
+
+        services.AddScoped<ConsultarConvocatoriasQueryHandler>();
+        services.AddScoped<ObtenerConvocatoriaPorIdQueryHandler>();
+        services.AddScoped<ConsultarConvocatoriasAbiertasQueryHandler>();
 
         return services;
     }

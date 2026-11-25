@@ -1,0 +1,3 @@
+namespace Ascenso.Programas.Application.Convocatorias.Consultas.ConsultarConvocatoriasAbiertas;
+
+public sealed record ConsultarConvocatoriasAbiertasQuery;

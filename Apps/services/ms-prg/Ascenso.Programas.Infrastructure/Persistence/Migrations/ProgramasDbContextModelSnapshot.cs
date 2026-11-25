@@ -23,6 +23,207 @@ namespace Ascenso.Programas.Infrastructure.Persistence.Migrations
 
             NpgsqlModelBuilderExtensions.UseIdentityByDefaultColumns(modelBuilder);
 
+            modelBuilder.Entity("Ascenso.Programas.Domain.Convocatorias.Agregados.Convocatoria", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .HasColumnType("uuid")
+                        .HasColumnName("id");
+
+                    b.Property<string>("Codigo")
+                        .IsRequired()
+                        .HasMaxLength(40)
+                        .HasColumnType("character varying(40)")
+                        .HasColumnName("codigo");
+
+                    b.Property<int>("CuposAsignados")
+                        .HasColumnType("integer")
+                        .HasColumnName("cupos_asignados");
+
+                    b.Property<string>("Estado")
+                        .IsRequired()
+                        .HasMaxLength(20)
+                        .HasColumnType("varchar")
+                        .HasColumnName("estado");
+
+                    b.Property<DateTimeOffset>("FechaApertura")
+                        .HasColumnType("timestamptz")
+                        .HasColumnName("fecha_apertura");
+
+                    b.Property<DateTimeOffset>("FechaCierre")
+                        .HasColumnType("timestamptz")
+                        .HasColumnName("fecha_cierre");
+
+                    b.Property<DateTimeOffset>("FechaCierreEvaluacion")
+                        .HasColumnType("timestamptz")
+                        .HasColumnName("fecha_cierre_evaluacion");
+
+                    b.Property<DateTimeOffset>("FechaCreacion")
+                        .HasColumnType("timestamptz")
+                        .HasColumnName("fecha_creacion");
+
+                    b.Property<DateTimeOffset>("FechaInicioEvaluacion")
+                        .HasColumnType("timestamptz")
+                        .HasColumnName("fecha_inicio_evaluacion");
+
+                    b.Property<DateTimeOffset>("FechaLimiteSubsanacionDocumentos")
+                        .HasColumnType("timestamptz")
+                        .HasColumnName("fecha_limite_subsanacion_documentos");
+
+                    b.Property<DateTimeOffset?>("FechaPublicacion")
+                        .HasColumnType("timestamptz")
+                        .HasColumnName("fecha_publicacion");
+
+                    b.Property<DateTimeOffset>("FechaUltimaModificacion")
+                        .HasColumnType("timestamptz")
+                        .HasColumnName("fecha_ultima_modificacion");
+
+                    b.Property<string>("Nombre")
+                        .IsRequired()
+                        .HasMaxLength(200)
+                        .HasColumnType("character varying(200)")
+                        .HasColumnName("nombre");
+
+                    b.Property<string>("PeriodoAcademicoId")
+                        .IsRequired()
+                        .HasMaxLength(36)
+                        .HasColumnType("character varying(36)")
+                        .HasColumnName("periodo_academico_id");
+
+                    b.Property<Guid>("ProgramaBecaId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("programa_beca_id");
+
+                    b.Property<bool>("RequiereRevisionDocumentalPrevia")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("boolean")
+                        .HasDefaultValue(true)
+                        .HasColumnName("requiere_revision_documental_previa");
+
+                    b.Property<Guid>("UsuarioCreacionId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("usuario_creacion_id");
+
+                    b.Property<Guid>("UsuarioModificacionId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("usuario_modificacion_id");
+
+                    b.Property<int>("Version")
+                        .IsConcurrencyToken()
+                        .HasColumnType("integer")
+                        .HasColumnName("version");
+
+                    b.HasKey("Id")
+                        .HasName("pk_convocatorias");
+
+                    b.HasIndex("Codigo")
+                        .IsUnique()
+                        .HasDatabaseName("ux_convocatoria_codigo");
+
+                    b.HasIndex("ProgramaBecaId")
+                        .HasDatabaseName("ix_convocatoria_programa_beca");
+
+                    b.HasIndex("Estado", "FechaCierre")
+                        .HasDatabaseName("ix_convocatoria_estado_fecha_cierre");
+
+                    b.ToTable("convocatorias", "programas", t =>
+                        {
+                            t.HasCheckConstraint("ck_convocatoria_cupos_positivos", "cupos_asignados >= 1");
+
+                            t.HasCheckConstraint("ck_convocatoria_edad_maxima_valida", "criterio_edad_maxima BETWEEN 0 AND 120");
+
+                            t.HasCheckConstraint("ck_convocatoria_edad_minima_valida", "criterio_edad_minima BETWEEN 0 AND 120");
+
+                            t.HasCheckConstraint("ck_convocatoria_edades_ordenadas", "criterio_edad_minima <= criterio_edad_maxima");
+
+                            t.HasCheckConstraint("ck_convocatoria_estado_valido", "estado IN ('BORRADOR', 'PUBLICADA', 'CERRADA', 'CANCELADA')");
+
+                            t.HasCheckConstraint("ck_convocatoria_evaluacion_despues_de_subsanacion", "fecha_cierre_evaluacion > fecha_limite_subsanacion_documentos");
+
+                            t.HasCheckConstraint("ck_convocatoria_evaluacion_ordenada", "fecha_cierre_evaluacion > fecha_inicio_evaluacion");
+
+                            t.HasCheckConstraint("ck_convocatoria_fechas_ordenadas", "fecha_cierre > fecha_apertura");
+
+                            t.HasCheckConstraint("ck_convocatoria_promedio_valido", "criterio_promedio_minimo BETWEEN 0 AND 20");
+
+                            t.HasCheckConstraint("ck_convocatoria_subsanacion_despues_del_cierre", "fecha_limite_subsanacion_documentos >= fecha_cierre");
+
+                            t.HasCheckConstraint("ck_convocatoria_tope_ingreso_no_negativo", "criterio_tope_ingreso_familiar >= 0");
+                        });
+                });
+
+            modelBuilder.Entity("Ascenso.Programas.Domain.Convocatorias.Entidades.DocumentoRequerido", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .HasColumnType("uuid")
+                        .HasColumnName("id");
+
+                    b.Property<Guid>("ConvocatoriaId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("convocatoria_id");
+
+                    b.Property<string>("Descripcion")
+                        .HasMaxLength(1000)
+                        .HasColumnType("character varying(1000)")
+                        .HasColumnName("descripcion");
+
+                    b.Property<DateTimeOffset>("FechaCreacion")
+                        .HasColumnType("timestamptz")
+                        .HasColumnName("fecha_creacion");
+
+                    b.Property<DateTimeOffset>("FechaUltimaModificacion")
+                        .HasColumnType("timestamptz")
+                        .HasColumnName("fecha_ultima_modificacion");
+
+                    b.Property<string>("Nombre")
+                        .IsRequired()
+                        .HasMaxLength(200)
+                        .HasColumnType("character varying(200)")
+                        .HasColumnName("nombre");
+
+                    b.Property<bool>("Obligatorio")
+                        .HasColumnType("boolean")
+                        .HasColumnName("obligatorio");
+
+                    b.Property<int>("TamanioMaximoMb")
+                        .HasColumnType("integer")
+                        .HasColumnName("tamanio_maximo_mb");
+
+                    b.Property<string>("TipoDocumento")
+                        .IsRequired()
+                        .HasMaxLength(60)
+                        .HasColumnType("character varying(60)")
+                        .HasColumnName("tipo_documento");
+
+                    b.Property<string>("TiposMimePermitidos")
+                        .IsRequired()
+                        .HasColumnType("jsonb")
+                        .HasColumnName("tipos_mime_permitidos");
+
+                    b.Property<Guid>("UsuarioCreacionId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("usuario_creacion_id");
+
+                    b.Property<Guid>("UsuarioModificacionId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("usuario_modificacion_id");
+
+                    b.Property<int>("Version")
+                        .IsConcurrencyToken()
+                        .HasColumnType("integer")
+                        .HasColumnName("version");
+
+                    b.HasKey("Id")
+                        .HasName("pk_documentos_requeridos");
+
+                    b.HasIndex("ConvocatoriaId")
+                        .HasDatabaseName("ix_documento_requerido_convocatoria");
+
+                    b.ToTable("documentos_requeridos", "programas", t =>
+                        {
+                            t.HasCheckConstraint("ck_documento_requerido_tamanio_positivo", "tamanio_maximo_mb > 0");
+                        });
+                });
+
             modelBuilder.Entity("Ascenso.Programas.Domain.Donantes.Agregados.Donante", b =>
                 {
                     b.Property<Guid>("Id")
@@ -120,7 +321,7 @@ namespace Ascenso.Programas.Infrastructure.Persistence.Migrations
                         {
                             t.HasCheckConstraint("ck_donante_estado_valido", "estado_donante IN ('ACTIVO', 'INACTIVO')");
 
-                            t.HasCheckConstraint("ck_donante_saldos_no_negativos", "saldo_total_historico >= 0\nAND saldo_disponible_asignacion >= 0\nAND saldo_disponible_asignacion <= saldo_total_historico");
+                            t.HasCheckConstraint("ck_donante_saldos_no_negativos", "saldo_total_historico >= 0\r\nAND saldo_disponible_asignacion >= 0\r\nAND saldo_disponible_asignacion <= saldo_total_historico");
 
                             t.HasCheckConstraint("ck_donante_tipo_valido", "tipo_donante IN ('EMPRESA', 'ORGANIZACION', 'EGRESADO_PERSONA')");
                         });
@@ -1079,6 +1280,70 @@ namespace Ascenso.Programas.Infrastructure.Persistence.Migrations
                     b.ToTable("outbox_state", "programas");
                 });
 
+            modelBuilder.Entity("Ascenso.Programas.Domain.Convocatorias.Agregados.Convocatoria", b =>
+                {
+                    b.HasOne("Ascenso.Programas.Domain.Programas.Agregados.ProgramaBeca", null)
+                        .WithMany()
+                        .HasForeignKey("ProgramaBecaId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired()
+                        .HasConstraintName("fk_convocatorias_programa_beca");
+
+                    b.OwnsOne("Ascenso.Programas.Domain.Convocatorias.ObjetosValor.CriteriosElegibilidadCiclo", "CriteriosElegibilidad", b1 =>
+                        {
+                            b1.Property<Guid>("ConvocatoriaId")
+                                .HasColumnType("uuid");
+
+                            b1.Property<string>("CarrerasPermitidasIds")
+                                .IsRequired()
+                                .HasColumnType("jsonb")
+                                .HasColumnName("criterio_carreras_permitidas_ids");
+
+                            b1.Property<int>("EdadMaxima")
+                                .HasColumnType("integer")
+                                .HasColumnName("criterio_edad_maxima");
+
+                            b1.Property<int>("EdadMinima")
+                                .HasColumnType("integer")
+                                .HasColumnName("criterio_edad_minima");
+
+                            b1.Property<decimal>("PromedioMinimo")
+                                .HasPrecision(5, 2)
+                                .HasColumnType("numeric(5,2)")
+                                .HasColumnName("criterio_promedio_minimo");
+
+                            b1.Property<decimal>("TopeIngresoFamiliar")
+                                .HasPrecision(18, 2)
+                                .HasColumnType("numeric(18,2)")
+                                .HasColumnName("criterio_tope_ingreso_familiar");
+
+                            b1.Property<string>("UniversidadesPermitidasIds")
+                                .IsRequired()
+                                .HasColumnType("jsonb")
+                                .HasColumnName("criterio_universidades_permitidas_ids");
+
+                            b1.HasKey("ConvocatoriaId");
+
+                            b1.ToTable("convocatorias", "programas");
+
+                            b1.WithOwner()
+                                .HasForeignKey("ConvocatoriaId");
+                        });
+
+                    b.Navigation("CriteriosElegibilidad")
+                        .IsRequired();
+                });
+
+            modelBuilder.Entity("Ascenso.Programas.Domain.Convocatorias.Entidades.DocumentoRequerido", b =>
+                {
+                    b.HasOne("Ascenso.Programas.Domain.Convocatorias.Agregados.Convocatoria", null)
+                        .WithMany("DocumentosRequeridos")
+                        .HasForeignKey("ConvocatoriaId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired()
+                        .HasConstraintName("fk_documentos_requeridos_convocatoria");
+                });
+
             modelBuilder.Entity("Ascenso.Programas.Domain.Donantes.Agregados.Donante", b =>
                 {
                     b.OwnsOne("Ascenso.Programas.Domain.Donantes.ObjetosValor.ContactoDonante", "ContactoPrincipal", b1 =>
@@ -1419,6 +1684,11 @@ namespace Ascenso.Programas.Infrastructure.Persistence.Migrations
                         .WithMany()
                         .HasForeignKey("InboxMessageId", "InboxConsumerId")
                         .HasPrincipalKey("MessageId", "ConsumerId");
+                });
+
+            modelBuilder.Entity("Ascenso.Programas.Domain.Convocatorias.Agregados.Convocatoria", b =>
+                {
+                    b.Navigation("DocumentosRequeridos");
                 });
 
             modelBuilder.Entity("Ascenso.Programas.Domain.Donantes.Agregados.Donante", b =>
