@@ -1,3 +1,5 @@
+using Ascenso.Postulaciones.Domain.Asignaciones.Agregados;
+using Ascenso.Postulaciones.Domain.Asignaciones.Entidades;
 using Ascenso.Postulaciones.Domain.Comites.Agregados;
 using Ascenso.Postulaciones.Domain.Comites.Entidades;
 using Ascenso.Postulaciones.Domain.Excepciones;
@@ -33,6 +35,10 @@ public sealed class PostulacionesDbContext : DbContext, IUnitOfWork
     public DbSet<ComiteEvaluador> ComitesEvaluadores => Set<ComiteEvaluador>();
 
     public DbSet<MiembroComite> MiembrosComite => Set<MiembroComite>();
+
+    public DbSet<AsignacionEvaluacion> AsignacionesEvaluacion => Set<AsignacionEvaluacion>();
+
+    public DbSet<AutorizacionExcepcionEvaluadorUnico> ExcepcionesEvaluadorUnico => Set<AutorizacionExcepcionEvaluadorUnico>();
 
     public async Task<int> GuardarCambiosAsync(CancellationToken cancellationToken = default)
     {

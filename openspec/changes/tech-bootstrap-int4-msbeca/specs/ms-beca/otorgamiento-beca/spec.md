@@ -199,8 +199,8 @@ MS-BEC SHALL conservar referencias estables, no firmadas, para cartas y compromi
 - **WHEN** un usuario autenticado no es propietario ni tiene alcance sobre el recurso
 - **THEN** MS-BEC rechaza la consulta y no emite una URL de descarga
 
-#### Scenario: Emulador seleccionado para desarrollo o pruebas
+#### Scenario: Desarrollo local sin proyecto cloud
 
-- **WHEN** el entorno selecciona Firebase Storage Emulator para consultar un documento autorizado
-- **THEN** MS-BEC devuelve la URL local del objeto sin requerir credenciales cloud
-- **AND** no se intenta acceder a Cloud Storage
+- **WHEN** un usuario autorizado consulta un documento en el entorno local
+- **THEN** MS-BEC devuelve un enlace local sin requerir credenciales cloud
+- **AND** no se intenta acceder a Firebase ni a Google Cloud

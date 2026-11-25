@@ -344,17 +344,12 @@ jobs:
             dotnet restore "$project" --locked-mode
           done < <(jq -r '.[]' <<< "$PROJECTS")
 
-      - name: Iniciar Firebase Storage Emulator
-        if: steps.gate.outputs.changed == 'true' && matrix.service == 'ms-becas'
-        run: docker compose --profile firebase-emulator up --wait -d firebase-storage
-
       - name: Ejecutar pruebas de integración
         if: steps.gate.outputs.changed == 'true'
         shell: bash
         env:
           PROJECTS: ${{ matrix.integrationProjectsJson }}
           SERVICE: ${{ matrix.service }}
-          STORAGE_EMULATOR_HOST: ${{ matrix.service == 'ms-becas' && '127.0.0.1:9199' || '' }}
           # Los WebApplicationFactory de las pruebas no deben levantar
           # MassTransit contra el RabbitMQ por defecto (localhost:5672).
           # Las pruebas de mensajería que sí lo necesitan pasan su propia

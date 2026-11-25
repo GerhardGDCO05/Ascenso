@@ -133,16 +133,14 @@ public sealed class AlmacenamientoFirebaseArchivosTests
     }
 
     private static AlmacenamientoFirebaseArchivos CrearAlmacenamiento(
-        IAlmacenObjetosNube objetos,
-        string? urlBase = null)
+        IAlmacenObjetosNube objetos)
         => new(
             objetos,
             new OpcionesAlmacenamiento
             {
                 Firebase = new OpcionesAlmacenamientoFirebase
                 {
-                    Bucket = Bucket,
-                    UrlBase = urlBase
+                    Bucket = Bucket
                 }
             });
 

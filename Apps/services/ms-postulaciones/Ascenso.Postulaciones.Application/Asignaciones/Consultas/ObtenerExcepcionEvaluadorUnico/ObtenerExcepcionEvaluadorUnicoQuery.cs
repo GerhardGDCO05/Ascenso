@@ -1,0 +1,3 @@
+namespace Ascenso.Postulaciones.Application.Asignaciones.Consultas.ObtenerExcepcionEvaluadorUnico;
+
+public sealed record ObtenerExcepcionEvaluadorUnicoQuery(Guid PostulacionId);
