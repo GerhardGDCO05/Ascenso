@@ -101,4 +101,22 @@ public sealed class EnumeracionesTests
     {
         Assert.Throws<ArgumentOutOfRangeException>(() => ((EstadoBeca)999).ACodigo());
     }
+
+    [Fact]
+    public void Debe_GenerarLosCodigosLocalesDeSeguimientoAcademico()
+    {
+        Assert.Equal(["MATRICULADO", "NO_MATRICULADO", "RETIRADO"],
+            Enum.GetValues<EstadoMatricula>().Select(valor => valor.ACodigo()));
+        Assert.Equal(["BECARIO", "UNIVERSIDAD"],
+            Enum.GetValues<FuenteReporte>().Select(valor => valor.ACodigo()));
+        Assert.Equal(["ENTREGADO", "EN_REVISION", "APROBADO", "RECHAZADO"],
+            Enum.GetValues<EstadoReporteAcademico>().Select(valor => valor.ACodigo()));
+        Assert.Equal(["PROMEDIO_MINIMO", "MATERIAS_MINIMAS_APROBADAS",
+                "MAXIMO_MATERIAS_REPROBADAS", "HORAS_SERVICIO_POR_PERIODO"],
+            Enum.GetValues<TipoCondicionPermanencia>().Select(valor => valor.ACodigo()));
+        Assert.Equal(["PENDIENTE_CONFIRMACION", "CONFIRMADA", "RECHAZADA"],
+            Enum.GetValues<EstadoConsecuencia>().Select(valor => valor.ACodigo()));
+        Assert.Equal(["LLAMADO_ATENCION", "SUSPENSION", "REVOCACION"],
+            Enum.GetValues<ConsecuenciaPermanencia>().Select(valor => valor.ACodigo()));
+    }
 }

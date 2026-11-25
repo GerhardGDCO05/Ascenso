@@ -1,6 +1,6 @@
 ## Context
 
-`MS-BEC` parte de cero: el repositorio solo contiene la especificación maestra `docs/Explicacion_del_DDD_V7.md`. El diseño debe hacer convivir la máquina de estados cerrada del PRD, las invariantes monetarias y de no doble beneficio, y la integración con `MS-POS`, `MS-PRG`, `MS-PLT` y `MS-AUD`, sin introducir transacciones distribuidas. El alcance de este cambio es la fundación del servicio y la primera rebanada vertical de otorgamiento; los desembolsos, el seguimiento académico, la renovación y la revocación definitiva se construirán sobre esta base en cambios posteriores.
+`MS-BEC` parte de cero: el repositorio solo contiene la especificación maestra `docs/Explicacion_del_DDD_V7.md`. El diseño debe hacer convivir la máquina de estados cerrada del PRD, las invariantes monetarias y de no doble beneficio, y la integración con `MS-POS`, `MS-PRG`, `MS-PLT` y `MS-AUD`, sin introducir transacciones distribuidas. La entrega inicial del cambio cubre la fundación del servicio y la primera rebanada vertical de otorgamiento. El plan completo en `tasks.md` incluye la continuidad; esta rama comienza el modelo de seguimiento académico de la sección 18.
 
 Restricciones que condicionan el diseño:
 
@@ -24,12 +24,18 @@ Restricciones que condicionan el diseño:
 **Non-Goals:**
 
 - No se implementan `CalendarioDesembolso`, `Desembolso`, `DatosPagoBecario`, `IncidenciaDesembolso` ni `SuspensionDesembolso`.
-- No se implementan `ReporteAcademico`, `EvaluacionPermanencia`, `SolicitudRenovacion` ni `PausaAplazamiento`.
+- En la entrega inicial no se implementaron `ReporteAcademico`, `EvaluacionPermanencia`, `SolicitudRenovacion` ni `PausaAplazamiento`. Esta continuidad incorpora `ReporteAcademico`; los otros modelos permanecen pendientes.
 - No se implementa la revocación definitiva con OTP; solo se deja el puerto `IOtpClient` y su adaptador probado.
 - No se implementan reportes CQRS, exportaciones ni el panel de dirección.
 - No se define la interfaz visual; el API expone DTOs y OpenAPI.
 
 ## Decisions
+
+### Catálogos de seguimiento académico (sección 18)
+
+El DDD V7 nombra `EstadoMatricula`, `FuenteReporte`, `EstadoReporteAcademico`, `TipoCondicionPermanencia` y `EstadoConsecuencia` en el modelo de `ReporteAcademico`/`EvaluacionPermanencia`, pero no fija sus miembros. `MS-BEC` define estos códigos locales para la primera implementación: `EstadoMatricula` = `MATRICULADO`, `NO_MATRICULADO`, `RETIRADO`; `FuenteReporte` = `BECARIO`, `UNIVERSIDAD`; `EstadoReporteAcademico` = `ENTREGADO`, `EN_REVISION`, `APROBADO`, `RECHAZADO`; `TipoCondicionPermanencia` = `PROMEDIO_MINIMO`, `MATERIAS_MINIMAS_APROBADAS`, `MAXIMO_MATERIAS_REPROBADAS`, `HORAS_SERVICIO_POR_PERIODO`; `EstadoConsecuencia` = `PENDIENTE_CONFIRMACION`, `CONFIRMADA`, `RECHAZADA`. `ConsecuenciaPermanencia` ya existe y conserva `LLAMADO_ATENCION`, `SUSPENSION`, `REVOCACION`, conforme a RN-BEC-05. Los códigos locales expuestos por API/eventos requieren revisión de compatibilidad con consumidores antes de considerarse contratos compartidos.
+
+`ReporteAcademico` mantiene la URI inmutable `gs://` del comprobante PDF y los metadatos SHA-256, tamaño y MIME exigidos por la política de archivos del DDD; no almacena el binario. El promedio usa escala 0–20 con dos decimales. Las materias y créditos no pueden ser negativos; los créditos aprobados requieren alguna materia aprobada y una matrícula no vigente no puede declarar materias en curso. La entrega tardía compara la fecha UTC de recepción con la fecha límite del periodo. El estado comienza en `ENTREGADO` y la revisión explícita pasa por `EN_REVISION` antes de `APROBADO` o `RECHAZADO`.
 
 ### 1. Solución, capas y reglas de dependencia
 
