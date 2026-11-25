@@ -1,5 +1,24 @@
 namespace Ascenso.Becas.Application.IntegracionEventos;
 
+public sealed record DesembolsosBecaSuspendidos(
+    Guid BecaId, Guid SuspensionId, Guid ProgramaBecaId,
+    Guid PeriodoAcademicoId, decimal SaldoPendiente);
+
+public sealed record DesembolsosBecaReanudados(
+    Guid BecaId, Guid SuspensionId, Guid ProgramaBecaId,
+    Guid PeriodoAcademicoId, decimal SaldoPendiente);
+
+public sealed record BecaRevocadaDefinitivamente(
+    Guid BecaId, Guid ProgramaBecaId, Guid PeriodoAcademicoId,
+    string EstadoBeca, string TipoCierre);
+
+public sealed record DesembolsoProgramado(Guid BecaId, Guid CalendarioId, Guid DesembolsoId);
+public sealed record DesembolsoConfirmadoConOTP(Guid BecaId, Guid CalendarioId, Guid DesembolsoId);
+public sealed record DesembolsoFallido(Guid BecaId, Guid CalendarioId, Guid DesembolsoId);
+public sealed record DesembolsoDevuelto(Guid BecaId, Guid CalendarioId, Guid DesembolsoId);
+public sealed record DesembolsoReintentado(Guid BecaId, Guid CalendarioId, Guid DesembolsoId);
+public sealed record DesembolsoCancelado(Guid BecaId, Guid CalendarioId, Guid DesembolsoId);
+
 /// <summary>
 /// Payload de <c>OfertaBecaEmitida</c>. Solo contiene identificadores y el
 /// estado resultante de la oferta.

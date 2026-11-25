@@ -16,7 +16,9 @@
 - Incorporar pruebas unitarias de dominio, pruebas de integración con Testcontainers y pipeline de CI.
 - Preparar el adaptador de Google Cloud Storage para el bucket Firebase existente, sin conectarlo a un proyecto real en este cambio. El desarrollo y CI usarán almacenamiento local; las credenciales cloud serán externas al repositorio.
 
-**Fuera de alcance de este cambio (se entregará en cambios posteriores):** `CalendarioDesembolso`, `Desembolso`, `DatosPagoBecario`, `IncidenciaDesembolso`, `SuspensionDesembolso`, revocación definitiva, `ReporteAcademico`, `EvaluacionPermanencia`, `SolicitudRenovacion`, `PausaAplazamiento`, reportería y despliegue productivo.
+**Continuidad dentro de este cambio:** las secciones 15–22 de `tasks.md` documentan el plan completo de `MS-BEC`. La sección 16 incorpora `CalendarioDesembolso`, `Desembolso`, `DatosPagoBecario` e `IncidenciaDesembolso` con sus casos de uso y contratos. Los criterios que exigen aceptación de equipos propietarios de otros microservicios permanecen pendientes hasta esa validación.
+
+**Fuera de la sección 16:** `SuspensionDesembolso`, revocación definitiva, `ReporteAcademico`, `EvaluacionPermanencia`, `SolicitudRenovacion`, `PausaAplazamiento`, reportería y despliegue productivo se tratan en las secciones posteriores del mismo plan.
 
 ## Capabilities
 

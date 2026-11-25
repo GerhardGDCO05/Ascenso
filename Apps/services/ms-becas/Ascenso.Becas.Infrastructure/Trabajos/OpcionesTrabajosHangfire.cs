@@ -28,4 +28,9 @@ public sealed class OpcionesTrabajosHangfire
     /// Máximo de ofertas vencidas que procesa cada reconciliación.
     /// </summary>
     public int LimiteOfertasPorReconciliacion { get; set; } = 500;
+
+    /// <summary>
+    /// Tamaño de cada página consultada al revisar suspensiones vigentes.
+    /// </summary>
+    public int LimiteSuspensionesPorPagina { get; set; } = 500;
 }

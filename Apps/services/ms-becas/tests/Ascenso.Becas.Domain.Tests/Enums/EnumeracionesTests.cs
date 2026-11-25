@@ -101,4 +101,25 @@ public sealed class EnumeracionesTests
     {
         Assert.Throws<ArgumentOutOfRangeException>(() => ((EstadoBeca)999).ACodigo());
     }
+
+    [Fact]
+    public void Debe_GenerarLosCodigosDeDesembolsoDefinidosPorElDdd()
+    {
+        Assert.Equal(
+            ["PROGRAMADO", "EN_PROCESO", "PAGADO_CONFIRMADO", "FALLIDO", "DEVUELTO", "SUSPENDIDO", "CANCELADO"],
+            Enum.GetValues<EstadoDesembolso>().Select(estado => estado.ACodigo()));
+    }
+
+    [Fact]
+    public void Debe_GenerarLosCodigosDeModalidadDefinidosParaMsBeca()
+    {
+        Assert.Equal(["MENSUAL", "SEMESTRAL"], Enum.GetValues<FrecuenciaDesembolso>().Select(valor => valor.ACodigo()));
+        Assert.Equal(["BECARIO", "INSTITUCION"], Enum.GetValues<DestinatarioPago>().Select(valor => valor.ACodigo()));
+        Assert.Equal(["TRANSFERENCIA_BANCARIA"], Enum.GetValues<MetodoPago>().Select(valor => valor.ACodigo()));
+        Assert.Equal(["PROGRAMADO", "SUSPENDIDO", "COMPLETADO", "CANCELADO"], Enum.GetValues<EstadoPlanDesembolso>().Select(valor => valor.ACodigo()));
+        Assert.Equal(["ACTIVO", "REEMPLAZADO"], Enum.GetValues<EstadoDatosPago>().Select(valor => valor.ACodigo()));
+        Assert.Equal(["FALLO_BANCARIO", "DEVOLUCION_BANCARIA"], Enum.GetValues<TipoIncidenciaDesembolso>().Select(valor => valor.ACodigo()));
+        Assert.Equal(["ABIERTA", "RESUELTA"], Enum.GetValues<EstadoIncidencia>().Select(valor => valor.ACodigo()));
+    }
+
 }

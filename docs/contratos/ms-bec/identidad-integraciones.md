@@ -156,9 +156,10 @@ Respuesta `200` esperada:
 MS-BEC conserva las proyecciones locales como caché de metadatos del programa,
 pero utiliza la política, condiciones, arancel y vigencia del convenio
 devueltos por esta consulta para crear el snapshot de la oferta. Un `404` se
-traduce a `422 CONFIGURACION_PROGRAMA_NO_DISPONIBLE`; `422 CONVENIO_VENCIDO`
-se conserva como rechazo; timeout, error de red o respuesta inválida se
-traduce a `503 DEPENDENCIA_NO_DISPONIBLE`.
+traduce a `422 CONFIGURACION_PROGRAMA_NO_DISPONIBLE`; una configuración presente
+pero incompleta o inválida también produce `422`. `422 CONVENIO_VENCIDO`
+se conserva como rechazo; timeout, error de red, JSON malformado o identificadores
+incompatibles se traducen a `503 DEPENDENCIA_NO_DISPONIBLE`.
 
 ## MS-PLT: consultar el periodo académico actual
 
@@ -200,6 +201,20 @@ MS-BEC sigue DEC-07 del DDD: emisión y anulación administrativa de ofertas no
 requieren consumir una autorización OTP adicional; las operaciones
 administrativas continúan protegidas por 2FA de Keycloak. El consumo OTP queda
 reservado para las operaciones obligatorias definidas por el DDD.
+
+Para `CONFIRMAR_DESEMBOLSO` y `MODIFICAR_DATOS_PAGO`, MS-BEC consume
+`POST /internal/v1/otp/consumir` en MS-PLT. Envía `usuarioId`, `operacion`,
+`recursoTipo`, `recursoId`, `huellaPayload` (SHA-256 del contenido de la
+operación) y `codigo`. La confirmación usa `recursoTipo = DESEMBOLSO` e ID de
+la cuota; el cambio de cuenta usa `recursoTipo = BECA` e ID de la beca. La
+petición lleva `Idempotency-Key` derivada del identificador de la autorización
+OTP, que distingue operaciones sucesivas sobre la misma beca. MS-BEC no persiste ni registra el código OTP ni el número de cuenta
+en claro. El consumo remoto precede al commit local dentro de la transacción
+de MS-BEC; ambos servicios no comparten una transacción distribuida.
+
+La revocación definitiva también exige OTP (`REVOCAR_BECA`, `recursoTipo = BECA`,
+`recursoId = becaId`). Su caso de uso consume y valida el código en MS-PLT
+bajo bloqueo de la beca, antes de confirmar la transición y la cancelación de cuotas.
 
 ## MS-PRG: reservar cupo y presupuesto
 

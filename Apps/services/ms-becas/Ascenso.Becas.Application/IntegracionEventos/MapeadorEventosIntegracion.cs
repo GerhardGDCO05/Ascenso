@@ -1,4 +1,5 @@
 using Ascenso.Becas.Domain.Comun;
+using Ascenso.Becas.Domain.Desembolsos.Eventos;
 using Ascenso.Becas.Domain.Enums;
 using Ascenso.Becas.Domain.Otorgamiento.Eventos;
 
@@ -20,6 +21,28 @@ public static class MapeadorEventosIntegracion
 
         return evento switch
         {
+            DesembolsosBecaSuspendidosEvento item => Envolver(item, item.BecaId,
+                new DesembolsosBecaSuspendidos(item.BecaId, item.SuspensionId,
+                    item.ProgramaBecaId, item.PeriodoAcademicoId, item.SaldoPendiente), aggregateVersion),
+            DesembolsosBecaReanudadosEvento item => Envolver(item, item.BecaId,
+                new DesembolsosBecaReanudados(item.BecaId, item.SuspensionId,
+                    item.ProgramaBecaId, item.PeriodoAcademicoId, item.SaldoPendiente), aggregateVersion),
+            BecaRevocadaDefinitivamenteEvento item => Envolver(item, item.BecaId,
+                new BecaRevocadaDefinitivamente(item.BecaId, item.ProgramaBecaId,
+                    item.PeriodoAcademicoId, EstadoBeca.Revocada.ACodigo(),
+                    TipoCierreBeca.RevocacionDefinitiva.ACodigo()), aggregateVersion),
+            DesembolsoProgramadoEvento item => Envolver(item, item.BecaId,
+                new DesembolsoProgramado(item.BecaId, item.CalendarioId, item.DesembolsoId), aggregateVersion),
+            DesembolsoConfirmadoConOtpEvento item => Envolver(item, item.BecaId,
+                new DesembolsoConfirmadoConOTP(item.BecaId, item.CalendarioId, item.DesembolsoId), aggregateVersion),
+            DesembolsoFallidoEvento item => Envolver(item, item.BecaId,
+                new DesembolsoFallido(item.BecaId, item.CalendarioId, item.DesembolsoId), aggregateVersion),
+            DesembolsoDevueltoEvento item => Envolver(item, item.BecaId,
+                new DesembolsoDevuelto(item.BecaId, item.CalendarioId, item.DesembolsoId), aggregateVersion),
+            DesembolsoReintentadoEvento item => Envolver(item, item.BecaId,
+                new DesembolsoReintentado(item.BecaId, item.CalendarioId, item.DesembolsoId), aggregateVersion),
+            DesembolsoCanceladoEvento item => Envolver(item, item.BecaId,
+                new DesembolsoCancelado(item.BecaId, item.CalendarioId, item.DesembolsoId), aggregateVersion),
             OfertaBecaEmitidaEvento emitida => Envolver(
                 emitida,
                 emitida.BecaId,

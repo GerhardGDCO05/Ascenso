@@ -8,8 +8,10 @@ namespace Ascenso.Becas.Domain.Ports;
 public interface IOtpClient
 {
     Task<ResultadoConsumoOtp> ConsumirAsync(
+        Guid autorizacionOtpId,
         Guid usuarioId,
         TipoOperacionOTP operacion,
+        string recursoTipo,
         Guid recursoId,
         string huellaPayload,
         string codigo,

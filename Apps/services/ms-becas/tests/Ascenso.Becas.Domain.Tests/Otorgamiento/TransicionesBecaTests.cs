@@ -1,6 +1,7 @@
 using Ascenso.Becas.Domain.Enums;
 using Ascenso.Becas.Domain.Excepciones;
 using Ascenso.Becas.Domain.Otorgamiento.Agregados;
+using Ascenso.Becas.Domain.Otorgamiento.Eventos;
 
 namespace Ascenso.Becas.Domain.Tests.Otorgamiento;
 
@@ -41,7 +42,7 @@ public sealed class TransicionesBecaTests
         var beca = PruebasOtorgamiento.CrearBecaActiva();
         var suspension = PruebasOtorgamiento.Contexto(PruebasOtorgamiento.FechaBase.AddDays(5), Justificacion);
 
-        beca.Suspender(suspension);
+        PruebasOtorgamiento.Suspender(beca, suspension);
 
         Assert.Equal(EstadoBeca.Suspendida, beca.Estado);
         Assert.False(beca.HabilitadaParaDesembolso);
@@ -82,17 +83,13 @@ public sealed class TransicionesBecaTests
     }
 
     [Theory]
-    [InlineData(false)]
-    [InlineData(true)]
-    public void Debe_RevocarDefinitivamenteLaBeca_Cuando_EstaActivaOSuspendida(bool suspender)
+    [InlineData(EstadoBeca.Otorgada)]
+    [InlineData(EstadoBeca.Activa)]
+    [InlineData(EstadoBeca.Suspendida)]
+    public void Debe_RevocarDefinitivamenteLaBeca_DesdeCadaEstadoPermitido(EstadoBeca origen)
     {
-        var beca = PruebasOtorgamiento.CrearBecaActiva();
+        var beca = CrearBecaEnEstado(origen);
         var fecha = PruebasOtorgamiento.FechaBase.AddDays(10);
-
-        if (suspender)
-        {
-            beca.Suspender(PruebasOtorgamiento.Contexto(fecha, Justificacion));
-        }
 
         var contexto = PruebasOtorgamiento.Contexto(
             fecha.AddDays(1),
@@ -106,6 +103,24 @@ public sealed class TransicionesBecaTests
         Assert.False(beca.HabilitadaParaDesembolso);
         Assert.True(beca.Historial.Last().EstadoTerminalIrreversible);
         Assert.Equal(contexto.AutorizacionOtpId, beca.Historial.Last().AutorizacionOtpId);
+        var evento = Assert.Single(beca.EventosDominio.OfType<BecaRevocadaDefinitivamenteEvento>());
+        Assert.Equal(beca.Id, evento.BecaId);
+        Assert.Equal(beca.ProgramaBecaId, evento.ProgramaBecaId);
+        if (origen == EstadoBeca.Otorgada)
+            Assert.Equal(EstadoOferta.AnuladaPorCoordinacion, beca.Oferta!.Estado);
+    }
+
+    [Fact]
+    public void Debe_RechazarRevocacionSinAutorizacionOtp()
+    {
+        var beca = PruebasOtorgamiento.CrearBecaActiva();
+        var historialAnterior = beca.Historial.Count;
+        var contexto = PruebasOtorgamiento.Contexto(justificacion: Justificacion);
+
+        Assert.Throws<InvalidOperationException>(() => beca.Revocar(contexto));
+        Assert.Equal(EstadoBeca.Activa, beca.Estado);
+        Assert.Equal(historialAnterior, beca.Historial.Count);
+        Assert.Null(beca.TipoCierre);
     }
 
     [Fact]
@@ -123,7 +138,6 @@ public sealed class TransicionesBecaTests
     [InlineData("renovar")]
     [InlineData("concluir")]
     [InlineData("reactivar")]
-    [InlineData("revocar")]
     public void Debe_RechazarLasTransicionesNoPermitidas_Cuando_LaBecaEstaOtorgada(string operacion)
     {
         var beca = PruebasOtorgamiento.CrearBecaConOferta();
@@ -131,11 +145,10 @@ public sealed class TransicionesBecaTests
 
         Action accion = operacion switch
         {
-            "suspender" => () => beca.Suspender(contexto),
+            "suspender" => () => PruebasOtorgamiento.Suspender(beca, contexto),
             "renovar" => () => beca.Renovar(contexto),
             "concluir" => () => beca.Concluir(contexto),
             "reactivar" => () => beca.Reactivar(contexto),
-            "revocar" => () => beca.Revocar(contexto),
             _ => throw new InvalidOperationException("Operación de prueba no soportada.")
         };
 
@@ -152,7 +165,7 @@ public sealed class TransicionesBecaTests
         var beca = CrearBecaEnEstado(estadoTerminal);
         var contexto = PruebasOtorgamiento.Contexto(justificacion: Justificacion);
 
-        Assert.Throws<TransicionEstadoInvalidaException>(() => beca.Suspender(contexto));
+        Assert.Throws<TransicionEstadoInvalidaException>(() => PruebasOtorgamiento.Suspender(beca, contexto));
         Assert.Throws<TransicionEstadoInvalidaException>(() => beca.Reactivar(contexto));
         Assert.Throws<TransicionEstadoInvalidaException>(() => beca.Renovar(contexto));
         Assert.Throws<TransicionEstadoInvalidaException>(() => beca.Concluir(contexto));
@@ -220,7 +233,7 @@ public sealed class TransicionesBecaTests
     private static Beca CrearSuspendida()
     {
         var beca = PruebasOtorgamiento.CrearBecaActiva();
-        beca.Suspender(PruebasOtorgamiento.Contexto(
+        PruebasOtorgamiento.Suspender(beca, PruebasOtorgamiento.Contexto(
             PruebasOtorgamiento.FechaBase.AddDays(5),
             Justificacion));
         return beca;
@@ -249,7 +262,8 @@ public sealed class TransicionesBecaTests
         var beca = PruebasOtorgamiento.CrearBecaActiva();
         beca.Revocar(PruebasOtorgamiento.Contexto(
             PruebasOtorgamiento.FechaBase.AddDays(10),
-            Justificacion));
+            Justificacion,
+            PruebasOtorgamiento.NuevoId()));
         return beca;
     }
 }

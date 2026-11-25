@@ -1,6 +1,6 @@
 ## Context
 
-`MS-BEC` parte de cero: el repositorio solo contiene la especificación maestra `docs/Explicacion_del_DDD_V7.md`. El diseño debe hacer convivir la máquina de estados cerrada del PRD, las invariantes monetarias y de no doble beneficio, y la integración con `MS-POS`, `MS-PRG`, `MS-PLT` y `MS-AUD`, sin introducir transacciones distribuidas. El alcance de este cambio es la fundación del servicio y la primera rebanada vertical de otorgamiento; los desembolsos, el seguimiento académico, la renovación y la revocación definitiva se construirán sobre esta base en cambios posteriores.
+`MS-BEC` comenzó con la fundación del servicio y la primera rebanada vertical de otorgamiento. El plan de continuidad de `tasks.md` extiende el mismo cambio a desembolsos, seguimiento académico, renovación y revocación. La sección 16 desarrolla desembolsos sobre esa base, respetando la máquina de estados del DDD, las invariantes monetarias y las integraciones con `MS-PRG` y `MS-PLT` sin introducir transacciones distribuidas.
 
 Restricciones que condicionan el diseño:
 
@@ -23,13 +23,19 @@ Restricciones que condicionan el diseño:
 
 **Non-Goals:**
 
-- No se implementan `CalendarioDesembolso`, `Desembolso`, `DatosPagoBecario`, `IncidenciaDesembolso` ni `SuspensionDesembolso`.
-- No se implementan `ReporteAcademico`, `EvaluacionPermanencia`, `SolicitudRenovacion` ni `PausaAplazamiento`.
-- No se implementa la revocación definitiva con OTP; solo se deja el puerto `IOtpClient` y su adaptador probado.
-- No se implementan reportes CQRS, exportaciones ni el panel de dirección.
+- `SuspensionDesembolso` y las operaciones completas de suspensión/revocación se desarrollan en la sección 17; la sección 16 implementa las transiciones de cuotas que esas operaciones necesitan.
+- `ReporteAcademico`, `EvaluacionPermanencia`, `SolicitudRenovacion` y `PausaAplazamiento` pertenecen a las secciones 18–20, fuera de la sección 16.
+- La revocación definitiva con OTP pertenece a la sección 17; la sección 16 reutiliza `IOtpClient` para pagos.
+- Los reportes CQRS, exportaciones y el panel de dirección no pertenecen a la sección 16.
 - No se define la interfaz visual; el API expone DTOs y OpenAPI.
 
 ## Decisions
+
+### Continuidad de desembolsos (sección 16)
+
+La Tabla 3.3 del DDD define los siete códigos y las transiciones de `EstadoDesembolso`. Los demás tipos de enumeración no tienen una lista literal de valores en el DDD o el PRD; `MS-BEC` documenta sus códigos locales en el delta `desembolsos-pagos` y comprueba cualquier código expuesto antes de dar por cerrado el contrato. «Pago directo a la institución» se representa como destinatario, separado de la frecuencia mensual o semestral.
+
+`desembolsoOrigenReintentoId` exige preservar la fila fallida o devuelta. Un reintento crea una nueva fila `PROGRAMADO` de la misma cuota, enlazada con la anterior; la fila previa conserva su estado y queda fuera de los cálculos de saldo vigente. La unicidad se aplica al número de intento de la cuota y a que solo exista una fila vigente. `IncidenciaDesembolso` debe estar resuelta antes de crearla. Las secciones 17 y 19 aportan respectivamente suspensión/revocación y renovación; las pruebas cruzadas de 16.10, 16.13 y 16.14 se cierran cuando esos flujos estén disponibles.
 
 ### 1. Solución, capas y reglas de dependencia
 
@@ -180,7 +186,7 @@ La guarda de la Tabla 3.2 (“`ReservaPresupuestoCupo` confirmada en `MS-PRG`”
 
 Respuesta `201`: `{ "reservaId": "uuid", "estado": "PENDIENTE", "monto": 1234.56, "cupos": 1, "expiraEn": "..." }`. La confirmación, activación y liberación requieren `POST` a `/internal/v1/programas/{id}/reservas/{reservaId}/{confirmar|activar|liberar}` con `Idempotency-Key: {operacion}-{ofertaId}`. Errores de la creación: `409 SIN_CUPO_O_PRESUPUESTO`, `422 CONVENIO_VENCIDO`.
 
-**`MS-PLT` — `POST /internal/v1/otp/consumir`:** se implementa el puerto y el cliente, pero no se invoca en este cambio. El contrato queda documentado para el cambio de revocación y desembolsos.
+**`MS-PLT` — `POST /internal/v1/otp/consumir`:** el puerto y el cliente existentes se conectan a confirmación de desembolso y modificación de datos de pago en la sección 16. La revocación se incorpora en la sección 17.
 
 **Eventos consumidos de `MS-PRG`:**
 

@@ -119,8 +119,15 @@ public sealed class ProgramasClient : IProgramasClient
                 || resultado.UniversidadAliadaId != universidadAliadaId
                 || resultado.CostoMatricula.CarreraId != carreraId
                 || resultado.CostoMatricula.PeriodoAcademicoId != periodoAcademicoId
-                || resultado.Convenio.UniversidadAliadaId != universidadAliadaId
-                || resultado.CostoMatricula.CostoMatriculaReferenciaId == Guid.Empty
+                || resultado.Convenio.UniversidadAliadaId != universidadAliadaId)
+            {
+                throw new HttpRequestException(
+                    "MS-PRG devolvió condiciones de otra postulación.",
+                    inner: null,
+                    respuesta.StatusCode);
+            }
+
+            if (resultado.CostoMatricula.CostoMatriculaReferenciaId == Guid.Empty
                 || resultado.CostoMatricula.MontoReferenciaMatricula <= 0m
                 || !string.Equals(
                     resultado.CostoMatricula.Moneda,
@@ -133,8 +140,9 @@ public sealed class ProgramasClient : IProgramasClient
                 || resultado.Convenio.FechaFin == default
                 || string.IsNullOrWhiteSpace(resultado.Convenio.Estado))
             {
-                throw new InvalidOperationException(
-                    "MS-PRG devolvió condiciones incompletas o incompatibles con la solicitud.");
+                throw new ConfiguracionProgramaNoDisponibleException(
+                    programaBecaId,
+                    "MS-PRG devolvió condiciones de programa incompletas.");
             }
 
             if (!TryParseEnum(
@@ -144,7 +152,8 @@ public sealed class ProgramasClient : IProgramasClient
                     resultado.CondicionesPermanencia.ConsecuenciaIncumplimiento,
                     out ConsecuenciaPermanencia consecuencia))
             {
-                throw new InvalidOperationException(
+                throw new ConfiguracionProgramaNoDisponibleException(
+                    programaBecaId,
                     "MS-PRG devolvió una política o condición de permanencia desconocida.");
             }
 
@@ -182,17 +191,15 @@ public sealed class ProgramasClient : IProgramasClient
         }
         catch (ArgumentException excepcion)
         {
-            throw new HttpRequestException(
-                "MS-PRG devolvió una política de cobertura o condiciones de permanencia inválidas.",
-                excepcion,
-                respuesta.StatusCode);
+            throw new ConfiguracionProgramaNoDisponibleException(
+                programaBecaId,
+                $"MS-PRG devolvió condiciones de programa inválidas: {excepcion.Message}");
         }
         catch (InvalidOperationException excepcion)
         {
-            throw new HttpRequestException(
-                "MS-PRG devolvió condiciones incompatibles con la solicitud.",
-                excepcion,
-                respuesta.StatusCode);
+            throw new ConfiguracionProgramaNoDisponibleException(
+                programaBecaId,
+                $"MS-PRG devolvió condiciones de programa inválidas: {excepcion.Message}");
         }
     }
 
