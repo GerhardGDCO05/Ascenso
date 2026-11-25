@@ -55,7 +55,7 @@ public sealed class CerrarConvocatoriasVencidasIntegrationTests : IAsyncLifetime
             "JOB-VENCIDA",
             ahora,
             ahora.AddHours(-1));
-        var futura =         CrearConvocatoriaPublicada(
+        var futura = CrearConvocatoriaPublicada(
             programa.Id,
             "JOB-FUTURA",
             ahora,

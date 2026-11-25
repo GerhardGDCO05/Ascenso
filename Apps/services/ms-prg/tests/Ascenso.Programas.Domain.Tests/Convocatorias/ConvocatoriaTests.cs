@@ -1,8 +1,8 @@
+using Ascenso.Programas.Domain.Comun;
 using Ascenso.Programas.Domain.Convocatorias.Agregados;
 using Ascenso.Programas.Domain.Convocatorias.Entidades;
 using Ascenso.Programas.Domain.Convocatorias.Eventos;
 using Ascenso.Programas.Domain.Convocatorias.ObjetosValor;
-using Ascenso.Programas.Domain.Comun;
 using Ascenso.Programas.Domain.Enums;
 using Ascenso.Programas.Domain.Excepciones;
 using FluentAssertions;

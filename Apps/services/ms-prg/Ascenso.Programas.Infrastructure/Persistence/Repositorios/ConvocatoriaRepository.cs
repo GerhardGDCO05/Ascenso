@@ -1,6 +1,6 @@
+using Ascenso.Programas.Domain.Convocatorias.Agregados;
 using Ascenso.Programas.Domain.Enums;
 using Ascenso.Programas.Domain.Interfaces;
-using Ascenso.Programas.Domain.Convocatorias.Agregados;
 using Microsoft.EntityFrameworkCore;
 
 namespace Ascenso.Programas.Infrastructure.Persistence.Repositorios;
