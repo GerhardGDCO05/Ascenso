@@ -16,6 +16,7 @@ public sealed class AsignarEvaluadoresPostulacionCommandHandler
     private readonly IUsuarioActual _usuarioActual;
     private readonly IComiteEvaluadorRepository _comiteRepository;
     private readonly IAsignacionEvaluacionRepository _asignacionRepository;
+    private readonly IExcepcionEvaluadorUnicoRepository _excepcionRepository;
     private readonly IUnitOfWork _unitOfWork;
     private readonly IValidator<AsignarEvaluadoresPostulacionCommand> _validator;
     private readonly TimeProvider _timeProvider;
@@ -24,6 +25,7 @@ public sealed class AsignarEvaluadoresPostulacionCommandHandler
         IUsuarioActual usuarioActual,
         IComiteEvaluadorRepository comiteRepository,
         IAsignacionEvaluacionRepository asignacionRepository,
+        IExcepcionEvaluadorUnicoRepository excepcionRepository,
         IUnitOfWork unitOfWork,
         IValidator<AsignarEvaluadoresPostulacionCommand> validator,
         TimeProvider timeProvider)
@@ -31,6 +33,7 @@ public sealed class AsignarEvaluadoresPostulacionCommandHandler
         _usuarioActual = usuarioActual ?? throw new ArgumentNullException(nameof(usuarioActual));
         _comiteRepository = comiteRepository ?? throw new ArgumentNullException(nameof(comiteRepository));
         _asignacionRepository = asignacionRepository ?? throw new ArgumentNullException(nameof(asignacionRepository));
+        _excepcionRepository = excepcionRepository ?? throw new ArgumentNullException(nameof(excepcionRepository));
         _unitOfWork = unitOfWork ?? throw new ArgumentNullException(nameof(unitOfWork));
         _validator = validator ?? throw new ArgumentNullException(nameof(validator));
         _timeProvider = timeProvider ?? throw new ArgumentNullException(nameof(timeProvider));
@@ -53,6 +56,13 @@ public sealed class AsignarEvaluadoresPostulacionCommandHandler
         var vigentes = await _asignacionRepository
             .ListarVigentesPorPostulacionAsync(command.PostulacionId, cancellationToken);
 
+        var excepcion = await _excepcionRepository
+            .ObtenerPorPostulacionAsync(command.PostulacionId, cancellationToken);
+
+        var minimoEvaluadores = excepcion is not null
+            ? ServicioAsignacionEvaluadores.MinimoEvaluadoresConExcepcion
+            : ServicioAsignacionEvaluadores.MinimoEvaluadoresVigentes;
+
         var cargaPorMiembro = command.CantidadEvaluadores.HasValue
             ? await _asignacionRepository.ObtenerCargaPorMiembroAsync(comite.Id, cancellationToken)
             : _cargaVacia;
@@ -66,7 +76,8 @@ public sealed class AsignarEvaluadoresPostulacionCommandHandler
             cargaPorMiembro,
             _timeProvider.GetUtcNow(),
             command.FechaLimiteEvaluacion,
-            usuarioId);
+            usuarioId,
+            minimoEvaluadores);
 
         await _asignacionRepository.AgregarRangoAsync(nuevasAsignaciones, cancellationToken);
         await _unitOfWork.GuardarCambiosAsync(cancellationToken);

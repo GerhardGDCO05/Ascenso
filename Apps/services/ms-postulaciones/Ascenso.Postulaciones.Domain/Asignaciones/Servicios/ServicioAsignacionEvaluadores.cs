@@ -15,6 +15,8 @@ public static class ServicioAsignacionEvaluadores
 {
     public const int MinimoEvaluadoresVigentes = 2;
 
+    public const int MinimoEvaluadoresConExcepcion = 1;
+
     public static IReadOnlyList<AsignacionEvaluacion> Asignar(
         ComiteEvaluador comite,
         Guid postulacionId,
@@ -24,11 +26,20 @@ public static class ServicioAsignacionEvaluadores
         IReadOnlyDictionary<Guid, int> cargaPorMiembro,
         DateTimeOffset ahora,
         DateTimeOffset fechaLimite,
-        Guid usuarioAsignaId)
+        Guid usuarioAsignaId,
+        int minimoEvaluadores = MinimoEvaluadoresVigentes)
     {
         ArgumentNullException.ThrowIfNull(comite);
         ArgumentNullException.ThrowIfNull(vigentes);
         ArgumentNullException.ThrowIfNull(cargaPorMiembro);
+
+        if (minimoEvaluadores is not (MinimoEvaluadoresConExcepcion or MinimoEvaluadoresVigentes))
+        {
+            throw new ArgumentOutOfRangeException(
+                nameof(minimoEvaluadores),
+                minimoEvaluadores,
+                "El mínimo de evaluadores vigentes debe ser 1 (con excepción) o 2.");
+        }
 
         if (ahora == default)
         {
@@ -100,7 +111,7 @@ public static class ServicioAsignacionEvaluadores
             ? SeleccionarManual(comite, usuariosSolicitados!, evaluadoresVigentes)
             : SeleccionarAutomatico(comite, cantidad!.Value, evaluadoresVigentes, cargaPorMiembro);
 
-        if (asignacionesVigentes.Count + miembrosSeleccionados.Count < MinimoEvaluadoresVigentes)
+        if (asignacionesVigentes.Count + miembrosSeleccionados.Count < minimoEvaluadores)
         {
             throw new EvaluadoresInsuficientesException();
         }

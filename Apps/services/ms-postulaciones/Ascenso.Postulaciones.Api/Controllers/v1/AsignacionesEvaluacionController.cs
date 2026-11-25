@@ -1,7 +1,9 @@
 using Ascenso.Postulaciones.Api.Seguridad;
 using Ascenso.Postulaciones.Application.Asignaciones.Comandos.AsignarEvaluadoresPostulacion;
+using Ascenso.Postulaciones.Application.Asignaciones.Comandos.AutorizarExcepcionEvaluadorUnico;
 using Ascenso.Postulaciones.Application.Asignaciones.Consultas.ObtenerAsignacionesPostulacion;
 using Ascenso.Postulaciones.Application.Asignaciones.Consultas.ObtenerCargaEvaluadoresComite;
+using Ascenso.Postulaciones.Application.Asignaciones.Consultas.ObtenerExcepcionEvaluadorUnico;
 using Ascenso.Postulaciones.Application.Asignaciones.Consultas.ObtenerMisAsignaciones;
 using Ascenso.Postulaciones.Application.Asignaciones.DTOs;
 using Ascenso.Postulaciones.Domain.Enums;
@@ -18,17 +20,23 @@ public sealed class AsignacionesEvaluacionController : ControllerBase
     private readonly ObtenerAsignacionesPostulacionQueryHandler _obtenerAsignacionesPostulacionHandler;
     private readonly ObtenerCargaEvaluadoresComiteQueryHandler _obtenerCargaComiteHandler;
     private readonly ObtenerMisAsignacionesQueryHandler _obtenerMisAsignacionesHandler;
+    private readonly AutorizarExcepcionEvaluadorUnicoCommandHandler _autorizarExcepcionHandler;
+    private readonly ObtenerExcepcionEvaluadorUnicoQueryHandler _obtenerExcepcionHandler;
 
     public AsignacionesEvaluacionController(
         AsignarEvaluadoresPostulacionCommandHandler asignarEvaluadoresHandler,
         ObtenerAsignacionesPostulacionQueryHandler obtenerAsignacionesPostulacionHandler,
         ObtenerCargaEvaluadoresComiteQueryHandler obtenerCargaComiteHandler,
-        ObtenerMisAsignacionesQueryHandler obtenerMisAsignacionesHandler)
+        ObtenerMisAsignacionesQueryHandler obtenerMisAsignacionesHandler,
+        AutorizarExcepcionEvaluadorUnicoCommandHandler autorizarExcepcionHandler,
+        ObtenerExcepcionEvaluadorUnicoQueryHandler obtenerExcepcionHandler)
     {
         _asignarEvaluadoresHandler = asignarEvaluadoresHandler ?? throw new ArgumentNullException(nameof(asignarEvaluadoresHandler));
         _obtenerAsignacionesPostulacionHandler = obtenerAsignacionesPostulacionHandler ?? throw new ArgumentNullException(nameof(obtenerAsignacionesPostulacionHandler));
         _obtenerCargaComiteHandler = obtenerCargaComiteHandler ?? throw new ArgumentNullException(nameof(obtenerCargaComiteHandler));
         _obtenerMisAsignacionesHandler = obtenerMisAsignacionesHandler ?? throw new ArgumentNullException(nameof(obtenerMisAsignacionesHandler));
+        _autorizarExcepcionHandler = autorizarExcepcionHandler ?? throw new ArgumentNullException(nameof(autorizarExcepcionHandler));
+        _obtenerExcepcionHandler = obtenerExcepcionHandler ?? throw new ArgumentNullException(nameof(obtenerExcepcionHandler));
     }
 
     [HttpPost]
@@ -117,10 +125,56 @@ public sealed class AsignacionesEvaluacionController : ControllerBase
         return Ok(resultado);
     }
 
+    [HttpPost("postulaciones/{postulacionId:guid}/excepcion-evaluador-unico")]
+    [Authorize(Policy = PoliticasAutorizacionAsignaciones.GestionAsignacionesEvaluacion)]
+    [ProducesResponseType(typeof(ExcepcionEvaluadorUnicoDto), StatusCodes.Status201Created)]
+    [ProducesResponseType(typeof(ValidationProblemDetails), StatusCodes.Status400BadRequest)]
+    [ProducesResponseType(StatusCodes.Status401Unauthorized)]
+    [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status403Forbidden)]
+    [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status409Conflict)]
+    [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status422UnprocessableEntity)]
+    public async Task<ActionResult<ExcepcionEvaluadorUnicoDto>> AutorizarExcepcionEvaluadorUnico(
+        [FromRoute] Guid postulacionId,
+        [FromBody] AutorizarExcepcionEvaluadorUnicoRequest request,
+        CancellationToken cancellationToken = default)
+    {
+        ArgumentNullException.ThrowIfNull(request);
+
+        var resultado = await _autorizarExcepcionHandler.HandleAsync(
+            new AutorizarExcepcionEvaluadorUnicoCommand(postulacionId, request.Justificacion),
+            cancellationToken);
+
+        return CreatedAtAction(
+            nameof(ObtenerExcepcionEvaluadorUnico),
+            new { postulacionId = resultado.PostulacionId },
+            resultado);
+    }
+
+    [HttpGet("postulaciones/{postulacionId:guid}/excepcion-evaluador-unico")]
+    [Authorize(Policy = PoliticasAutorizacionAsignaciones.GestionAsignacionesEvaluacion)]
+    [ProducesResponseType(typeof(ExcepcionEvaluadorUnicoDto), StatusCodes.Status200OK)]
+    [ProducesResponseType(typeof(ValidationProblemDetails), StatusCodes.Status400BadRequest)]
+    [ProducesResponseType(StatusCodes.Status401Unauthorized)]
+    [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status403Forbidden)]
+    [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status404NotFound)]
+    public async Task<ActionResult<ExcepcionEvaluadorUnicoDto>> ObtenerExcepcionEvaluadorUnico(
+        [FromRoute] Guid postulacionId,
+        CancellationToken cancellationToken = default)
+    {
+        var resultado = await _obtenerExcepcionHandler.HandleAsync(
+            new ObtenerExcepcionEvaluadorUnicoQuery(postulacionId),
+            cancellationToken);
+
+        return Ok(resultado);
+    }
+
     public sealed record class AsignarEvaluadoresPostulacionRequest(
         Guid ComiteId,
         Guid PostulacionId,
         DateTimeOffset FechaLimiteEvaluacion,
         IReadOnlyCollection<Guid>? UsuariosEvaluadoresIds = null,
         int? CantidadEvaluadores = null);
+
+    public sealed record class AutorizarExcepcionEvaluadorUnicoRequest(
+        string Justificacion);
 }

@@ -44,9 +44,9 @@ public sealed class AsignarEvaluadoresPostulacionCommandValidator
             .When(x => x.UsuariosEvaluadoresIds is not null);
 
         RuleFor(x => x.CantidadEvaluadores)
-            .GreaterThanOrEqualTo(ServicioAsignacionEvaluadores.MinimoEvaluadoresVigentes)
+            .GreaterThanOrEqualTo(ServicioAsignacionEvaluadores.MinimoEvaluadoresConExcepcion)
             .WithMessage(
-                $"La cantidad de evaluadores para asignación automática debe ser al menos {ServicioAsignacionEvaluadores.MinimoEvaluadoresVigentes}.")
+                $"La cantidad de evaluadores para asignación automática debe ser al menos {ServicioAsignacionEvaluadores.MinimoEvaluadoresConExcepcion}.")
             .When(x => x.CantidadEvaluadores.HasValue);
     }
 }

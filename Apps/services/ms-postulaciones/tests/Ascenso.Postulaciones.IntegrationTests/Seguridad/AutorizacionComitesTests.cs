@@ -287,6 +287,7 @@ public sealed class AutorizacionComitesTests : IClassFixture<WebApplicationFacto
                 servicios.RemoveAll<IRubricaRepository>();
                 servicios.RemoveAll<IComiteEvaluadorRepository>();
                 servicios.RemoveAll<IAsignacionEvaluacionRepository>();
+                servicios.RemoveAll<IExcepcionEvaluadorUnicoRepository>();
                 servicios.RemoveAll<IPeriodoAcademicoClient>();
                 servicios.RemoveAll<ICatalogoAcademicoClient>();
                 servicios.RemoveAll<IUnitOfWork>();
@@ -295,6 +296,7 @@ public sealed class AutorizacionComitesTests : IClassFixture<WebApplicationFacto
                 servicios.AddSingleton(Substitute.For<IRubricaRepository>());
                 servicios.AddSingleton(repoComites ?? Substitute.For<IComiteEvaluadorRepository>());
                 servicios.AddSingleton(Substitute.For<IAsignacionEvaluacionRepository>());
+                servicios.AddSingleton(Substitute.For<IExcepcionEvaluadorUnicoRepository>());
                 servicios.AddSingleton(Substitute.For<IPeriodoAcademicoClient>());
                 servicios.AddSingleton(Substitute.For<ICatalogoAcademicoClient>());
                 servicios.AddSingleton(Substitute.For<IUnitOfWork>());

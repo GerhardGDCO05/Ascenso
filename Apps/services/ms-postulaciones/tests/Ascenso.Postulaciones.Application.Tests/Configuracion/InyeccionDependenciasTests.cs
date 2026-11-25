@@ -1,6 +1,8 @@
 using Ascenso.Postulaciones.Application.Asignaciones.Comandos.AsignarEvaluadoresPostulacion;
+using Ascenso.Postulaciones.Application.Asignaciones.Comandos.AutorizarExcepcionEvaluadorUnico;
 using Ascenso.Postulaciones.Application.Asignaciones.Consultas.ObtenerAsignacionesPostulacion;
 using Ascenso.Postulaciones.Application.Asignaciones.Consultas.ObtenerCargaEvaluadoresComite;
+using Ascenso.Postulaciones.Application.Asignaciones.Consultas.ObtenerExcepcionEvaluadorUnico;
 using Ascenso.Postulaciones.Application.Asignaciones.Consultas.ObtenerMisAsignaciones;
 using Ascenso.Postulaciones.Application.Comites.Comandos.AgregarMiembroComite;
 using Ascenso.Postulaciones.Application.Comites.Comandos.CrearComiteEvaluador;
@@ -38,6 +40,7 @@ public sealed class InyeccionDependenciasTests
         servicios.AddSingleton(Substitute.For<IRubricaRepository>());
         servicios.AddSingleton(Substitute.For<IComiteEvaluadorRepository>());
         servicios.AddSingleton(Substitute.For<IAsignacionEvaluacionRepository>());
+        servicios.AddSingleton(Substitute.For<IExcepcionEvaluadorUnicoRepository>());
         servicios.AddSingleton(Substitute.For<IPeriodoAcademicoClient>());
         servicios.AddSingleton(Substitute.For<ICatalogoAcademicoClient>());
         servicios.AddSingleton(Substitute.For<IUnitOfWork>());
@@ -85,6 +88,10 @@ public sealed class InyeccionDependenciasTests
         alcance.ServiceProvider.GetRequiredService<ObtenerCargaEvaluadoresComiteQueryHandler>()
             .Should().NotBeNull();
         alcance.ServiceProvider.GetRequiredService<ObtenerMisAsignacionesQueryHandler>()
+            .Should().NotBeNull();
+        alcance.ServiceProvider.GetRequiredService<AutorizarExcepcionEvaluadorUnicoCommandHandler>()
+            .Should().NotBeNull();
+        alcance.ServiceProvider.GetRequiredService<ObtenerExcepcionEvaluadorUnicoQueryHandler>()
             .Should().NotBeNull();
 
         var validadoresRegistro = alcance.ServiceProvider
@@ -164,5 +171,17 @@ public sealed class InyeccionDependenciasTests
 
         validadoresMisAsignaciones.Should().ContainSingle(
             validador => validador is ObtenerMisAsignacionesQueryValidator);
+
+        var validadoresAutorizarExcepcion = alcance.ServiceProvider
+            .GetServices<IValidator<AutorizarExcepcionEvaluadorUnicoCommand>>();
+
+        validadoresAutorizarExcepcion.Should().ContainSingle(
+            validador => validador is AutorizarExcepcionEvaluadorUnicoCommandValidator);
+
+        var validadoresObtenerExcepcion = alcance.ServiceProvider
+            .GetServices<IValidator<ObtenerExcepcionEvaluadorUnicoQuery>>();
+
+        validadoresObtenerExcepcion.Should().ContainSingle(
+            validador => validador is ObtenerExcepcionEvaluadorUnicoQueryValidator);
     }
 }

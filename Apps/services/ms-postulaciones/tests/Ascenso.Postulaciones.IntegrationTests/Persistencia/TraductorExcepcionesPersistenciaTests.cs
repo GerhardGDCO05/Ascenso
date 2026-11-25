@@ -89,6 +89,18 @@ public sealed class TraductorExcepcionesPersistenciaTests
     }
 
     [Fact]
+    public void Debe_TraducirAExcepcionEvaluadorUnicoYaAutorizada_Cuando_FallaIndiceDeExcepcionPorPostulacion()
+    {
+        var excepcion = CrearDbUpdateUnicidad(TraductorExcepcionesPersistencia.IndiceExcepcionEvaluadorUnicoPostulacionUnico);
+
+        var traducida = TraductorExcepcionesPersistencia.TraducirSiAplica(excepcion);
+
+        var yaAutorizada = traducida.Should().BeOfType<ExcepcionEvaluadorUnicoYaAutorizadaException>().Subject;
+        yaAutorizada.Codigo.Should().Be(ExcepcionEvaluadorUnicoYaAutorizadaException.CodigoError);
+        yaAutorizada.EstadoHttp.Should().Be(409);
+    }
+
+    [Fact]
     public void Debe_TraducirAConflictoConCodigoRestriccionUnicidad_Cuando_FallaIndiceDeOrdenDeCriterio()
     {
         var excepcion = CrearDbUpdateUnicidad(TraductorExcepcionesPersistencia.IndiceCriterioRubricaOrdenUnico);

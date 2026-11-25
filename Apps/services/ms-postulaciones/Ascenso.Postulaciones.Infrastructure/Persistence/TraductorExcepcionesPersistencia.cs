@@ -16,6 +16,7 @@ internal static class TraductorExcepcionesPersistencia
     public const string IndiceComiteProgramaConvocatoriaUnico = "ux_comites_programa_convocatoria";
     public const string IndiceMiembroComiteUsuarioActivoUnico = "ux_miembros_comite_usuario_activo";
     public const string IndiceAsignacionPostulacionEvaluadorVigenteUnico = "ux_asignaciones_postulacion_evaluador_vigente";
+    public const string IndiceExcepcionEvaluadorUnicoPostulacionUnico = "ux_excepciones_evaluador_unico_postulacion";
 
     public static Exception? TraducirSiAplica(DbUpdateException excepcion)
     {
@@ -55,6 +56,11 @@ internal static class TraductorExcepcionesPersistencia
         if (string.Equals(pg.ConstraintName, IndiceAsignacionPostulacionEvaluadorVigenteUnico, StringComparison.OrdinalIgnoreCase))
         {
             return new AsignacionDuplicadaException();
+        }
+
+        if (string.Equals(pg.ConstraintName, IndiceExcepcionEvaluadorUnicoPostulacionUnico, StringComparison.OrdinalIgnoreCase))
+        {
+            return new ExcepcionEvaluadorUnicoYaAutorizadaException();
         }
 
         return new ExcepcionConflictoConcurrencia(
