@@ -1,0 +1,3 @@
+namespace Ascenso.Postulaciones.Application.Consolidacion.Consultas.ObtenerResultadoConsolidadoPostulacion;
+
+public sealed record class ObtenerResultadoConsolidadoPostulacionQuery(Guid PostulacionId);

@@ -1,4 +1,5 @@
 using Ascenso.Postulaciones.Application.Common;
+using Ascenso.Postulaciones.Application.Consolidacion.Interfaces;
 using Ascenso.Postulaciones.Application.Evaluaciones.DTOs;
 using Ascenso.Postulaciones.Application.Evaluaciones.Interfaces;
 using Ascenso.Postulaciones.Application.Interfaces;
@@ -18,6 +19,7 @@ public sealed class EnviarEvaluacionDefinitivaCommandHandler
     private readonly IComiteEvaluadorRepository _comiteRepository;
     private readonly IConsultaRubricaParaEvaluacionRepository _rubricaRepository;
     private readonly IBloqueadorRubricaEvaluacion _bloqueadorRubrica;
+    private readonly IConsolidadorPostulacionEvaluacion _consolidadorPostulacion;
     private readonly IUnitOfWork _unitOfWork;
     private readonly IValidator<EnviarEvaluacionDefinitivaCommand> _validator;
     private readonly TimeProvider _timeProvider;
@@ -30,6 +32,7 @@ public sealed class EnviarEvaluacionDefinitivaCommandHandler
         IComiteEvaluadorRepository comiteRepository,
         IConsultaRubricaParaEvaluacionRepository rubricaRepository,
         IBloqueadorRubricaEvaluacion bloqueadorRubrica,
+        IConsolidadorPostulacionEvaluacion consolidadorPostulacion,
         IUnitOfWork unitOfWork,
         IValidator<EnviarEvaluacionDefinitivaCommand> validator,
         TimeProvider timeProvider)
@@ -41,6 +44,7 @@ public sealed class EnviarEvaluacionDefinitivaCommandHandler
         _comiteRepository = comiteRepository ?? throw new ArgumentNullException(nameof(comiteRepository));
         _rubricaRepository = rubricaRepository ?? throw new ArgumentNullException(nameof(rubricaRepository));
         _bloqueadorRubrica = bloqueadorRubrica ?? throw new ArgumentNullException(nameof(bloqueadorRubrica));
+        _consolidadorPostulacion = consolidadorPostulacion ?? throw new ArgumentNullException(nameof(consolidadorPostulacion));
         _unitOfWork = unitOfWork ?? throw new ArgumentNullException(nameof(unitOfWork));
         _validator = validator ?? throw new ArgumentNullException(nameof(validator));
         _timeProvider = timeProvider ?? throw new ArgumentNullException(nameof(timeProvider));
@@ -103,6 +107,10 @@ public sealed class EnviarEvaluacionDefinitivaCommandHandler
                 rubrica.Id,
                 cancellationToken);
         }
+
+        await _consolidadorPostulacion.IntentarConsolidarAutomaticamenteAsync(
+            asignacion.PostulacionId,
+            cancellationToken);
 
         return evaluacion.ADto();
     }

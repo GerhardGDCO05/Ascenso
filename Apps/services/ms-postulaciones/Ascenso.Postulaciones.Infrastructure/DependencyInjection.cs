@@ -44,6 +44,9 @@ public static class DependencyInjection
         services.AddScoped<IConsultaAsignacionParaEvaluacionRepository, ConsultaAsignacionParaEvaluacionRepository>();
         services.AddScoped<IConsultaRubricaParaEvaluacionRepository, ConsultaRubricaParaEvaluacionRepository>();
         services.AddScoped<IConsultaEvaluacionesCoevaluadoresRepository, ConsultaEvaluacionesCoevaluadoresRepository>();
+        services.AddScoped<IResultadoConsolidadoRepository, ResultadoConsolidadoRepository>();
+        services.AddScoped<IConsultaDatosConsolidacionRepository, ConsultaDatosConsolidacionRepository>();
+        services.AddScoped<IProveedorParametrosConsolidacion, ProveedorParametrosConsolidacionConfigurado>();
 
         if (configuration is not null)
         {
@@ -51,11 +54,14 @@ public static class DependencyInjection
                 configuration.GetSection(ServiciosExternosOptions.Seccion));
             services.Configure<PeriodoActualOptions>(
                 configuration.GetSection(PeriodoActualOptions.Seccion));
+            services.Configure<ConsolidacionOptions>(
+                configuration.GetSection(ConsolidacionOptions.Seccion));
         }
         else
         {
             services.AddOptions<ServiciosExternosOptions>();
             services.AddOptions<PeriodoActualOptions>();
+            services.AddOptions<ConsolidacionOptions>();
         }
 
         services.AddHttpClient<IPeriodoAcademicoClient, PeriodoAcademicoClient>((proveedor, cliente) =>

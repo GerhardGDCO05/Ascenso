@@ -463,6 +463,9 @@ public sealed class AutorizacionEvaluacionesTests : IClassFixture<WebApplication
                 servicios.RemoveAll<IConsultaAsignacionParaEvaluacionRepository>();
                 servicios.RemoveAll<IConsultaRubricaParaEvaluacionRepository>();
                 servicios.RemoveAll<IConsultaEvaluacionesCoevaluadoresRepository>();
+                servicios.RemoveAll<IResultadoConsolidadoRepository>();
+                servicios.RemoveAll<IConsultaDatosConsolidacionRepository>();
+                servicios.RemoveAll<IProveedorParametrosConsolidacion>();
                 servicios.RemoveAll<IBloqueadorRubricaEvaluacion>();
                 servicios.RemoveAll<IPeriodoAcademicoClient>();
                 servicios.RemoveAll<ICatalogoAcademicoClient>();
@@ -491,6 +494,9 @@ public sealed class AutorizacionEvaluacionesTests : IClassFixture<WebApplication
                 servicios.AddSingleton(repoAsignacion ?? Substitute.For<IConsultaAsignacionParaEvaluacionRepository>());
                 servicios.AddSingleton(repoRubrica ?? Substitute.For<IConsultaRubricaParaEvaluacionRepository>());
                 servicios.AddSingleton(repoCoevaluadores ?? Substitute.For<IConsultaEvaluacionesCoevaluadoresRepository>());
+                servicios.AddSingleton(Substitute.For<IResultadoConsolidadoRepository>());
+                servicios.AddSingleton(Substitute.For<IConsultaDatosConsolidacionRepository>());
+                servicios.AddSingleton(Substitute.For<IProveedorParametrosConsolidacion>());
                 servicios.AddSingleton(Substitute.For<IBloqueadorRubricaEvaluacion>());
                 servicios.AddSingleton(Substitute.For<IPeriodoAcademicoClient>());
                 servicios.AddSingleton(Substitute.For<ICatalogoAcademicoClient>());

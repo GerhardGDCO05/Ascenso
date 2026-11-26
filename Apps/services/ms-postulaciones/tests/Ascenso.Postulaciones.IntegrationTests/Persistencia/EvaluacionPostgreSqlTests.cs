@@ -1,3 +1,4 @@
+using Ascenso.Postulaciones.Application.Consolidacion.Interfaces;
 using Ascenso.Postulaciones.Application.Evaluaciones.Comandos.EnviarEvaluacionDefinitiva;
 using Ascenso.Postulaciones.Application.Evaluaciones.Comandos.GuardarBorradorEvaluacion;
 using Ascenso.Postulaciones.Application.Evaluaciones.Servicios;
@@ -814,9 +815,18 @@ public sealed class EvaluacionPostgreSqlTests
             new ComiteEvaluadorRepository(contexto),
             new ConsultaRubricaParaEvaluacionRepository(contexto),
             bloqueadorAdapter,
+            new ConsolidadorPostulacionNoOp(),
             contexto,
             new EnviarEvaluacionDefinitivaCommandValidator(),
             timeProvider);
+    }
+
+    private sealed class ConsolidadorPostulacionNoOp : IConsolidadorPostulacionEvaluacion
+    {
+        public Task IntentarConsolidarAutomaticamenteAsync(
+            Guid postulacionId,
+            CancellationToken cancellationToken = default)
+            => Task.CompletedTask;
     }
 
     private sealed class ConvocatoriaEvaluacionAbiertaFija(TimeProvider timeProvider)

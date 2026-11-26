@@ -1,4 +1,5 @@
 using Ascenso.Postulaciones.Application.Asignaciones.Comandos.AutorizarExcepcionEvaluadorUnico;
+using Ascenso.Postulaciones.Application.Consolidacion.Interfaces;
 using Ascenso.Postulaciones.Application.Interfaces;
 using Ascenso.Postulaciones.Domain.Asignaciones.Agregados;
 using Ascenso.Postulaciones.Domain.Asignaciones.Entidades;
@@ -25,6 +26,8 @@ public sealed class AutorizarExcepcionEvaluadorUnicoCommandHandlerTests
         Substitute.For<IExcepcionEvaluadorUnicoRepository>();
     private readonly IAsignacionEvaluacionRepository _asignacionRepository =
         Substitute.For<IAsignacionEvaluacionRepository>();
+    private readonly IConsolidadorPostulacionEvaluacion _consolidadorPostulacion =
+        Substitute.For<IConsolidadorPostulacionEvaluacion>();
     private readonly IUnitOfWork _unitOfWork = Substitute.For<IUnitOfWork>();
     private readonly AutorizarExcepcionEvaluadorUnicoCommandHandler _handler;
 
@@ -50,6 +53,7 @@ public sealed class AutorizarExcepcionEvaluadorUnicoCommandHandlerTests
             _usuarioActual,
             _excepcionRepository,
             _asignacionRepository,
+            _consolidadorPostulacion,
             _unitOfWork,
             new AutorizarExcepcionEvaluadorUnicoCommandValidator(),
             new RelojFijo(_ahora));

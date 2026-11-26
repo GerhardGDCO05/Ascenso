@@ -1,5 +1,6 @@
 using Ascenso.Postulaciones.Application.Asignaciones.DTOs;
 using Ascenso.Postulaciones.Application.Common;
+using Ascenso.Postulaciones.Application.Consolidacion.Interfaces;
 using Ascenso.Postulaciones.Application.Interfaces;
 using Ascenso.Postulaciones.Domain.Asignaciones.Servicios;
 using Ascenso.Postulaciones.Domain.Comun;
@@ -13,6 +14,7 @@ public sealed class AutorizarExcepcionEvaluadorUnicoCommandHandler
     private readonly IUsuarioActual _usuarioActual;
     private readonly IExcepcionEvaluadorUnicoRepository _excepcionRepository;
     private readonly IAsignacionEvaluacionRepository _asignacionRepository;
+    private readonly IConsolidadorPostulacionEvaluacion _consolidadorPostulacion;
     private readonly IUnitOfWork _unitOfWork;
     private readonly IValidator<AutorizarExcepcionEvaluadorUnicoCommand> _validator;
     private readonly TimeProvider _timeProvider;
@@ -21,6 +23,7 @@ public sealed class AutorizarExcepcionEvaluadorUnicoCommandHandler
         IUsuarioActual usuarioActual,
         IExcepcionEvaluadorUnicoRepository excepcionRepository,
         IAsignacionEvaluacionRepository asignacionRepository,
+        IConsolidadorPostulacionEvaluacion consolidadorPostulacion,
         IUnitOfWork unitOfWork,
         IValidator<AutorizarExcepcionEvaluadorUnicoCommand> validator,
         TimeProvider timeProvider)
@@ -28,6 +31,7 @@ public sealed class AutorizarExcepcionEvaluadorUnicoCommandHandler
         _usuarioActual = usuarioActual ?? throw new ArgumentNullException(nameof(usuarioActual));
         _excepcionRepository = excepcionRepository ?? throw new ArgumentNullException(nameof(excepcionRepository));
         _asignacionRepository = asignacionRepository ?? throw new ArgumentNullException(nameof(asignacionRepository));
+        _consolidadorPostulacion = consolidadorPostulacion ?? throw new ArgumentNullException(nameof(consolidadorPostulacion));
         _unitOfWork = unitOfWork ?? throw new ArgumentNullException(nameof(unitOfWork));
         _validator = validator ?? throw new ArgumentNullException(nameof(validator));
         _timeProvider = timeProvider ?? throw new ArgumentNullException(nameof(timeProvider));
@@ -60,6 +64,10 @@ public sealed class AutorizarExcepcionEvaluadorUnicoCommandHandler
 
         await _excepcionRepository.AgregarAsync(autorizacion, cancellationToken);
         await _unitOfWork.GuardarCambiosAsync(cancellationToken);
+
+        await _consolidadorPostulacion.IntentarConsolidarAutomaticamenteAsync(
+            command.PostulacionId,
+            cancellationToken);
 
         return autorizacion.ADto();
     }
