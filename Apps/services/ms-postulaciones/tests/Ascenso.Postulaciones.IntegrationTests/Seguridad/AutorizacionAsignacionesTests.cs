@@ -340,8 +340,10 @@ public sealed class AutorizacionAsignacionesTests : IClassFixture<WebApplication
                 servicios.RemoveAll<IEvaluacionRepository>();
                 servicios.RemoveAll<IConsultaAsignacionParaEvaluacionRepository>();
                 servicios.RemoveAll<IConsultaRubricaParaEvaluacionRepository>();
+                servicios.RemoveAll<IConsultaEvaluacionesCoevaluadoresRepository>();
                 servicios.RemoveAll<IPeriodoAcademicoClient>();
                 servicios.RemoveAll<ICatalogoAcademicoClient>();
+                servicios.RemoveAll<IConvocatoriaEvaluacionClient>();
                 servicios.RemoveAll<IUnitOfWork>();
 
                 servicios.AddSingleton(repo ?? Substitute.For<IPostulanteRepository>());
@@ -352,8 +354,10 @@ public sealed class AutorizacionAsignacionesTests : IClassFixture<WebApplication
                 servicios.AddSingleton(Substitute.For<IEvaluacionRepository>());
                 servicios.AddSingleton(Substitute.For<IConsultaAsignacionParaEvaluacionRepository>());
                 servicios.AddSingleton(Substitute.For<IConsultaRubricaParaEvaluacionRepository>());
+                servicios.AddSingleton(Substitute.For<IConsultaEvaluacionesCoevaluadoresRepository>());
                 servicios.AddSingleton(Substitute.For<IPeriodoAcademicoClient>());
                 servicios.AddSingleton(Substitute.For<ICatalogoAcademicoClient>());
+                servicios.AddSingleton(Substitute.For<IConvocatoriaEvaluacionClient>());
                 servicios.AddSingleton(Substitute.For<IUnitOfWork>());
                 servicios.AddSingleton(TimeProvider.System);
 

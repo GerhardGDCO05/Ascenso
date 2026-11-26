@@ -33,6 +33,8 @@ public sealed class GuardarBorradorEvaluacionCommandHandlerTests
     private readonly IUsuarioActual _usuarioActual = Substitute.For<IUsuarioActual>();
     private readonly IConsultaAsignacionParaEvaluacionRepository _asignacionRepository =
         Substitute.For<IConsultaAsignacionParaEvaluacionRepository>();
+    private readonly IConvocatoriaEvaluacionClient _convocatoriaClient =
+        Substitute.For<IConvocatoriaEvaluacionClient>();
     private readonly IComiteEvaluadorRepository _comiteRepository =
         Substitute.For<IComiteEvaluadorRepository>();
     private readonly IConsultaRubricaParaEvaluacionRepository _rubricaRepository =
@@ -49,10 +51,19 @@ public sealed class GuardarBorradorEvaluacionCommandHandlerTests
         _usuarioActual.EstaAutenticado.Returns(true);
         _usuarioActual.UsuarioId.Returns(_evaluadorId);
         _unitOfWork.GuardarCambiosAsync(Arg.Any<CancellationToken>()).Returns(Task.FromResult(1));
+        _convocatoriaClient
+            .ObtenerVentanaRevisionAsync(Arg.Any<Guid>(), Arg.Any<CancellationToken>())
+            .Returns(call => Task.FromResult<VentanaRevisionConvocatoria?>(
+                new VentanaRevisionConvocatoria(
+                    call.ArgAt<Guid>(0),
+                    EstadoConvocatoriaExterna.Publicada,
+                    _ahora.AddDays(-10),
+                    _ahora.AddDays(30))));
 
         _handler = new GuardarBorradorEvaluacionCommandHandler(
             _usuarioActual,
             _asignacionRepository,
+            _convocatoriaClient,
             _comiteRepository,
             _rubricaRepository,
             _evaluacionRepository,

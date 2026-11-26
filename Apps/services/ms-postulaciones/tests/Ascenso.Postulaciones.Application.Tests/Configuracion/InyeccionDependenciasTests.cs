@@ -11,6 +11,7 @@ using Ascenso.Postulaciones.Application.Comites.Consultas.ObtenerComiteEvaluador
 using Ascenso.Postulaciones.Application.Comites.Consultas.ObtenerComitePorPrograma;
 using Ascenso.Postulaciones.Application.Evaluaciones.Comandos.EnviarEvaluacionDefinitiva;
 using Ascenso.Postulaciones.Application.Evaluaciones.Comandos.GuardarBorradorEvaluacion;
+using Ascenso.Postulaciones.Application.Evaluaciones.Consultas.ObtenerEvaluacionesCoevaluadoresPostulacion;
 using Ascenso.Postulaciones.Application.Evaluaciones.Consultas.ObtenerEvaluacionesPostulacion;
 using Ascenso.Postulaciones.Application.Evaluaciones.Consultas.ObtenerMiEvaluacionPorAsignacion;
 using Ascenso.Postulaciones.Application.Evaluaciones.Consultas.ObtenerMisEvaluaciones;
@@ -51,8 +52,10 @@ public sealed class InyeccionDependenciasTests
         servicios.AddSingleton(Substitute.For<IEvaluacionRepository>());
         servicios.AddSingleton(Substitute.For<IConsultaAsignacionParaEvaluacionRepository>());
         servicios.AddSingleton(Substitute.For<IConsultaRubricaParaEvaluacionRepository>());
+        servicios.AddSingleton(Substitute.For<IConsultaEvaluacionesCoevaluadoresRepository>());
         servicios.AddSingleton(Substitute.For<IPeriodoAcademicoClient>());
         servicios.AddSingleton(Substitute.For<ICatalogoAcademicoClient>());
+        servicios.AddSingleton(Substitute.For<IConvocatoriaEvaluacionClient>());
         servicios.AddSingleton(Substitute.For<IUnitOfWork>());
         servicios.AddSingleton(TimeProvider.System);
 
@@ -114,6 +117,8 @@ public sealed class InyeccionDependenciasTests
         alcance.ServiceProvider.GetRequiredService<ObtenerMisEvaluacionesQueryHandler>()
             .Should().NotBeNull();
         alcance.ServiceProvider.GetRequiredService<ObtenerEvaluacionesPostulacionQueryHandler>()
+            .Should().NotBeNull();
+        alcance.ServiceProvider.GetRequiredService<ObtenerEvaluacionesCoevaluadoresPostulacionQueryHandler>()
             .Should().NotBeNull();
 
         var validadoresRegistro = alcance.ServiceProvider
@@ -235,5 +240,11 @@ public sealed class InyeccionDependenciasTests
 
         validadoresEvaluacionesPostulacion.Should().ContainSingle(
             validador => validador is ObtenerEvaluacionesPostulacionQueryValidator);
+
+        var validadoresEvaluacionesCoevaluadores = alcance.ServiceProvider
+            .GetServices<IValidator<ObtenerEvaluacionesCoevaluadoresPostulacionQuery>>();
+
+        validadoresEvaluacionesCoevaluadores.Should().ContainSingle(
+            validador => validador is ObtenerEvaluacionesCoevaluadoresPostulacionQueryValidator);
     }
 }

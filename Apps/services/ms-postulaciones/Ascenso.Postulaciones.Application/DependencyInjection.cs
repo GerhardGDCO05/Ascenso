@@ -11,6 +11,7 @@ using Ascenso.Postulaciones.Application.Comites.Consultas.ObtenerComiteEvaluador
 using Ascenso.Postulaciones.Application.Comites.Consultas.ObtenerComitePorPrograma;
 using Ascenso.Postulaciones.Application.Evaluaciones.Comandos.EnviarEvaluacionDefinitiva;
 using Ascenso.Postulaciones.Application.Evaluaciones.Comandos.GuardarBorradorEvaluacion;
+using Ascenso.Postulaciones.Application.Evaluaciones.Consultas.ObtenerEvaluacionesCoevaluadoresPostulacion;
 using Ascenso.Postulaciones.Application.Evaluaciones.Consultas.ObtenerEvaluacionesPostulacion;
 using Ascenso.Postulaciones.Application.Evaluaciones.Consultas.ObtenerMiEvaluacionPorAsignacion;
 using Ascenso.Postulaciones.Application.Evaluaciones.Consultas.ObtenerMisEvaluaciones;
@@ -66,6 +67,7 @@ public static class DependencyInjection
         services.AddScoped<ObtenerMiEvaluacionPorAsignacionQueryHandler>();
         services.AddScoped<ObtenerMisEvaluacionesQueryHandler>();
         services.AddScoped<ObtenerEvaluacionesPostulacionQueryHandler>();
+        services.AddScoped<ObtenerEvaluacionesCoevaluadoresPostulacionQueryHandler>();
 
         return services;
     }

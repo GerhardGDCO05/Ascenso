@@ -32,8 +32,10 @@ public sealed class EnsambladoApiTests : IClassFixture<WebApplicationFactory<Pro
                 servicios.AddSingleton(Substitute.For<IEvaluacionRepository>());
                 servicios.AddSingleton(Substitute.For<IConsultaAsignacionParaEvaluacionRepository>());
                 servicios.AddSingleton(Substitute.For<IConsultaRubricaParaEvaluacionRepository>());
+                servicios.AddSingleton(Substitute.For<IConsultaEvaluacionesCoevaluadoresRepository>());
                 servicios.AddSingleton(Substitute.For<IPeriodoAcademicoClient>());
                 servicios.AddSingleton(Substitute.For<ICatalogoAcademicoClient>());
+                servicios.AddSingleton(Substitute.For<IConvocatoriaEvaluacionClient>());
                 servicios.AddSingleton(Substitute.For<IUnitOfWork>());
                 servicios.AddSingleton(TimeProvider.System);
             });

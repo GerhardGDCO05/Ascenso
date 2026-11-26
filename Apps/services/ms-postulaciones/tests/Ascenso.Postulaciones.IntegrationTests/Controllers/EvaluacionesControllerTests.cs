@@ -499,6 +499,293 @@ public sealed class EvaluacionesControllerTests : IClassFixture<WebApplicationFa
         var respPostulacionGuidVacio = await clienteCoordinador.GetAsync(
             $"/api/v1/evaluaciones/postulaciones/{Guid.Empty}");
         respPostulacionGuidVacio.StatusCode.Should().Be(HttpStatusCode.BadRequest);
+
+        var respCoevaluadoresGuidVacio = await clienteEvaluador.GetAsync(
+            $"/api/v1/evaluaciones/postulaciones/{Guid.Empty}/coevaluadores");
+        respCoevaluadoresGuidVacio.StatusCode.Should().Be(HttpStatusCode.BadRequest);
+    }
+
+    [Fact]
+    public async Task Debe_Retornar200OkConEvaluacionesDefinitivasDeCoevaluadoresSinIdentidadDelPar_Cuando_PeriodoRevisionHaCerrado()
+    {
+        var (comite, rubrica, criterio1, criterio2, asignacionPropia, evaluadorId, ahora) = CrearEscenario(
+            EstadoRubrica.Bloqueada);
+        var postulacionId = asignacionPropia.PostulacionId;
+        var miembro2 = comite.Miembros.First(m => m.UsuarioEvaluadorId != evaluadorId);
+        var coevaluadorId = miembro2.UsuarioEvaluadorId;
+        var asignacionCoevaluador = AsignacionEvaluacion.Crear(
+            comite,
+            miembro2.Id,
+            postulacionId,
+            ahora.AddDays(-5),
+            ahora.AddDays(5),
+            Guid.NewGuid());
+
+        var evaluacionCoevaluador = Evaluacion.CrearBorrador(
+            asignacionCoevaluador,
+            rubrica,
+            [
+                new DatosCalificacionCriterio(criterio1.Id, 18.00m, "Excelente promedio"),
+                new DatosCalificacionCriterio(criterio2.Id, 9.00m, "Gran proyección")
+            ],
+            "Evaluación definitiva del coevaluador",
+            ahora.AddHours(-4),
+            coevaluadorId);
+        evaluacionCoevaluador.EnviarDefinitiva(
+            rubrica,
+            asignacionCoevaluador.FechaLimiteEvaluacion,
+            ahora.AddHours(-3),
+            coevaluadorId);
+
+        var fechaCierreRevision = ahora.AddHours(-1);
+        var repoCoevaluadores = Substitute.For<IConsultaEvaluacionesCoevaluadoresRepository>();
+        repoCoevaluadores.ObtenerAsignacionVigenteEvaluadorAsync(
+                postulacionId,
+                evaluadorId,
+                Arg.Any<CancellationToken>())
+            .Returns(asignacionPropia);
+        repoCoevaluadores.ListarDefinitivasDeCoevaluadoresAsync(
+                postulacionId,
+                evaluadorId,
+                Arg.Any<CancellationToken>())
+            .Returns([evaluacionCoevaluador]);
+
+        var convocatoriaClient = Substitute.For<IConvocatoriaEvaluacionClient>();
+        convocatoriaClient.ObtenerVentanaRevisionAsync(
+                asignacionPropia.ConvocatoriaId,
+                Arg.Any<CancellationToken>())
+            .Returns(new VentanaRevisionConvocatoria(
+                asignacionPropia.ConvocatoriaId,
+                EstadoConvocatoriaExterna.Cerrada,
+                ahora.AddDays(-10),
+                fechaCierreRevision));
+
+        using var fabrica = CrearFabrica(
+            repoCoevaluadores: repoCoevaluadores,
+            convocatoriaClient: convocatoriaClient);
+        using var cliente = CrearClienteAutenticado(fabrica, evaluadorId, RolMiembroComite);
+
+        var respuesta = await cliente.GetAsync(
+            $"/api/v1/evaluaciones/postulaciones/{postulacionId}/coevaluadores");
+
+        respuesta.StatusCode.Should().Be(HttpStatusCode.OK);
+
+        var json = await respuesta.Content.ReadAsStringAsync();
+        using var doc = JsonDocument.Parse(json);
+        var itemJson = doc.RootElement.GetProperty("evaluaciones")[0];
+        itemJson.TryGetProperty("evaluadorId", out _).Should().BeFalse();
+        itemJson.TryGetProperty("asignacionEvaluacionId", out _).Should().BeFalse();
+
+        var dto = await respuesta.Content.ReadFromJsonAsync<EvaluacionesCoevaluadoresPostulacionDto>();
+        dto.Should().NotBeNull();
+        dto!.PostulacionId.Should().Be(postulacionId);
+        dto.ConvocatoriaId.Should().Be(asignacionPropia.ConvocatoriaId);
+        dto.FechaCierreRevision.Should().Be(fechaCierreRevision.ToUniversalTime());
+        dto.Evaluaciones.Should().ContainSingle();
+        dto.Evaluaciones[0].EvaluacionId.Should().Be(evaluacionCoevaluador.Id);
+        dto.Evaluaciones[0].Estado.Should().Be("ENVIADA_DEFINITIVA");
+        dto.Evaluaciones[0].PuntajeTotalPonderado.Should().Be(90.00m);
+        dto.Evaluaciones[0].Calificaciones.Should().HaveCount(2);
+    }
+
+    [Fact]
+    public async Task Debe_Retornar200OkConListaVacia_Cuando_NoExistenEvaluacionesDefinitivasDeCoevaluadoresTrasCierre()
+    {
+        var (_, _, _, _, asignacionPropia, evaluadorId, ahora) = CrearEscenario();
+        var postulacionId = asignacionPropia.PostulacionId;
+        var fechaCierreRevision = ahora.AddMinutes(-30);
+
+        var repoCoevaluadores = Substitute.For<IConsultaEvaluacionesCoevaluadoresRepository>();
+        repoCoevaluadores.ObtenerAsignacionVigenteEvaluadorAsync(
+                postulacionId,
+                evaluadorId,
+                Arg.Any<CancellationToken>())
+            .Returns(asignacionPropia);
+        repoCoevaluadores.ListarDefinitivasDeCoevaluadoresAsync(
+                postulacionId,
+                evaluadorId,
+                Arg.Any<CancellationToken>())
+            .Returns([]);
+
+        var convocatoriaClient = Substitute.For<IConvocatoriaEvaluacionClient>();
+        convocatoriaClient.ObtenerVentanaRevisionAsync(
+                asignacionPropia.ConvocatoriaId,
+                Arg.Any<CancellationToken>())
+            .Returns(new VentanaRevisionConvocatoria(
+                asignacionPropia.ConvocatoriaId,
+                EstadoConvocatoriaExterna.Publicada,
+                ahora.AddDays(-5),
+                fechaCierreRevision));
+
+        using var fabrica = CrearFabrica(
+            repoCoevaluadores: repoCoevaluadores,
+            convocatoriaClient: convocatoriaClient);
+        using var cliente = CrearClienteAutenticado(fabrica, evaluadorId, RolMiembroComite);
+
+        var respuesta = await cliente.GetAsync(
+            $"/api/v1/evaluaciones/postulaciones/{postulacionId}/coevaluadores");
+
+        respuesta.StatusCode.Should().Be(HttpStatusCode.OK);
+        var dto = await respuesta.Content.ReadFromJsonAsync<EvaluacionesCoevaluadoresPostulacionDto>();
+        dto.Should().NotBeNull();
+        dto!.PostulacionId.Should().Be(postulacionId);
+        dto.Evaluaciones.Should().BeEmpty();
+    }
+
+    [Fact]
+    public async Task Debe_Retornar403404409Y503EnProblemDetails_Cuando_FallanReglasDeVentanaRevisionOCoevaluadores()
+    {
+        var (comite, rubrica, criterio1, _, asignacion, evaluadorId, ahora) = CrearEscenario();
+        var postulacionId = asignacion.PostulacionId;
+        var evaluadorNoAsignadoId = Guid.NewGuid();
+
+        var repoAsignacion = Substitute.For<IConsultaAsignacionParaEvaluacionRepository>();
+        repoAsignacion.ObtenerParaActualizarPorIdAsync(asignacion.Id, Arg.Any<CancellationToken>())
+            .Returns(asignacion);
+
+        var repoComites = Substitute.For<IComiteEvaluadorRepository>();
+        repoComites.ObtenerPorIdAsync(comite.Id, Arg.Any<CancellationToken>())
+            .Returns(comite);
+
+        var repoRubrica = Substitute.For<IConsultaRubricaParaEvaluacionRepository>();
+        repoRubrica.ObtenerPorProgramaYConvocatoriaAsync(
+                comite.ProgramaBecaId,
+                comite.ConvocatoriaId,
+                Arg.Any<CancellationToken>())
+            .Returns(rubrica);
+
+        var repoEvaluacion = Substitute.For<IEvaluacionRepository>();
+
+        var repoCoevaluadores = Substitute.For<IConsultaEvaluacionesCoevaluadoresRepository>();
+        repoCoevaluadores.ObtenerAsignacionVigenteEvaluadorAsync(
+                postulacionId,
+                evaluadorId,
+                Arg.Any<CancellationToken>())
+            .Returns(asignacion);
+        repoCoevaluadores.ObtenerAsignacionVigenteEvaluadorAsync(
+                postulacionId,
+                evaluadorNoAsignadoId,
+                Arg.Any<CancellationToken>())
+            .Returns((AsignacionEvaluacion?)null);
+
+        var convocatoriaClient = Substitute.For<IConvocatoriaEvaluacionClient>();
+
+        using var fabrica = CrearFabrica(
+            repoAsignacion: repoAsignacion,
+            repoComites: repoComites,
+            repoRubrica: repoRubrica,
+            repoEvaluacion: repoEvaluacion,
+            repoCoevaluadores: repoCoevaluadores,
+            convocatoriaClient: convocatoriaClient);
+
+        // 1. 403 EVALUACION_CONFIDENCIAL en coevaluadores sin asignación vigente
+        using var clienteNoAsignado = CrearClienteAutenticado(fabrica, evaluadorNoAsignadoId, RolMiembroComite);
+        var respConfidencial = await clienteNoAsignado.GetAsync(
+            $"/api/v1/evaluaciones/postulaciones/{postulacionId}/coevaluadores");
+        respConfidencial.StatusCode.Should().Be(HttpStatusCode.Forbidden);
+        await VerificarCodigoErrorAsync(respConfidencial, EvaluacionConfidencialException.CodigoError);
+
+        using var cliente = CrearClienteAutenticado(fabrica, evaluadorId, RolMiembroComite);
+
+        // 2. 404 CONVOCATORIA_NO_ENCONTRADA
+        convocatoriaClient.ObtenerVentanaRevisionAsync(
+                asignacion.ConvocatoriaId,
+                Arg.Any<CancellationToken>())
+            .Returns((VentanaRevisionConvocatoria?)null);
+
+        var respConvocatoriaNoEncontrada = await cliente.GetAsync(
+            $"/api/v1/evaluaciones/postulaciones/{postulacionId}/coevaluadores");
+        respConvocatoriaNoEncontrada.StatusCode.Should().Be(HttpStatusCode.NotFound);
+        await VerificarCodigoErrorAsync(
+            respConvocatoriaNoEncontrada,
+            ConvocatoriaNoEncontradaException.CodigoError);
+
+        // 3. 409 PERIODO_REVISION_ABIERTO al consultar coevaluadores mientras la ventana sigue abierta
+        convocatoriaClient.ObtenerVentanaRevisionAsync(
+                asignacion.ConvocatoriaId,
+                Arg.Any<CancellationToken>())
+            .Returns(new VentanaRevisionConvocatoria(
+                asignacion.ConvocatoriaId,
+                EstadoConvocatoriaExterna.Publicada,
+                ahora.AddDays(-2),
+                ahora.AddDays(5)));
+
+        var respPeriodoAbierto = await cliente.GetAsync(
+            $"/api/v1/evaluaciones/postulaciones/{postulacionId}/coevaluadores");
+        respPeriodoAbierto.StatusCode.Should().Be(HttpStatusCode.Conflict);
+        await VerificarCodigoErrorAsync(respPeriodoAbierto, PeriodoRevisionAbiertoException.CodigoError);
+
+        // 4. 409 PERIODO_REVISION_CERRADO al guardar borrador después del cierre
+        convocatoriaClient.ObtenerVentanaRevisionAsync(
+                asignacion.ConvocatoriaId,
+                Arg.Any<CancellationToken>())
+            .Returns(new VentanaRevisionConvocatoria(
+                asignacion.ConvocatoriaId,
+                EstadoConvocatoriaExterna.Cerrada,
+                ahora.AddDays(-10),
+                ahora.AddMinutes(-5)));
+
+        var respPeriodoCerrado = await cliente.PutAsJsonAsync(
+            $"/api/v1/evaluaciones/asignaciones/{asignacion.Id}/borrador",
+            new
+            {
+                calificaciones = new[]
+                {
+                    new { criterioEvaluacionId = criterio1.Id, puntajeAsignado = 15.00m }
+                }
+            });
+        respPeriodoCerrado.StatusCode.Should().Be(HttpStatusCode.Conflict);
+        await VerificarCodigoErrorAsync(respPeriodoCerrado, PeriodoRevisionCerradoException.CodigoError);
+
+        // 5. 409 PERIODO_REVISION_NO_INICIADO al guardar borrador antes del inicio
+        convocatoriaClient.ObtenerVentanaRevisionAsync(
+                asignacion.ConvocatoriaId,
+                Arg.Any<CancellationToken>())
+            .Returns(new VentanaRevisionConvocatoria(
+                asignacion.ConvocatoriaId,
+                EstadoConvocatoriaExterna.Borrador,
+                ahora.AddDays(2),
+                ahora.AddDays(10)));
+
+        var respPeriodoNoIniciado = await cliente.PutAsJsonAsync(
+            $"/api/v1/evaluaciones/asignaciones/{asignacion.Id}/borrador",
+            new
+            {
+                calificaciones = new[]
+                {
+                    new { criterioEvaluacionId = criterio1.Id, puntajeAsignado = 15.00m }
+                }
+            });
+        respPeriodoNoIniciado.StatusCode.Should().Be(HttpStatusCode.Conflict);
+        await VerificarCodigoErrorAsync(respPeriodoNoIniciado, PeriodoRevisionNoIniciadoException.CodigoError);
+
+        // 6. 409 CONVOCATORIA_CANCELADA en consulta de coevaluadores y en envío
+        convocatoriaClient.ObtenerVentanaRevisionAsync(
+                asignacion.ConvocatoriaId,
+                Arg.Any<CancellationToken>())
+            .Returns(new VentanaRevisionConvocatoria(
+                asignacion.ConvocatoriaId,
+                EstadoConvocatoriaExterna.Cancelada,
+                ahora.AddDays(-5),
+                ahora.AddDays(5)));
+
+        var respConvocatoriaCancelada = await cliente.GetAsync(
+            $"/api/v1/evaluaciones/postulaciones/{postulacionId}/coevaluadores");
+        respConvocatoriaCancelada.StatusCode.Should().Be(HttpStatusCode.Conflict);
+        await VerificarCodigoErrorAsync(respConvocatoriaCancelada, ConvocatoriaCanceladaException.CodigoError);
+
+        // 7. 503 DEPENDENCIA_NO_DISPONIBLE
+        convocatoriaClient.ObtenerVentanaRevisionAsync(
+                asignacion.ConvocatoriaId,
+                Arg.Any<CancellationToken>())
+            .Returns<Task<VentanaRevisionConvocatoria?>>(_ => throw new DependenciaNoDisponibleException());
+
+        var respDependenciaNoDisponible = await cliente.GetAsync(
+            $"/api/v1/evaluaciones/postulaciones/{postulacionId}/coevaluadores");
+        respDependenciaNoDisponible.StatusCode.Should().Be(HttpStatusCode.ServiceUnavailable);
+        await VerificarCodigoErrorAsync(
+            respDependenciaNoDisponible,
+            DependenciaNoDisponibleException.CodigoError);
     }
 
     [Fact]
@@ -638,6 +925,8 @@ public sealed class EvaluacionesControllerTests : IClassFixture<WebApplicationFa
         IComiteEvaluadorRepository? repoComites = null,
         IConsultaRubricaParaEvaluacionRepository? repoRubrica = null,
         IEvaluacionRepository? repoEvaluacion = null,
+        IConsultaEvaluacionesCoevaluadoresRepository? repoCoevaluadores = null,
+        IConvocatoriaEvaluacionClient? convocatoriaClient = null,
         IBloqueadorRubricaEvaluacion? bloqueadorRubrica = null,
         IUnitOfWork? uow = null)
     {
@@ -653,10 +942,25 @@ public sealed class EvaluacionesControllerTests : IClassFixture<WebApplicationFa
                 servicios.RemoveAll<IEvaluacionRepository>();
                 servicios.RemoveAll<IConsultaAsignacionParaEvaluacionRepository>();
                 servicios.RemoveAll<IConsultaRubricaParaEvaluacionRepository>();
+                servicios.RemoveAll<IConsultaEvaluacionesCoevaluadoresRepository>();
                 servicios.RemoveAll<IBloqueadorRubricaEvaluacion>();
                 servicios.RemoveAll<IPeriodoAcademicoClient>();
                 servicios.RemoveAll<ICatalogoAcademicoClient>();
+                servicios.RemoveAll<IConvocatoriaEvaluacionClient>();
                 servicios.RemoveAll<IUnitOfWork>();
+
+                var clienteConvocatoriaPorDefecto = Substitute.For<IConvocatoriaEvaluacionClient>();
+                clienteConvocatoriaPorDefecto
+                    .ObtenerVentanaRevisionAsync(Arg.Any<Guid>(), Arg.Any<CancellationToken>())
+                    .Returns(callInfo =>
+                    {
+                        var ahora = DateTimeOffset.UtcNow;
+                        return new VentanaRevisionConvocatoria(
+                            callInfo.ArgAt<Guid>(0),
+                            EstadoConvocatoriaExterna.Publicada,
+                            ahora.AddDays(-10),
+                            ahora.AddDays(30));
+                    });
 
                 servicios.AddSingleton(Substitute.For<IPostulanteRepository>());
                 servicios.AddSingleton(Substitute.For<IRubricaRepository>());
@@ -666,9 +970,11 @@ public sealed class EvaluacionesControllerTests : IClassFixture<WebApplicationFa
                 servicios.AddSingleton(repoEvaluacion ?? Substitute.For<IEvaluacionRepository>());
                 servicios.AddSingleton(repoAsignacion ?? Substitute.For<IConsultaAsignacionParaEvaluacionRepository>());
                 servicios.AddSingleton(repoRubrica ?? Substitute.For<IConsultaRubricaParaEvaluacionRepository>());
+                servicios.AddSingleton(repoCoevaluadores ?? Substitute.For<IConsultaEvaluacionesCoevaluadoresRepository>());
                 servicios.AddSingleton(bloqueadorRubrica ?? Substitute.For<IBloqueadorRubricaEvaluacion>());
                 servicios.AddSingleton(Substitute.For<IPeriodoAcademicoClient>());
                 servicios.AddSingleton(Substitute.For<ICatalogoAcademicoClient>());
+                servicios.AddSingleton(convocatoriaClient ?? clienteConvocatoriaPorDefecto);
                 servicios.AddSingleton(uow ?? Substitute.For<IUnitOfWork>());
                 servicios.AddSingleton(TimeProvider.System);
 
