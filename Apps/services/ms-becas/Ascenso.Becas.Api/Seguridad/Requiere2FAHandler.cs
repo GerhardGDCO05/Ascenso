@@ -50,8 +50,10 @@ public sealed class Requiere2FAHandler : AuthorizationHandler<Requiere2FARequire
     {
         var roles = LectorClaims.Valores(usuario, _opciones.ClaimRol);
 
-        return _opciones.RolesAdministrativos.Any(administrativo =>
-            roles.Contains(administrativo, StringComparer.OrdinalIgnoreCase));
+        return roles.Contains(PoliticasSeguridad.RolAdministradorFinanciero,
+                StringComparer.OrdinalIgnoreCase)
+            || _opciones.RolesAdministrativos.Any(administrativo =>
+                roles.Contains(administrativo, StringComparer.OrdinalIgnoreCase));
     }
 
     private bool TieneSegundoFactor(ClaimsPrincipal usuario)

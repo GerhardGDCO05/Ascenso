@@ -15,6 +15,7 @@ public sealed class ProgramadorTrabajosHangfireRecurrentes : IHostedService
     public const string ReconciliacionId = "reconciliar-ofertas-pendientes";
     public const string LimpiezaIdempotenciaId = "limpiar-idempotencia";
     public const string LimpiezaOutboxId = "limpiar-outbox";
+    public const string RevisionSuspensionesId = "revisar-suspensiones";
 
     private readonly IRecurringJobManager _gestor;
     private readonly IOptions<OpcionesTrabajosHangfire> _opciones;
@@ -57,6 +58,16 @@ public sealed class ProgramadorTrabajosHangfireRecurrentes : IHostedService
             RegistroHangfire.ColaPorDefecto,
             job => job.Ejecutar(CancellationToken.None),
             "15 3 * * *",
+            new RecurringJobOptions
+            {
+                TimeZone = TimeZoneInfo.Utc
+            });
+
+        _gestor.AddOrUpdate<RevisarSuspensionesJob>(
+            RevisionSuspensionesId,
+            RegistroHangfire.ColaPorDefecto,
+            job => job.Ejecutar(CancellationToken.None),
+            "0 13 * * *",
             new RecurringJobOptions
             {
                 TimeZone = TimeZoneInfo.Utc

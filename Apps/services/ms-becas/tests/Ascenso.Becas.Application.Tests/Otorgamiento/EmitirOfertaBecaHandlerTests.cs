@@ -31,6 +31,7 @@ public sealed class EmitirOfertaBecaHandlerTests
         beca.CadenaBecaId.Should().Be(beca.Id);
         beca.BecaAnteriorId.Should().BeNull();
         beca.PeriodosCursados.Should().Be(0);
+        beca.PeriodoVigenteActualId.Should().Be(escenario.PeriodoAcademicoId);
         beca.Oferta.Should().NotBeNull();
         beca.Oferta!.Estado.Should().Be(EstadoOferta.PendienteRespuesta);
         beca.Oferta.Id.Should().Be(resultado.OfertaId);
@@ -72,6 +73,48 @@ public sealed class EmitirOfertaBecaHandlerTests
         escenario.Programas.UltimaSolicitud.Monto.Should().Be(2000m);
         escenario.Programas.UltimaSolicitud.Cupos.Should().Be(1);
         escenario.Postulaciones.PostulacionSolicitada.Should().Be(escenario.PostulacionId);
+        escenario.Periodos.Llamadas.Should().Be(1);
+        escenario.Postulaciones.Otorgamientos.Should().Be(1);
+        escenario.Postulaciones.OtorgamientoSolicitado.Should()
+            .Be((escenario.PostulacionId, resultado.OfertaId));
+        escenario.Programas.ConsultasCondiciones.Should().Be(1);
+    }
+
+    [Fact]
+    public async Task Debe_UsarElArancelActualDeMS_PRG_AlCalcularLaOferta()
+    {
+        var escenario = new EscenarioOtorgamiento();
+        var proyeccion = escenario.Proyecciones.Proyeccion!;
+        escenario.Programas.CrearCondiciones = (_, carreraId, periodoId, universidadId) =>
+            new ResultadoCondicionesPrograma(
+                escenario.ProgramaBecaId,
+                carreraId,
+                periodoId,
+                universidadId,
+                proyeccion.Programa.PoliticaCobertura,
+                proyeccion.Programa.CondicionesPermanencia,
+                new CostoMatriculaVigente(
+                    escenario.CostoMatriculaId,
+                    carreraId,
+                    periodoId,
+                    1200m,
+                    "USD",
+                    2,
+                    DateOnly.FromDateTime(DatosAplicacion.FechaBase.UtcDateTime).AddDays(-1),
+                    null,
+                    "VIGENTE"),
+                new ConvenioVigente(
+                    universidadId,
+                    escenario.ConvenioId,
+                    "VIGENTE",
+                    DateOnly.FromDateTime(DatosAplicacion.FechaBase.UtcDateTime).AddYears(1)));
+        escenario.Programas.Resultado = DatosAplicacion.Reserva(monto: 2400m);
+
+        await escenario.CrearEmitir().HandleAsync(
+            new EmitirOfertaBecaCommand(escenario.PostulacionId));
+
+        escenario.Generador.Datos!.MontoOfertaPorPeriodo.Should().Be(600m);
+        escenario.Programas.UltimaSolicitud!.Monto.Should().Be(2400m);
     }
 
     [Fact]
@@ -183,6 +226,66 @@ public sealed class EmitirOfertaBecaHandlerTests
 
         excepcion.Which.Dependencia.Should().Be("MS-POS");
         excepcion.Which.Codigo.Should().Be("DEPENDENCIA_NO_DISPONIBLE");
+    }
+
+    [Fact]
+    public async Task Debe_FallarCerrado_CuandoElPeriodoActualNoCoincideConLaPostulacion()
+    {
+        var escenario = new EscenarioOtorgamiento();
+        escenario.Periodos.Resultado = escenario.Periodos.Resultado with
+        {
+            PeriodoAcademicoId = Guid.CreateVersion7()
+        };
+
+        var accion = () => escenario.CrearEmitir().HandleAsync(
+            new EmitirOfertaBecaCommand(escenario.PostulacionId));
+
+        var excepcion = await accion.Should().ThrowAsync<DependenciaNoDisponibleException>();
+
+        excepcion.Which.Dependencia.Should().Be("MS-PLT");
+        escenario.Proyecciones.Llamadas.Should().Be(0);
+        escenario.Programas.ConsultasCondiciones.Should().Be(0);
+        escenario.Programas.Llamadas.Should().Be(0);
+        escenario.Repositorio.Becas.Should().BeEmpty();
+    }
+
+    [Fact]
+    public async Task Debe_FallarCerrado_Cuando_MS_PRGNoDevuelveLasCondicionesDelPrograma()
+    {
+        var escenario = new EscenarioOtorgamiento();
+        escenario.Programas.ErrorCondiciones = new HttpRequestException("sin conexión");
+
+        var accion = () => escenario.CrearEmitir().HandleAsync(
+            new EmitirOfertaBecaCommand(escenario.PostulacionId));
+
+        var excepcion = await accion.Should().ThrowAsync<DependenciaNoDisponibleException>();
+
+        excepcion.Which.Dependencia.Should().Be("MS-PRG");
+        escenario.Programas.Llamadas.Should().Be(0);
+        escenario.Generador.Datos.Should().BeNull();
+        escenario.Repositorio.Becas.Should().BeEmpty();
+    }
+
+    [Fact]
+    public async Task Debe_NoPersistirOfertaYCompensarRecursos_Cuando_FallaElOtorgamientoEnMS_POS()
+    {
+        var escenario = new EscenarioOtorgamiento();
+        escenario.Postulaciones.ErrorOtorgar = new HttpRequestException("sin conexión");
+
+        var accion = () => escenario.CrearEmitir().HandleAsync(
+            new EmitirOfertaBecaCommand(escenario.PostulacionId));
+
+        var excepcion = await accion.Should().ThrowAsync<DependenciaNoDisponibleException>();
+
+        excepcion.Which.Dependencia.Should().Be("MS-POS");
+        escenario.Programas.Llamadas.Should().Be(1);
+        escenario.Programador.Canceladas.Should().ContainSingle()
+            .Which.Should().Be(escenario.Programador.Referencia);
+        escenario.Almacenamiento.UrlsEliminadas.Should().ContainSingle()
+            .Which.Should().Be(escenario.Almacenamiento.Resultado.Url);
+        escenario.Repositorio.Becas.Should().BeEmpty();
+        escenario.Unidad.Confirmaciones.Should().Be(0);
+        escenario.Outbox.Confirmados.Should().BeEmpty();
     }
 
     [Fact]

@@ -28,6 +28,7 @@ public sealed class EmitirOfertaBecaHandler
     private readonly IContextoOperacionActual _contextoActual;
     private readonly IClock _reloj;
     private readonly IPostulacionesClient _postulaciones;
+    private readonly IPeriodosAcademicosClient _periodos;
     private readonly IProyeccionesOtorgamiento _proyecciones;
     private readonly IMetricaConfiguracionFaltante _metricaConfiguracion;
     private readonly IMetricasOtorgamiento _metricas;
@@ -44,6 +45,7 @@ public sealed class EmitirOfertaBecaHandler
         IContextoOperacionActual contextoActual,
         IClock reloj,
         IPostulacionesClient postulaciones,
+        IPeriodosAcademicosClient periodos,
         IProyeccionesOtorgamiento proyecciones,
         IMetricaConfiguracionFaltante metricaConfiguracion,
         IMetricasOtorgamiento metricas,
@@ -59,6 +61,7 @@ public sealed class EmitirOfertaBecaHandler
         _contextoActual = contextoActual ?? throw new ArgumentNullException(nameof(contextoActual));
         _reloj = reloj ?? throw new ArgumentNullException(nameof(reloj));
         _postulaciones = postulaciones ?? throw new ArgumentNullException(nameof(postulaciones));
+        _periodos = periodos ?? throw new ArgumentNullException(nameof(periodos));
         _proyecciones = proyecciones ?? throw new ArgumentNullException(nameof(proyecciones));
         _metricaConfiguracion = metricaConfiguracion
             ?? throw new ArgumentNullException(nameof(metricaConfiguracion));
@@ -94,8 +97,9 @@ public sealed class EmitirOfertaBecaHandler
         }
 
         ValidarRespuestaAdjudicabilidad(adjudicacion, command.PostulacionId);
+        await ValidarPeriodoActualAsync(adjudicacion, cancellationToken);
 
-        var proyeccion = await _proyecciones.ObtenerAsync(
+        var proyeccionLocal = await _proyecciones.ObtenerAsync(
             adjudicacion.ProgramaBecaId,
             adjudicacion.CarreraId,
             adjudicacion.PeriodoAcademicoId,
@@ -103,7 +107,7 @@ public sealed class EmitirOfertaBecaHandler
             fechaOperacion,
             cancellationToken);
 
-        if (proyeccion is null)
+        if (proyeccionLocal is null)
         {
             _metricaConfiguracion.Registrar(IMetricaConfiguracionFaltante.RecursoPrograma);
             throw new ConfiguracionProgramaNoDisponibleException(
@@ -111,6 +115,20 @@ public sealed class EmitirOfertaBecaHandler
                 "No existe configuración local de programa, costo de matrícula y convenio para la postulación.");
         }
 
+        var condiciones = await ObtenerCondicionesAsync(adjudicacion, cancellationToken);
+
+        if (condiciones is null)
+        {
+            _metricaConfiguracion.Registrar(IMetricaConfiguracionFaltante.RecursoPrograma);
+            throw new ConfiguracionProgramaNoDisponibleException(
+                adjudicacion.ProgramaBecaId,
+                "MS-PRG no devolvió condiciones vigentes para el programa, la carrera y el periodo.");
+        }
+
+        var proyeccion = AplicarCondicionesActuales(
+            proyeccionLocal,
+            condiciones,
+            adjudicacion);
         ValidarProyeccion(proyeccion, fechaOperacion);
 
         var montoPorPeriodo = CalculadoraMontoOferta.CalcularMontoPorPeriodo(
@@ -198,6 +216,11 @@ public sealed class EmitirOfertaBecaHandler
                 referenciaJob,
                 contexto);
 
+            await OtorgarPostulacionAsync(
+                command.PostulacionId,
+                ofertaId,
+                cancellationToken);
+
             await _unidadDeTrabajo.EjecutarEnTransaccionAsync(
                 async token =>
                 {
@@ -234,6 +257,26 @@ public sealed class EmitirOfertaBecaHandler
         }
     }
 
+    private async Task OtorgarPostulacionAsync(
+        Guid postulacionId,
+        Guid ofertaId,
+        CancellationToken cancellationToken)
+    {
+        try
+        {
+            await _postulaciones.OtorgarAsync(
+                postulacionId,
+                ofertaId,
+                cancellationToken);
+        }
+        catch (Exception excepcion) when (
+            !cancellationToken.IsCancellationRequested
+            && excepcion is HttpRequestException or TimeoutException or TaskCanceledException)
+        {
+            throw new DependenciaNoDisponibleException("MS-POS", excepcion);
+        }
+    }
+
     private async Task<ResultadoAdjudicabilidad> ObtenerAdjudicabilidadAsync(
         Guid postulacionId,
         CancellationToken cancellationToken)
@@ -247,6 +290,36 @@ public sealed class EmitirOfertaBecaHandler
             && excepcion is HttpRequestException or TimeoutException or TaskCanceledException)
         {
             throw new DependenciaNoDisponibleException("MS-POS", excepcion);
+        }
+    }
+
+    private async Task ValidarPeriodoActualAsync(
+        ResultadoAdjudicabilidad adjudicacion,
+        CancellationToken cancellationToken)
+    {
+        ResultadoPeriodoAcademico periodoActual;
+
+        try
+        {
+            periodoActual = await _periodos.ObtenerActualAsync(cancellationToken);
+        }
+        catch (Exception excepcion) when (
+            !cancellationToken.IsCancellationRequested
+            && excepcion is HttpRequestException or TimeoutException or TaskCanceledException)
+        {
+            throw new DependenciaNoDisponibleException("MS-PLT", excepcion);
+        }
+
+        if (periodoActual.PeriodoAcademicoId != adjudicacion.PeriodoAcademicoId
+            || !string.Equals(
+                periodoActual.Codigo,
+                adjudicacion.PeriodoCodigo,
+                StringComparison.Ordinal))
+        {
+            throw new DependenciaNoDisponibleException(
+                "MS-PLT",
+                new InvalidOperationException(
+                    "El periodo actual no coincide con el periodo de la postulación adjudicable."));
         }
     }
 
@@ -301,6 +374,68 @@ public sealed class EmitirOfertaBecaHandler
         }
 
         return resultado;
+    }
+
+    private async Task<ResultadoCondicionesPrograma?> ObtenerCondicionesAsync(
+        ResultadoAdjudicabilidad adjudicacion,
+        CancellationToken cancellationToken)
+    {
+        try
+        {
+            return await _programas.ObtenerCondicionesAsync(
+                adjudicacion.ProgramaBecaId,
+                adjudicacion.CarreraId,
+                adjudicacion.PeriodoAcademicoId,
+                adjudicacion.UniversidadAliadaId,
+                cancellationToken);
+        }
+        catch (Exception excepcion) when (
+            !cancellationToken.IsCancellationRequested
+            && excepcion is HttpRequestException or TimeoutException or TaskCanceledException)
+        {
+            throw new DependenciaNoDisponibleException("MS-PRG", excepcion);
+        }
+    }
+
+    private static ProyeccionOtorgamiento AplicarCondicionesActuales(
+        ProyeccionOtorgamiento proyeccionLocal,
+        ResultadoCondicionesPrograma condiciones,
+        ResultadoAdjudicabilidad adjudicacion)
+    {
+        if (condiciones.ProgramaBecaId != proyeccionLocal.Programa.ProgramaBecaId
+            || condiciones.CarreraId != adjudicacion.CarreraId
+            || condiciones.PeriodoAcademicoId != adjudicacion.PeriodoAcademicoId
+            || condiciones.UniversidadAliadaId != adjudicacion.UniversidadAliadaId
+            || condiciones.CostoMatricula.CarreraId != adjudicacion.CarreraId
+            || condiciones.CostoMatricula.PeriodoAcademicoId != adjudicacion.PeriodoAcademicoId
+            || condiciones.Convenio.UniversidadAliadaId != adjudicacion.UniversidadAliadaId)
+        {
+            throw new DependenciaNoDisponibleException(
+                "MS-PRG",
+                new InvalidOperationException(
+                    "Las condiciones devueltas no coinciden con la postulación adjudicable."));
+        }
+
+        return proyeccionLocal with
+        {
+            Programa = proyeccionLocal.Programa with
+            {
+                PoliticaCobertura = condiciones.PoliticaCobertura,
+                CondicionesPermanencia = condiciones.CondicionesPermanencia
+            },
+            CostoMatricula = new CostoMatriculaProyeccion(
+                condiciones.CostoMatricula.CostoMatriculaReferenciaId,
+                condiciones.CostoMatricula.MontoReferenciaMatricula,
+                condiciones.CostoMatricula.Moneda,
+                condiciones.CostoMatricula.Estado,
+                condiciones.CostoMatricula.FechaVigenciaDesde,
+                condiciones.CostoMatricula.FechaVigenciaHasta,
+                condiciones.CostoMatricula.NumeroVersion),
+            Convenio = new ConvenioProyeccion(
+                condiciones.Convenio.ConvenioId,
+                condiciones.Convenio.Estado,
+                condiciones.Convenio.FechaFin)
+        };
     }
 
     private async Task<Stream> GenerarCartaAsync(

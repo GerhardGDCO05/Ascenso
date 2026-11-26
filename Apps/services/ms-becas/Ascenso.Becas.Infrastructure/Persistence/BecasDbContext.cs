@@ -1,3 +1,5 @@
+using Ascenso.Becas.Domain.Desembolsos.Agregados;
+using Ascenso.Becas.Domain.Desembolsos.Entidades;
 using Ascenso.Becas.Domain.Otorgamiento.Agregados;
 using Ascenso.Becas.Domain.Otorgamiento.Entidades;
 using Ascenso.Becas.Domain.SeguimientoAcademico.Agregados;
@@ -22,6 +24,14 @@ public sealed class BecasDbContext : DbContext
     }
 
     public DbSet<Beca> Becas => Set<Beca>();
+
+    public DbSet<CalendarioDesembolso> CalendariosDesembolso => Set<CalendarioDesembolso>();
+
+    public DbSet<Desembolso> Desembolsos => Set<Desembolso>();
+
+    public DbSet<DatosPagoBecario> DatosPagoBecarios => Set<DatosPagoBecario>();
+
+    public DbSet<IncidenciaDesembolso> IncidenciasDesembolso => Set<IncidenciaDesembolso>();
 
     public DbSet<OfertaBeca> OfertasBeca => Set<OfertaBeca>();
 

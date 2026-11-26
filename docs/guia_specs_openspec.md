@@ -1,6 +1,6 @@
 # Guía para escribir especificaciones OpenSpec
 
-Esta guía reúne las reglas para redactar especificaciones duraderas (`spec.md`) en `openspec/specs/<microservicio>/`. Sustituye al borrador `openspec/specs/ejemplo.txt`, que se retiró del directorio de especificaciones activas.
+Esta guía reúne las reglas para redactar especificaciones duraderas en `openspec/specs/<microservicio>/<capacidad>/spec.md`. El archivo `spec_<código>.md` situado directamente bajo la carpeta del microservicio conserva la visión general del dominio, pero la CLI de OpenSpec no lo cuenta como una capacidad.
 
 ## 1. Qué debe contener una especificación duradera
 
@@ -35,14 +35,14 @@ Los escenarios son la forma de capturar ejemplos, casos borde y criterios de ace
 
 1. **Sin detalles de infraestructura:** no mencionar bases de datos, tablas, controladores, rutas HTTP ni librerías en la especificación duradera. Ese detalle pertenece a `design.md` del cambio.
 2. **Vocabulario ubicuo:** los términos de negocio (`Beca`, `EstadoBeca`, `PoliticaCobertura`, etc.) deben coincidir exactamente con el glosario de `docs/Explicacion_del_DDD_V7.md` y con las clases del dominio en C#.
-3. **Especificaciones atómicas:** si un microservicio acumula demasiados escenarios, dividir el archivo en subarchivos dentro de `openspec/specs/<microservicio>/` (por ejemplo, `otorgamiento.md`, `desembolsos.md`) para conservar el contexto.
+3. **Especificaciones atómicas:** separar las capacidades en carpetas dentro de `openspec/specs/<microservicio>/` (por ejemplo, `otorgamiento-beca/spec.md` y `desembolsos/spec.md`) para conservar el contexto.
 4. **Una carpeta por microservicio:** no mezclar escenarios de contextos distintos en `openspec/specs/`.
 5. **Idioma:** redactar en español, salvo las abstracciones técnicas que el glosario defina en inglés.
 
 ## 3. Relación con los cambios
 
-- La especificación duradera vive en `openspec/specs/<microservicio>/`.
-- Los cambios activos viven en `openspec/changes/[ID-Cambio]-[Integrante]-[Microservicio]/` y contienen `proposal.md`, `design.md`, `tasks.md` y, si aplica, los deltas de especificación.
+- Cada especificación duradera vive en `openspec/specs/<microservicio>/<capacidad>/spec.md`. El archivo `spec_<código>.md` de la carpeta superior es una visión general, como en MS-POS y MS-PRG.
+- Los cambios activos viven en `openspec/changes/[ID-Cambio]-[Integrante]-[Microservicio]/` y contienen `proposal.md`, `design.md`, `tasks.md` y, si aplica, deltas en `specs/<microservicio>/<capacidad>/spec.md`.
 - Al archivar un cambio, los escenarios nuevos o modificados se integran en la especificación duradera. El histórico conserva la bitácora y los artefactos del cambio.
 - Un cambio técnico sin cambio de comportamiento puede archivarse con `skip_specs: true` en su `.openspec.yaml`.
 

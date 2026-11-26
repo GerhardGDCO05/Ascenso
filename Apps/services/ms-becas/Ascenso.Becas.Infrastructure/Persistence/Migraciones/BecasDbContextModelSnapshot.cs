@@ -23,6 +23,417 @@ namespace Ascenso.Becas.Infrastructure.Persistence.Migraciones
 
             NpgsqlModelBuilderExtensions.UseIdentityByDefaultColumns(modelBuilder);
 
+            modelBuilder.Entity("Ascenso.Becas.Domain.Desembolsos.Agregados.CalendarioDesembolso", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .HasColumnType("uuid")
+                        .HasColumnName("id");
+
+                    b.Property<Guid>("BecaId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("beca_id");
+
+                    b.Property<Guid>("CreadoPorUsuarioId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("creado_por_usuario_id");
+
+                    b.Property<string>("DestinatarioPredeterminado")
+                        .IsRequired()
+                        .HasColumnType("varchar")
+                        .HasColumnName("destinatario_predeterminado");
+
+                    b.Property<string>("EstadoPlan")
+                        .IsRequired()
+                        .HasColumnType("varchar")
+                        .HasColumnName("estado_plan");
+
+                    b.Property<DateTimeOffset>("FechaCreacion")
+                        .HasColumnType("timestamptz")
+                        .HasColumnName("fecha_creacion");
+
+                    b.Property<DateOnly>("FechaFin")
+                        .HasColumnType("date")
+                        .HasColumnName("fecha_fin");
+
+                    b.Property<DateOnly>("FechaInicio")
+                        .HasColumnType("date")
+                        .HasColumnName("fecha_inicio");
+
+                    b.Property<DateTimeOffset>("FechaUltimaModificacion")
+                        .HasColumnType("timestamptz")
+                        .HasColumnName("fecha_ultima_modificacion");
+
+                    b.Property<string>("Frecuencia")
+                        .IsRequired()
+                        .HasColumnType("varchar")
+                        .HasColumnName("frecuencia");
+
+                    b.Property<decimal>("MontoMaximoAprobadoPeriodo")
+                        .HasPrecision(18, 2)
+                        .HasColumnType("numeric(18,2)")
+                        .HasColumnName("monto_maximo_aprobado_periodo");
+
+                    b.Property<int>("NumeroCuotas")
+                        .HasColumnType("integer")
+                        .HasColumnName("numero_cuotas");
+
+                    b.Property<Guid>("PeriodoAcademicoId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("periodo_academico_id");
+
+                    b.Property<decimal>("SumaCuotasProgramadas")
+                        .HasPrecision(18, 2)
+                        .HasColumnType("numeric(18,2)")
+                        .HasColumnName("suma_cuotas_programadas");
+
+                    b.Property<Guid>("UsuarioCreacionId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("usuario_creacion_id");
+
+                    b.Property<Guid>("UsuarioModificacionId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("usuario_modificacion_id");
+
+                    b.Property<int>("Version")
+                        .IsConcurrencyToken()
+                        .HasColumnType("integer")
+                        .HasColumnName("version");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("BecaId", "PeriodoAcademicoId")
+                        .IsUnique();
+
+                    b.ToTable("calendario_desembolso", "becas", t =>
+                        {
+                            t.HasCheckConstraint("ck_calendario_destinatario", "destinatario_predeterminado IN ('BECARIO', 'INSTITUCION')");
+
+                            t.HasCheckConstraint("ck_calendario_estado", "estado_plan IN ('PROGRAMADO', 'SUSPENDIDO', 'COMPLETADO', 'CANCELADO')");
+
+                            t.HasCheckConstraint("ck_calendario_fechas", "fecha_fin >= fecha_inicio AND numero_cuotas > 0");
+
+                            t.HasCheckConstraint("ck_calendario_frecuencia", "frecuencia IN ('MENSUAL', 'SEMESTRAL')");
+
+                            t.HasCheckConstraint("ck_calendario_montos", "monto_maximo_aprobado_periodo >= 0 AND suma_cuotas_programadas >= 0 AND suma_cuotas_programadas <= monto_maximo_aprobado_periodo");
+                        });
+                });
+
+            modelBuilder.Entity("Ascenso.Becas.Domain.Desembolsos.Agregados.DatosPagoBecario", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .HasColumnType("uuid")
+                        .HasColumnName("id");
+
+                    b.Property<Guid?>("AutorizacionOtpModificacionId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("autorizacion_otp_modificacion_id");
+
+                    b.Property<Guid>("BecaId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("beca_id");
+
+                    b.Property<string>("CodigoBanco")
+                        .IsRequired()
+                        .HasColumnType("text")
+                        .HasColumnName("codigo_banco");
+
+                    b.Property<string>("DocumentoTitular")
+                        .IsRequired()
+                        .HasColumnType("text")
+                        .HasColumnName("documento_titular");
+
+                    b.Property<string>("Estado")
+                        .IsRequired()
+                        .HasColumnType("varchar")
+                        .HasColumnName("estado");
+
+                    b.Property<DateTimeOffset>("FechaCreacion")
+                        .HasColumnType("timestamptz")
+                        .HasColumnName("fecha_creacion");
+
+                    b.Property<DateTimeOffset>("FechaUltimaModificacion")
+                        .HasColumnType("timestamptz")
+                        .HasColumnName("fecha_ultima_modificacion");
+
+                    b.Property<Guid>("ModificadoPorUsuarioId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("modificado_por_usuario_id");
+
+                    b.Property<string>("NombreBanco")
+                        .IsRequired()
+                        .HasColumnType("text")
+                        .HasColumnName("nombre_banco");
+
+                    b.Property<string>("NumeroCuentaCifradoAesGcm")
+                        .IsRequired()
+                        .HasColumnType("text")
+                        .HasColumnName("numero_cuenta_cifrado_aes_gcm");
+
+                    b.Property<Guid>("PostulanteEstudianteId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("postulante_estudiante_id");
+
+                    b.Property<string>("TipoCuenta")
+                        .IsRequired()
+                        .HasColumnType("varchar")
+                        .HasColumnName("tipo_cuenta");
+
+                    b.Property<Guid>("UsuarioCreacionId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("usuario_creacion_id");
+
+                    b.Property<Guid>("UsuarioModificacionId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("usuario_modificacion_id");
+
+                    b.Property<int>("Version")
+                        .IsConcurrencyToken()
+                        .HasColumnType("integer")
+                        .HasColumnName("version");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("BecaId")
+                        .IsUnique()
+                        .HasFilter("estado = 'ACTIVO'");
+
+                    b.ToTable("datos_pago_becario", "becas", t =>
+                        {
+                            t.HasCheckConstraint("ck_datos_pago_cifrado", "numero_cuenta_cifrado_aes_gcm LIKE 'v1:%'");
+
+                            t.HasCheckConstraint("ck_datos_pago_estado", "estado IN ('ACTIVO', 'REEMPLAZADO')");
+
+                            t.HasCheckConstraint("ck_datos_pago_tipo_cuenta", "tipo_cuenta IN ('AHORRO', 'CORRIENTE')");
+                        });
+                });
+
+            modelBuilder.Entity("Ascenso.Becas.Domain.Desembolsos.Entidades.Desembolso", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .HasColumnType("uuid")
+                        .HasColumnName("id");
+
+                    b.Property<Guid?>("AutorizacionOtpConfirmacionId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("autorizacion_otp_confirmacion_id");
+
+                    b.Property<Guid>("BecaId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("beca_id");
+
+                    b.Property<Guid>("CalendarioDesembolsoId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("calendario_desembolso_id");
+
+                    b.Property<Guid?>("ConfirmadoPorUsuarioId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("confirmado_por_usuario_id");
+
+                    b.Property<string>("CuentaBancariaDestinoSnapshot")
+                        .HasColumnType("text")
+                        .HasColumnName("cuenta_bancaria_destino_snapshot");
+
+                    b.Property<Guid?>("DatosPagoBecarioId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("datos_pago_becario_id");
+
+                    b.Property<Guid?>("DesembolsoOrigenReintentoId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("desembolso_origen_reintento_id");
+
+                    b.Property<string>("Destinatario")
+                        .IsRequired()
+                        .HasColumnType("varchar")
+                        .HasColumnName("destinatario");
+
+                    b.Property<bool>("EsVigente")
+                        .HasColumnType("boolean")
+                        .HasColumnName("es_vigente");
+
+                    b.Property<string>("Estado")
+                        .IsRequired()
+                        .HasColumnType("varchar")
+                        .HasColumnName("estado");
+
+                    b.Property<DateTimeOffset?>("FechaConfirmacion")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("fecha_confirmacion");
+
+                    b.Property<DateTimeOffset>("FechaCreacion")
+                        .HasColumnType("timestamptz")
+                        .HasColumnName("fecha_creacion");
+
+                    b.Property<DateOnly?>("FechaEjecucionEfectiva")
+                        .HasColumnType("date")
+                        .HasColumnName("fecha_ejecucion_efectiva");
+
+                    b.Property<DateOnly>("FechaProgramada")
+                        .HasColumnType("date")
+                        .HasColumnName("fecha_programada");
+
+                    b.Property<DateTimeOffset>("FechaUltimaModificacion")
+                        .HasColumnType("timestamptz")
+                        .HasColumnName("fecha_ultima_modificacion");
+
+                    b.Property<int>("IntentosEjecucion")
+                        .HasColumnType("integer")
+                        .HasColumnName("intentos_ejecucion");
+
+                    b.Property<string>("MetodoPago")
+                        .HasColumnType("varchar")
+                        .HasColumnName("metodo_pago");
+
+                    b.Property<decimal?>("MontoEjecutado")
+                        .HasPrecision(18, 2)
+                        .HasColumnType("numeric(18,2)")
+                        .HasColumnName("monto_ejecutado");
+
+                    b.Property<decimal>("MontoProgramado")
+                        .HasPrecision(18, 2)
+                        .HasColumnType("numeric(18,2)")
+                        .HasColumnName("monto_programado");
+
+                    b.Property<int>("NumeroCuota")
+                        .HasColumnType("integer")
+                        .HasColumnName("numero_cuota");
+
+                    b.Property<string>("ObservacionIncidenciaBancaria")
+                        .HasColumnType("text")
+                        .HasColumnName("observacion_incidencia_bancaria");
+
+                    b.Property<Guid?>("PausaAplazamientoId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("pausa_aplazamiento_id");
+
+                    b.Property<string>("ReferenciaBancaria")
+                        .HasColumnType("text")
+                        .HasColumnName("referencia_bancaria");
+
+                    b.Property<Guid?>("RegistradoPorUsuarioId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("registrado_por_usuario_id");
+
+                    b.Property<Guid?>("SuspensionDesembolsoId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("suspension_desembolso_id");
+
+                    b.Property<Guid>("UsuarioCreacionId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("usuario_creacion_id");
+
+                    b.Property<Guid>("UsuarioModificacionId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("usuario_modificacion_id");
+
+                    b.Property<int>("Version")
+                        .IsConcurrencyToken()
+                        .HasColumnType("integer")
+                        .HasColumnName("version");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("CalendarioDesembolsoId", "NumeroCuota")
+                        .IsUnique()
+                        .HasFilter("es_vigente = true");
+
+                    b.HasIndex("CalendarioDesembolsoId", "NumeroCuota", "IntentosEjecucion")
+                        .IsUnique();
+
+                    b.ToTable("desembolso", "becas", t =>
+                        {
+                            t.HasCheckConstraint("ck_desembolso_destinatario", "destinatario IN ('BECARIO', 'INSTITUCION')");
+
+                            t.HasCheckConstraint("ck_desembolso_estado", "estado IN ('PROGRAMADO', 'EN_PROCESO', 'PAGADO_CONFIRMADO', 'FALLIDO', 'DEVUELTO', 'SUSPENDIDO', 'CANCELADO')");
+
+                            t.HasCheckConstraint("ck_desembolso_intentos", "intentos_ejecucion >= 0");
+
+                            t.HasCheckConstraint("ck_desembolso_metodo", "metodo_pago IS NULL OR metodo_pago IN ('TRANSFERENCIA_BANCARIA')");
+
+                            t.HasCheckConstraint("ck_desembolso_montos", "monto_programado > 0 AND (monto_ejecutado IS NULL OR (monto_ejecutado > 0 AND monto_ejecutado <= monto_programado))");
+                        });
+                });
+
+            modelBuilder.Entity("Ascenso.Becas.Domain.Desembolsos.Entidades.IncidenciaDesembolso", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .HasColumnType("uuid")
+                        .HasColumnName("id");
+
+                    b.Property<Guid>("DesembolsoId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("desembolso_id");
+
+                    b.Property<string>("Estado")
+                        .IsRequired()
+                        .HasColumnType("varchar")
+                        .HasColumnName("estado");
+
+                    b.Property<DateTimeOffset>("FechaCreacion")
+                        .HasColumnType("timestamptz")
+                        .HasColumnName("fecha_creacion");
+
+                    b.Property<DateTimeOffset>("FechaRegistro")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("fecha_registro");
+
+                    b.Property<DateTimeOffset?>("FechaResolucion")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("fecha_resolucion");
+
+                    b.Property<DateTimeOffset>("FechaUltimaModificacion")
+                        .HasColumnType("timestamptz")
+                        .HasColumnName("fecha_ultima_modificacion");
+
+                    b.Property<string>("Motivo")
+                        .IsRequired()
+                        .HasColumnType("text")
+                        .HasColumnName("motivo");
+
+                    b.Property<string>("ObservacionBanco")
+                        .IsRequired()
+                        .HasColumnType("text")
+                        .HasColumnName("observacion_banco");
+
+                    b.Property<Guid>("RegistradoPorUsuarioId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("registrado_por_usuario_id");
+
+                    b.Property<Guid?>("ResueltoPorUsuarioId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("resuelto_por_usuario_id");
+
+                    b.Property<string>("Tipo")
+                        .IsRequired()
+                        .HasColumnType("varchar")
+                        .HasColumnName("tipo");
+
+                    b.Property<Guid>("UsuarioCreacionId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("usuario_creacion_id");
+
+                    b.Property<Guid>("UsuarioModificacionId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("usuario_modificacion_id");
+
+                    b.Property<int>("Version")
+                        .IsConcurrencyToken()
+                        .HasColumnType("integer")
+                        .HasColumnName("version");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("DesembolsoId");
+
+                    b.ToTable("incidencia_desembolso", "becas", t =>
+                        {
+                            t.HasCheckConstraint("ck_incidencia_estado", "estado IN ('ABIERTA', 'RESUELTA')");
+
+                            t.HasCheckConstraint("ck_incidencia_observacion", "length(trim(observacion_banco)) > 0");
+
+                            t.HasCheckConstraint("ck_incidencia_tipo", "tipo IN ('FALLO_BANCARIO', 'DEVOLUCION_BANCARIA')");
+                        });
+                });
+
             modelBuilder.Entity("Ascenso.Becas.Domain.Otorgamiento.Agregados.Beca", b =>
                 {
                     b.Property<Guid>("Id")
@@ -550,6 +961,101 @@ namespace Ascenso.Becas.Infrastructure.Persistence.Migraciones
                             t.HasCheckConstraint("ck_oferta_beca_fechas_coherentes", "fecha_vencimiento_aceptacion > fecha_emision\nAND (fecha_respuesta IS NULL OR fecha_respuesta >= fecha_emision)");
 
                             t.HasCheckConstraint("ck_oferta_beca_montos_no_negativos", "monto_oferta_por_periodo >= 0 AND monto_total_estimado_duracion >= 0");
+                        });
+                });
+
+            modelBuilder.Entity("Ascenso.Becas.Domain.Otorgamiento.Entidades.SuspensionDesembolso", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .HasColumnType("uuid")
+                        .HasColumnName("id");
+
+                    b.Property<Guid>("BecaId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("beca_id");
+
+                    b.Property<bool>("EsIndefinida")
+                        .HasColumnType("boolean")
+                        .HasColumnName("es_indefinida");
+
+                    b.Property<string>("Estado")
+                        .IsRequired()
+                        .HasMaxLength(20)
+                        .HasColumnType("varchar")
+                        .HasColumnName("estado");
+
+                    b.Property<DateTimeOffset>("FechaCreacion")
+                        .HasColumnType("timestamptz")
+                        .HasColumnName("fecha_creacion");
+
+                    b.Property<DateOnly>("FechaInicio")
+                        .HasColumnType("date")
+                        .HasColumnName("fecha_inicio");
+
+                    b.Property<DateTimeOffset?>("FechaResolucion")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("fecha_resolucion");
+
+                    b.Property<DateOnly?>("FechaRevisionProgramada")
+                        .HasColumnType("date")
+                        .HasColumnName("fecha_revision_programada");
+
+                    b.Property<DateTimeOffset>("FechaUltimaModificacion")
+                        .HasColumnType("timestamptz")
+                        .HasColumnName("fecha_ultima_modificacion");
+
+                    b.Property<Guid?>("LevantadaPorCoordinadorId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("levantada_por_coordinador_id");
+
+                    b.Property<string>("MotivoSuspension")
+                        .IsRequired()
+                        .HasMaxLength(1000)
+                        .HasColumnType("character varying(1000)")
+                        .HasColumnName("motivo_suspension");
+
+                    b.Property<Guid>("RegistradaPorCoordinadorId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("registrada_por_coordinador_id");
+
+                    b.Property<string>("RequisitosParaReanudar")
+                        .IsRequired()
+                        .HasMaxLength(1000)
+                        .HasColumnType("character varying(1000)")
+                        .HasColumnName("requisitos_para_reanudar");
+
+                    b.Property<string>("TipoSuspension")
+                        .IsRequired()
+                        .HasMaxLength(40)
+                        .HasColumnType("varchar")
+                        .HasColumnName("tipo_suspension");
+
+                    b.Property<Guid>("UsuarioCreacionId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("usuario_creacion_id");
+
+                    b.Property<Guid>("UsuarioModificacionId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("usuario_modificacion_id");
+
+                    b.Property<int>("Version")
+                        .IsConcurrencyToken()
+                        .HasColumnType("integer")
+                        .HasColumnName("version");
+
+                    b.HasKey("Id")
+                        .HasName("pk_suspension_desembolso");
+
+                    b.HasIndex("BecaId", "Estado")
+                        .HasDatabaseName("ix_suspension_desembolso_beca_estado");
+
+                    b.ToTable("suspension_desembolso", "becas", t =>
+                        {
+                            t.HasCheckConstraint("ck_suspension_estado", "estado IN ('VIGENTE', 'LEVANTADA')");
+
+                            t.HasCheckConstraint("ck_suspension_revision", "(es_indefinida AND fecha_revision_programada IS NULL) OR (NOT es_indefinida AND fecha_revision_programada IS NOT NULL AND fecha_revision_programada >= fecha_inicio)");
+
+                            t.HasCheckConstraint("ck_suspension_tipo", "tipo_suspension IN ('MANUAL', 'INCUMPLIMIENTO_ACADEMICO', 'PAUSA_APLAZAMIENTO')");
                         });
                 });
 
@@ -1211,6 +1717,24 @@ namespace Ascenso.Becas.Infrastructure.Persistence.Migraciones
                     b.ToTable("outbox_state", "becas");
                 });
 
+            modelBuilder.Entity("Ascenso.Becas.Domain.Desembolsos.Entidades.Desembolso", b =>
+                {
+                    b.HasOne("Ascenso.Becas.Domain.Desembolsos.Agregados.CalendarioDesembolso", null)
+                        .WithMany("_desembolsos")
+                        .HasForeignKey("CalendarioDesembolsoId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+                });
+
+            modelBuilder.Entity("Ascenso.Becas.Domain.Desembolsos.Entidades.IncidenciaDesembolso", b =>
+                {
+                    b.HasOne("Ascenso.Becas.Domain.Desembolsos.Entidades.Desembolso", null)
+                        .WithMany("_incidencias")
+                        .HasForeignKey("DesembolsoId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+                });
+
             modelBuilder.Entity("Ascenso.Becas.Domain.Otorgamiento.Agregados.Beca", b =>
                 {
                     b.OwnsOne("Ascenso.Becas.Domain.ValueObjects.PoliticaCobertura", "CoberturaAplicada", b1 =>
@@ -1320,6 +1844,16 @@ namespace Ascenso.Becas.Infrastructure.Persistence.Migraciones
 
                     b.Navigation("CondicionesSnapshot")
                         .IsRequired();
+                });
+
+            modelBuilder.Entity("Ascenso.Becas.Domain.Otorgamiento.Entidades.SuspensionDesembolso", b =>
+                {
+                    b.HasOne("Ascenso.Becas.Domain.Otorgamiento.Agregados.Beca", null)
+                        .WithMany("Suspensiones")
+                        .HasForeignKey("BecaId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired()
+                        .HasConstraintName("fk_suspension_desembolso_beca");
                 });
 
             modelBuilder.Entity("Ascenso.Becas.Domain.SeguimientoAcademico.Agregados.ReporteAcademico", b =>
@@ -1485,6 +2019,16 @@ namespace Ascenso.Becas.Infrastructure.Persistence.Migraciones
                         .HasPrincipalKey("MessageId", "ConsumerId");
                 });
 
+            modelBuilder.Entity("Ascenso.Becas.Domain.Desembolsos.Agregados.CalendarioDesembolso", b =>
+                {
+                    b.Navigation("_desembolsos");
+                });
+
+            modelBuilder.Entity("Ascenso.Becas.Domain.Desembolsos.Entidades.Desembolso", b =>
+                {
+                    b.Navigation("_incidencias");
+                });
+
             modelBuilder.Entity("Ascenso.Becas.Domain.Otorgamiento.Agregados.Beca", b =>
                 {
                     b.Navigation("Compromiso");
@@ -1492,6 +2036,8 @@ namespace Ascenso.Becas.Infrastructure.Persistence.Migraciones
                     b.Navigation("Historial");
 
                     b.Navigation("Oferta");
+
+                    b.Navigation("Suspensiones");
                 });
 
             modelBuilder.Entity("Ascenso.Becas.Domain.SeguimientoAcademico.Agregados.ReporteAcademico", b =>

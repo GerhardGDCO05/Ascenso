@@ -37,6 +37,8 @@ public sealed class AceptarOfertaBecaHandlerTests
         escenario.Unidad.Confirmaciones.Should().Be(1);
         escenario.Outbox.Confirmados.Should()
             .ContainSingle(evento => evento is BecaActivadaEvento);
+        escenario.Programador.Canceladas.Should().ContainSingle()
+            .Which.Should().Be(escenario.Programador.Referencia);
     }
 
     [Fact]

@@ -303,6 +303,171 @@ namespace Ascenso.Postulaciones.Infrastructure.Persistence.Migrations
                         });
                 });
 
+            modelBuilder.Entity("Ascenso.Postulaciones.Domain.Evaluaciones.Agregados.Evaluacion", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .HasColumnType("uuid")
+                        .HasColumnName("id");
+
+                    b.Property<Guid>("AsignacionEvaluacionId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("asignacion_evaluacion_id");
+
+                    b.Property<string>("ComentariosGenerales")
+                        .HasMaxLength(2000)
+                        .HasColumnType("character varying(2000)")
+                        .HasColumnName("comentarios_generales");
+
+                    b.Property<Guid>("ConvocatoriaId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("convocatoria_id");
+
+                    b.Property<string>("Estado")
+                        .IsRequired()
+                        .HasMaxLength(30)
+                        .HasColumnType("varchar")
+                        .HasColumnName("estado");
+
+                    b.Property<Guid>("EvaluadorId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("evaluador_id");
+
+                    b.Property<DateTimeOffset>("FechaCreacion")
+                        .HasColumnType("timestamptz")
+                        .HasColumnName("fecha_creacion");
+
+                    b.Property<DateTimeOffset?>("FechaEnvio")
+                        .HasColumnType("timestamptz")
+                        .HasColumnName("fecha_envio");
+
+                    b.Property<DateTimeOffset>("FechaInicio")
+                        .HasColumnType("timestamptz")
+                        .HasColumnName("fecha_inicio");
+
+                    b.Property<DateTimeOffset>("FechaUltimaModificacion")
+                        .HasColumnType("timestamptz")
+                        .HasColumnName("fecha_ultima_modificacion");
+
+                    b.Property<string>("MotivoInvalidacion")
+                        .HasMaxLength(1000)
+                        .HasColumnType("character varying(1000)")
+                        .HasColumnName("motivo_invalidacion");
+
+                    b.Property<Guid>("PostulacionId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("postulacion_id");
+
+                    b.Property<decimal?>("PuntajeTotalPonderado")
+                        .HasPrecision(5, 2)
+                        .HasColumnType("numeric(5,2)")
+                        .HasColumnName("puntaje_total_ponderado");
+
+                    b.Property<Guid>("RubricaEvaluacionId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("rubrica_evaluacion_id");
+
+                    b.Property<Guid>("UsuarioCreacionId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("usuario_creacion_id");
+
+                    b.Property<Guid>("UsuarioModificacionId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("usuario_modificacion_id");
+
+                    b.Property<int>("Version")
+                        .IsConcurrencyToken()
+                        .HasColumnType("integer")
+                        .HasColumnName("version");
+
+                    b.HasKey("Id")
+                        .HasName("pk_evaluaciones");
+
+                    b.HasIndex("AsignacionEvaluacionId")
+                        .IsUnique()
+                        .HasDatabaseName("ux_evaluaciones_asignacion_evaluacion");
+
+                    b.HasIndex("RubricaEvaluacionId");
+
+                    b.HasIndex("PostulacionId", "Estado")
+                        .HasDatabaseName("ix_evaluaciones_postulacion_estado");
+
+                    b.HasIndex("EvaluadorId", "Estado", "FechaUltimaModificacion")
+                        .HasDatabaseName("ix_evaluaciones_evaluador_estado");
+
+                    b.ToTable("evaluaciones", "postulaciones", t =>
+                        {
+                            t.HasCheckConstraint("ck_evaluaciones_comentarios_generales_no_vacios", "comentarios_generales IS NULL OR length(btrim(comentarios_generales)) > 0");
+
+                            t.HasCheckConstraint("ck_evaluaciones_envio_coherente", "(estado = 'BORRADOR' AND fecha_envio IS NULL AND puntaje_total_ponderado IS NULL AND motivo_invalidacion IS NULL) OR (estado = 'ENVIADA_DEFINITIVA' AND fecha_envio IS NOT NULL AND puntaje_total_ponderado IS NOT NULL AND motivo_invalidacion IS NULL) OR (estado = 'INVALIDADA_POR_CONFLICTO' AND motivo_invalidacion IS NOT NULL AND length(btrim(motivo_invalidacion)) > 0)");
+
+                            t.HasCheckConstraint("ck_evaluaciones_estado_valido", "estado IN ('BORRADOR', 'ENVIADA_DEFINITIVA', 'INVALIDADA_POR_CONFLICTO')");
+
+                            t.HasCheckConstraint("ck_evaluaciones_puntaje_total_rango", "puntaje_total_ponderado IS NULL OR (puntaje_total_ponderado >= 0 AND puntaje_total_ponderado <= 100)");
+                        });
+                });
+
+            modelBuilder.Entity("Ascenso.Postulaciones.Domain.Evaluaciones.Entidades.CalificacionCriterio", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .HasColumnType("uuid")
+                        .HasColumnName("id");
+
+                    b.Property<string>("Comentario")
+                        .HasMaxLength(1000)
+                        .HasColumnType("character varying(1000)")
+                        .HasColumnName("comentario");
+
+                    b.Property<Guid>("CriterioEvaluacionId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("criterio_evaluacion_id");
+
+                    b.Property<Guid>("EvaluacionId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("evaluacion_id");
+
+                    b.Property<DateTimeOffset>("FechaCreacion")
+                        .HasColumnType("timestamptz")
+                        .HasColumnName("fecha_creacion");
+
+                    b.Property<DateTimeOffset>("FechaUltimaModificacion")
+                        .HasColumnType("timestamptz")
+                        .HasColumnName("fecha_ultima_modificacion");
+
+                    b.Property<decimal>("PuntajeAsignado")
+                        .HasPrecision(7, 2)
+                        .HasColumnType("numeric(7,2)")
+                        .HasColumnName("puntaje_asignado");
+
+                    b.Property<Guid>("UsuarioCreacionId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("usuario_creacion_id");
+
+                    b.Property<Guid>("UsuarioModificacionId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("usuario_modificacion_id");
+
+                    b.Property<int>("Version")
+                        .IsConcurrencyToken()
+                        .HasColumnType("integer")
+                        .HasColumnName("version");
+
+                    b.HasKey("Id")
+                        .HasName("pk_calificaciones_criterio");
+
+                    b.HasIndex("CriterioEvaluacionId");
+
+                    b.HasIndex("EvaluacionId", "CriterioEvaluacionId")
+                        .IsUnique()
+                        .HasDatabaseName("ux_calificaciones_criterio_evaluacion_criterio");
+
+                    b.ToTable("calificaciones_criterio", "postulaciones", t =>
+                        {
+                            t.HasCheckConstraint("ck_calificaciones_criterio_comentario_no_vacio", "comentario IS NULL OR length(btrim(comentario)) > 0");
+
+                            t.HasCheckConstraint("ck_calificaciones_criterio_puntaje_rango", "puntaje_asignado >= 0 AND puntaje_asignado <= 1000");
+                        });
+                });
+
             modelBuilder.Entity("Ascenso.Postulaciones.Domain.Postulantes.Agregados.Postulante", b =>
                 {
                     b.Property<Guid>("Id")
@@ -711,6 +876,40 @@ namespace Ascenso.Postulaciones.Infrastructure.Persistence.Migrations
                         .HasConstraintName("fk_miembros_comite_comites");
                 });
 
+            modelBuilder.Entity("Ascenso.Postulaciones.Domain.Evaluaciones.Agregados.Evaluacion", b =>
+                {
+                    b.HasOne("Ascenso.Postulaciones.Domain.Asignaciones.Agregados.AsignacionEvaluacion", null)
+                        .WithMany()
+                        .HasForeignKey("AsignacionEvaluacionId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired()
+                        .HasConstraintName("fk_evaluaciones_asignaciones_evaluacion");
+
+                    b.HasOne("Ascenso.Postulaciones.Domain.Rubricas.Agregados.RubricaEvaluacion", null)
+                        .WithMany()
+                        .HasForeignKey("RubricaEvaluacionId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired()
+                        .HasConstraintName("fk_evaluaciones_rubricas");
+                });
+
+            modelBuilder.Entity("Ascenso.Postulaciones.Domain.Evaluaciones.Entidades.CalificacionCriterio", b =>
+                {
+                    b.HasOne("Ascenso.Postulaciones.Domain.Rubricas.Entidades.CriterioEvaluacion", null)
+                        .WithMany()
+                        .HasForeignKey("CriterioEvaluacionId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired()
+                        .HasConstraintName("fk_calificaciones_criterio_criterios_evaluacion");
+
+                    b.HasOne("Ascenso.Postulaciones.Domain.Evaluaciones.Agregados.Evaluacion", null)
+                        .WithMany("Calificaciones")
+                        .HasForeignKey("EvaluacionId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired()
+                        .HasConstraintName("fk_calificaciones_criterio_evaluaciones");
+                });
+
             modelBuilder.Entity("Ascenso.Postulaciones.Domain.Postulantes.Agregados.Postulante", b =>
                 {
                     b.OwnsOne("Ascenso.Postulaciones.Domain.Postulantes.ObjetosValor.DatosContacto", "DatosContacto", b1 =>
@@ -765,6 +964,11 @@ namespace Ascenso.Postulaciones.Infrastructure.Persistence.Migrations
             modelBuilder.Entity("Ascenso.Postulaciones.Domain.Comites.Agregados.ComiteEvaluador", b =>
                 {
                     b.Navigation("Miembros");
+                });
+
+            modelBuilder.Entity("Ascenso.Postulaciones.Domain.Evaluaciones.Agregados.Evaluacion", b =>
+                {
+                    b.Navigation("Calificaciones");
                 });
 
             modelBuilder.Entity("Ascenso.Postulaciones.Domain.Postulantes.Agregados.Postulante", b =>

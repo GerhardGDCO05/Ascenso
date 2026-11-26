@@ -12,7 +12,7 @@ public interface IProgramadorExpiracionOfertas
         DateTimeOffset fechaVencimiento,
         CancellationToken cancellationToken = default);
 
-    Task CancelarAsync(
+    Task<bool> CancelarAsync(
         string referenciaJob,
         CancellationToken cancellationToken = default);
 }

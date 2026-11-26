@@ -9,6 +9,13 @@ using Ascenso.Postulaciones.Application.Comites.Comandos.CrearComiteEvaluador;
 using Ascenso.Postulaciones.Application.Comites.Comandos.DesvincularMiembroComite;
 using Ascenso.Postulaciones.Application.Comites.Consultas.ObtenerComiteEvaluador;
 using Ascenso.Postulaciones.Application.Comites.Consultas.ObtenerComitePorPrograma;
+using Ascenso.Postulaciones.Application.Evaluaciones.Comandos.EnviarEvaluacionDefinitiva;
+using Ascenso.Postulaciones.Application.Evaluaciones.Comandos.GuardarBorradorEvaluacion;
+using Ascenso.Postulaciones.Application.Evaluaciones.Consultas.ObtenerEvaluacionesPostulacion;
+using Ascenso.Postulaciones.Application.Evaluaciones.Consultas.ObtenerMiEvaluacionPorAsignacion;
+using Ascenso.Postulaciones.Application.Evaluaciones.Consultas.ObtenerMisEvaluaciones;
+using Ascenso.Postulaciones.Application.Evaluaciones.Interfaces;
+using Ascenso.Postulaciones.Application.Evaluaciones.Servicios;
 using Ascenso.Postulaciones.Application.Postulantes.Comandos.ActualizarPerfilSocioeconomico;
 using Ascenso.Postulaciones.Application.Postulantes.Comandos.RegistrarPostulante;
 using Ascenso.Postulaciones.Application.Postulantes.Consultas.ObtenerMiPerfil;
@@ -53,6 +60,12 @@ public static class DependencyInjection
         services.AddScoped<ObtenerMisAsignacionesQueryHandler>();
         services.AddScoped<AutorizarExcepcionEvaluadorUnicoCommandHandler>();
         services.AddScoped<ObtenerExcepcionEvaluadorUnicoQueryHandler>();
+        services.AddScoped<IBloqueadorRubricaEvaluacion, BloqueadorRubricaEvaluacionAdapter>();
+        services.AddScoped<GuardarBorradorEvaluacionCommandHandler>();
+        services.AddScoped<EnviarEvaluacionDefinitivaCommandHandler>();
+        services.AddScoped<ObtenerMiEvaluacionPorAsignacionQueryHandler>();
+        services.AddScoped<ObtenerMisEvaluacionesQueryHandler>();
+        services.AddScoped<ObtenerEvaluacionesPostulacionQueryHandler>();
 
         return services;
     }

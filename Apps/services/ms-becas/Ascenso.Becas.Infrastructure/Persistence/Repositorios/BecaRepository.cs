@@ -30,6 +30,7 @@ public sealed class BecaRepository : IBecaRepository
             .Include(beca => beca.Oferta)
             .Include(beca => beca.Compromiso)
             .Include(beca => beca.Historial)
+            .Include(beca => beca.Suspensiones)
             .AsSplitQuery()
             .SingleOrDefaultAsync(beca => beca.Id == becaId, cancellationToken);
     }
@@ -48,6 +49,7 @@ public sealed class BecaRepository : IBecaRepository
             .Include(beca => beca.Oferta)
             .Include(beca => beca.Compromiso)
             .Include(beca => beca.Historial)
+            .Include(beca => beca.Suspensiones)
             .AsSplitQuery()
             .SingleOrDefaultAsync(
                 beca => beca.Oferta != null && beca.Oferta.Id == ofertaId,

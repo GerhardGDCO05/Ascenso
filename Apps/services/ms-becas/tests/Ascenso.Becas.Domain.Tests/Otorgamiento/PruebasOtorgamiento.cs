@@ -32,6 +32,11 @@ internal static class PruebasOtorgamiento
             justificacion,
             autorizacionOtpId);
 
+    public static void Suspender(Beca beca, ContextoOperacion contexto)
+        => beca.Suspender(TipoSuspensionBeca.Manual,
+            "Suspensión documentada", "Revisión por coordinación",
+            DateOnly.FromDateTime(contexto.Fecha.UtcDateTime), null, true, contexto);
+
     public static PoliticaCobertura Cobertura(
         TipoCobertura modalidad = TipoCobertura.Parcial,
         decimal porcentaje = 50m,

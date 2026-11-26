@@ -1,3 +1,4 @@
+using System.Net;
 using System.Text.Json;
 using Ascenso.Becas.Application.Correlacion;
 using Ascenso.Becas.Application.Excepciones;
@@ -143,6 +144,81 @@ public sealed class ClientesInternosTests
             .ObtenerAdjudicabilidadAsync(postulacionId);
 
         await accion.Should().ThrowAsync<OperationCanceledException>();
+    }
+
+    [Fact]
+    public async Task Debe_OtorgarLaPostulacion_ConIdempotenciaYCorrelacion()
+    {
+        using var servidor = WireMockServer.Start();
+        var postulacionId = Guid.CreateVersion7();
+        var ofertaId = Guid.CreateVersion7();
+
+        servidor
+            .Given(Request.Create()
+                .WithPath($"/internal/v1/postulaciones/{postulacionId}/otorgar")
+                .UsingPost())
+            .RespondWith(Response.Create().WithStatusCode(204));
+
+        using var cliente = CrearCliente(servidor.Url, TimeSpan.FromSeconds(3));
+        await new PostulacionesClient(cliente, new CorrelacionFija())
+            .OtorgarAsync(postulacionId, ofertaId);
+
+        var peticion = servidor.LogEntries.Should().ContainSingle().Subject.RequestMessage!;
+        peticion.Headers!["Idempotency-Key"]!.Single().Should().Be($"otorgar-{ofertaId}");
+        peticion.Headers[CorrelacionConstantes.Encabezado]!.Single().Should().Be(Correlacion);
+    }
+
+    [Theory]
+    [InlineData(409, "POSTULACION_NO_TRANSICIONABLE")]
+    [InlineData(422, "POSTULACION_NO_OTORGABLE")]
+    public async Task Debe_MapearElRechazoDeOtorgamiento_Cuando_MS_POSRespondeError(
+        int estadoHttp,
+        string codigoEsperado)
+    {
+        using var servidor = WireMockServer.Start();
+        var postulacionId = Guid.CreateVersion7();
+        var ofertaId = Guid.CreateVersion7();
+
+        servidor
+            .Given(Request.Create()
+                .WithPath($"/internal/v1/postulaciones/{postulacionId}/otorgar")
+                .UsingPost())
+            .RespondWith(Response.Create()
+                .WithStatusCode(estadoHttp)
+                .WithHeader("Content-Type", "application/json")
+                .WithBody("{}"));
+
+        using var cliente = CrearCliente(servidor.Url, TimeSpan.FromSeconds(3));
+
+        var accion = () => new PostulacionesClient(cliente, new CorrelacionFija())
+            .OtorgarAsync(postulacionId, ofertaId);
+
+        var excepcion = await accion.Should()
+            .ThrowAsync<PostulacionOtorgamientoRechazadaException>();
+        excepcion.Which.Codigo.Should().Be(codigoEsperado);
+        excepcion.Which.EstadoHttp.Should().Be(estadoHttp);
+    }
+
+    [Fact]
+    public async Task Debe_PropagarEl503_Cuando_MS_POSNoPuedeOtorgarLaPostulacion()
+    {
+        using var servidor = WireMockServer.Start();
+        var postulacionId = Guid.CreateVersion7();
+        var ofertaId = Guid.CreateVersion7();
+
+        servidor
+            .Given(Request.Create()
+                .WithPath($"/internal/v1/postulaciones/{postulacionId}/otorgar")
+                .UsingPost())
+            .RespondWith(Response.Create().WithStatusCode(503));
+
+        using var cliente = CrearCliente(servidor.Url, TimeSpan.FromSeconds(3));
+
+        var accion = () => new PostulacionesClient(cliente, new CorrelacionFija())
+            .OtorgarAsync(postulacionId, ofertaId);
+
+        var excepcion = await accion.Should().ThrowAsync<HttpRequestException>();
+        excepcion.Which.StatusCode.Should().Be(HttpStatusCode.ServiceUnavailable);
     }
 
     [Fact]
@@ -317,9 +393,333 @@ public sealed class ClientesInternosTests
     }
 
     [Fact]
-    public async Task Debe_ConsumirElOtp_Cuando_MS_PLTConfirmaElConsumo()
+    public async Task Debe_ObtenerCondicionesVigentes_Cuando_MS_PRGEncuentraLaConfiguracion()
     {
         using var servidor = WireMockServer.Start();
+        var programaId = Guid.CreateVersion7();
+        var carreraId = Guid.CreateVersion7();
+        var periodoId = Guid.CreateVersion7();
+        var universidadId = Guid.CreateVersion7();
+        var costoId = Guid.CreateVersion7();
+        var convenioId = Guid.CreateVersion7();
+
+        servidor
+            .Given(Request.Create()
+                .WithPath($"/internal/v1/programas/{programaId}/condiciones")
+                .WithParam("carreraId", carreraId.ToString())
+                .WithParam("periodoId", periodoId.ToString())
+                .UsingGet())
+            .RespondWith(Response.Create()
+                .WithStatusCode(200)
+                .WithHeader("Content-Type", "application/json")
+                .WithBody(JsonSerializer.Serialize(new
+                {
+                    programaBecaId = programaId,
+                    carreraId,
+                    periodoAcademicoId = periodoId,
+                    universidadAliadaId = universidadId,
+                    politicaCobertura = new
+                    {
+                        modalidad = "MONTO_FIJO",
+                        porcentajeCobertura = 0m,
+                        montoFijoPeriodo = 750m,
+                        moneda = "USD"
+                    },
+                    condicionesPermanencia = new
+                    {
+                        promedioMinimoRenovacion = 14m,
+                        materiasMinimasAprobadas = 4,
+                        maximoMateriasReprobadas = 1,
+                        horasServicioPorPeriodo = 80,
+                        consecuenciaIncumplimiento = "SUSPENSION"
+                    },
+                    costoMatricula = new
+                    {
+                        costoMatriculaReferenciaId = costoId,
+                        carreraId,
+                        periodoAcademicoId = periodoId,
+                        montoReferenciaMatricula = 1500m,
+                        moneda = "USD",
+                        numeroVersion = 2,
+                        fechaVigenciaDesde = new DateOnly(2026, 1, 1),
+                        fechaVigenciaHasta = (DateOnly?)null,
+                        estado = "VIGENTE"
+                    },
+                    convenio = new
+                    {
+                        universidadAliadaId = universidadId,
+                        convenioId,
+                        estado = "VIGENTE",
+                        fechaFin = new DateOnly(2027, 12, 31)
+                    }
+                })));
+
+        using var cliente = CrearCliente(servidor.Url, TimeSpan.FromSeconds(3));
+        var resultado = await new ProgramasClient(cliente, new CorrelacionFija())
+            .ObtenerCondicionesAsync(programaId, carreraId, periodoId, universidadId);
+
+        resultado.Should().NotBeNull();
+        resultado!.PoliticaCobertura.Modalidad.Should().Be(TipoCobertura.MontoFijo);
+        resultado.PoliticaCobertura.MontoFijoPeriodo.Should().Be(750m);
+        resultado.CondicionesPermanencia.ConsecuenciaIncumplimiento
+            .Should().Be(ConsecuenciaPermanencia.Suspension);
+        resultado.CostoMatricula.CostoMatriculaReferenciaId.Should().Be(costoId);
+        resultado.CostoMatricula.MontoReferenciaMatricula.Should().Be(1500m);
+        resultado.Convenio.ConvenioId.Should().Be(convenioId);
+
+        var peticion = servidor.LogEntries.Should().ContainSingle().Subject.RequestMessage!;
+        peticion.Headers![CorrelacionConstantes.Encabezado]!.Single().Should().Be(Correlacion);
+    }
+
+    [Fact]
+    public async Task Debe_DevolverCondicionesNulas_Cuando_MS_PRGNoEncuentraLaConfiguracion()
+    {
+        using var servidor = WireMockServer.Start();
+        var programaId = Guid.CreateVersion7();
+
+        servidor
+            .Given(Request.Create()
+                .WithPath($"/internal/v1/programas/{programaId}/condiciones")
+                .UsingGet())
+            .RespondWith(Response.Create().WithStatusCode(404));
+
+        using var cliente = CrearCliente(servidor.Url, TimeSpan.FromSeconds(3));
+        var resultado = await new ProgramasClient(cliente, new CorrelacionFija())
+            .ObtenerCondicionesAsync(
+                programaId,
+                Guid.CreateVersion7(),
+                Guid.CreateVersion7(),
+                Guid.CreateVersion7());
+
+        resultado.Should().BeNull();
+    }
+
+    [Fact]
+    public async Task Debe_ResponderConfiguracionNoDisponible_Cuando_MS_PRGDevuelveCondicionesIncompletas()
+    {
+        using var servidor = WireMockServer.Start();
+        var programaId = Guid.CreateVersion7();
+
+        servidor
+            .Given(Request.Create()
+                .WithPath($"/internal/v1/programas/{programaId}/condiciones")
+                .UsingGet())
+            .RespondWith(Response.Create()
+                .WithStatusCode(200)
+                .WithHeader("Content-Type", "application/json")
+                .WithBody("""{"politicaCobertura":null,"condicionesPermanencia":null}"""));
+
+        using var cliente = CrearCliente(servidor.Url, TimeSpan.FromSeconds(3));
+
+        var accion = () => new ProgramasClient(cliente, new CorrelacionFija())
+            .ObtenerCondicionesAsync(
+                programaId,
+                Guid.CreateVersion7(),
+                Guid.CreateVersion7(),
+                Guid.CreateVersion7());
+
+        var excepcion = await accion.Should()
+            .ThrowAsync<ConfiguracionProgramaNoDisponibleException>();
+        excepcion.Which.Codigo.Should().Be(
+            ConfiguracionProgramaNoDisponibleException.CodigoError);
+        excepcion.Which.EstadoHttp.Should().Be(422);
+    }
+
+    [Fact]
+    public async Task Debe_Responder422_Cuando_ElArancelDevueltoNoEsValido()
+    {
+        using var servidor = WireMockServer.Start();
+        var programaId = Guid.CreateVersion7();
+        var carreraId = Guid.CreateVersion7();
+        var periodoId = Guid.CreateVersion7();
+        var universidadId = Guid.CreateVersion7();
+
+        servidor
+            .Given(Request.Create()
+                .WithPath($"/internal/v1/programas/{programaId}/condiciones")
+                .UsingGet())
+            .RespondWith(Response.Create()
+                .WithStatusCode(200)
+                .WithHeader("Content-Type", "application/json")
+                .WithBody(JsonSerializer.Serialize(new
+                {
+                    programaBecaId = programaId,
+                    carreraId,
+                    periodoAcademicoId = periodoId,
+                    universidadAliadaId = universidadId,
+                    politicaCobertura = new { modalidad = "TOTAL" },
+                    condicionesPermanencia = new { consecuenciaIncumplimiento = "SUSPENSION" },
+                    costoMatricula = new
+                    {
+                        costoMatriculaReferenciaId = Guid.CreateVersion7(),
+                        carreraId,
+                        periodoAcademicoId = periodoId,
+                        montoReferenciaMatricula = 0m,
+                        moneda = "USD",
+                        numeroVersion = 1,
+                        fechaVigenciaDesde = new DateOnly(2026, 1, 1),
+                        estado = "VIGENTE"
+                    },
+                    convenio = new
+                    {
+                        universidadAliadaId = universidadId,
+                        convenioId = Guid.CreateVersion7(),
+                        fechaFin = new DateOnly(2027, 12, 31),
+                        estado = "VIGENTE"
+                    }
+                })));
+
+        using var cliente = CrearCliente(servidor.Url, TimeSpan.FromSeconds(3));
+        var accion = () => new ProgramasClient(cliente, new CorrelacionFija())
+            .ObtenerCondicionesAsync(programaId, carreraId, periodoId, universidadId);
+
+        var excepcion = await accion.Should()
+            .ThrowAsync<ConfiguracionProgramaNoDisponibleException>();
+        excepcion.Which.EstadoHttp.Should().Be(422);
+    }
+
+    [Fact]
+    public async Task Debe_MapearConvenioVencido_Cuando_MS_PRGRechazaLasCondiciones()
+    {
+        using var servidor = WireMockServer.Start();
+        var programaId = Guid.CreateVersion7();
+
+        servidor
+            .Given(Request.Create()
+                .WithPath($"/internal/v1/programas/{programaId}/condiciones")
+                .UsingGet())
+            .RespondWith(Response.Create()
+                .WithStatusCode(422)
+                .WithHeader("Content-Type", "application/json")
+                .WithBody("""{"codigo":"CONVENIO_VENCIDO"}"""));
+
+        using var cliente = CrearCliente(servidor.Url, TimeSpan.FromSeconds(3));
+
+        var accion = () => new ProgramasClient(cliente, new CorrelacionFija())
+            .ObtenerCondicionesAsync(
+                programaId,
+                Guid.CreateVersion7(),
+                Guid.CreateVersion7(),
+                Guid.CreateVersion7());
+
+        var excepcion = await accion.Should()
+            .ThrowAsync<ReservaPresupuestoRechazadaException>();
+        excepcion.Which.Codigo.Should().Be(
+            ReservaPresupuestoRechazadaException.CodigoConvenioVencido);
+    }
+
+    [Theory]
+    [InlineData("confirmar")]
+    [InlineData("activar")]
+    [InlineData("liberar")]
+    public async Task Debe_CambiarEstadoDeReserva_ConClaveEstable(
+        string operacion)
+    {
+        using var servidor = WireMockServer.Start();
+        var programaId = Guid.CreateVersion7();
+        var reservaId = Guid.CreateVersion7();
+        var ofertaId = Guid.CreateVersion7();
+
+        servidor
+            .Given(Request.Create()
+                .WithPath($"/internal/v1/programas/{programaId}/reservas/{reservaId}/{operacion}")
+                .UsingPost())
+            .RespondWith(Response.Create().WithStatusCode(200));
+
+        using var cliente = CrearCliente(servidor.Url, TimeSpan.FromSeconds(3));
+        var programas = new ProgramasClient(cliente, new CorrelacionFija());
+
+        for (var intento = 0; intento < 2; intento++)
+        {
+            switch (operacion)
+            {
+                case "confirmar":
+                    await programas.ConfirmarReservaAsync(programaId, reservaId, ofertaId);
+                    break;
+                case "activar":
+                    await programas.ActivarReservaAsync(programaId, reservaId, ofertaId);
+                    break;
+                default:
+                    await programas.LiberarReservaAsync(programaId, reservaId, ofertaId);
+                    break;
+            }
+        }
+
+        servidor.LogEntries.Should().HaveCount(2);
+        foreach (var entrada in servidor.LogEntries)
+        {
+            entrada.RequestMessage!.Headers![ProgramasClient.EncabezadoIdempotencia]!
+                .Single().Should().Be($"{operacion}-{ofertaId}");
+            entrada.RequestMessage.Headers[CorrelacionConstantes.Encabezado]!
+                .Single().Should().Be(Correlacion);
+        }
+    }
+
+    [Fact]
+    public async Task Debe_ObtenerElPeriodoActual_Cuando_MS_PLTRespondeConUnPeriodoActivo()
+    {
+        using var servidor = WireMockServer.Start();
+        var periodoId = Guid.CreateVersion7();
+
+        servidor
+            .Given(Request.Create()
+                .WithPath("/internal/v1/periodos-academicos/actual")
+                .UsingGet())
+            .RespondWith(Response.Create()
+                .WithStatusCode(200)
+                .WithHeader("Content-Type", "application/json")
+                .WithBody(JsonSerializer.Serialize(new
+                {
+                    periodoAcademicoId = periodoId,
+                    codigo = "2026-2",
+                    nombre = "Segundo periodo 2026",
+                    ordenSecuencia = 2,
+                    fechaInicio = new DateOnly(2026, 7, 1),
+                    fechaFin = new DateOnly(2026, 12, 31),
+                    estado = "ACTIVO",
+                    esActual = true
+                })));
+
+        using var cliente = CrearCliente(servidor.Url, TimeSpan.FromSeconds(3));
+        var resultado = await new PeriodosAcademicosClient(cliente, new CorrelacionFija())
+            .ObtenerActualAsync();
+
+        resultado.PeriodoAcademicoId.Should().Be(periodoId);
+        resultado.Codigo.Should().Be("2026-2");
+        resultado.EsActual.Should().BeTrue();
+
+        var peticion = servidor.LogEntries.Should().ContainSingle().Subject.RequestMessage!;
+        peticion.Headers![CorrelacionConstantes.Encabezado]!.Single().Should().Be(Correlacion);
+    }
+
+    [Fact]
+    public async Task Debe_FallarCerrado_Cuando_MS_PLTResponde503AlConsultarPeriodoActual()
+    {
+        using var servidor = WireMockServer.Start();
+
+        servidor
+            .Given(Request.Create()
+                .WithPath("/internal/v1/periodos-academicos/actual")
+                .UsingGet())
+            .RespondWith(Response.Create().WithStatusCode(503));
+
+        using var cliente = CrearCliente(servidor.Url, TimeSpan.FromSeconds(3));
+
+        var accion = () => new PeriodosAcademicosClient(cliente, new CorrelacionFija())
+            .ObtenerActualAsync();
+
+        var excepcion = await accion.Should().ThrowAsync<HttpRequestException>();
+        excepcion.Which.StatusCode.Should().Be(HttpStatusCode.ServiceUnavailable);
+    }
+
+    [Theory]
+    [InlineData(TipoOperacionOTP.ConfirmarDesembolso, "DESEMBOLSO", "CONFIRMAR_DESEMBOLSO")]
+    [InlineData(TipoOperacionOTP.ModificarDatosPago, "BECA", "MODIFICAR_DATOS_PAGO")]
+    public async Task Debe_ConsumirElOtp_Cuando_MS_PLTConfirmaElConsumo(
+        TipoOperacionOTP operacion, string recursoTipo, string codigoOperacion)
+    {
+        using var servidor = WireMockServer.Start();
+        var autorizacionOtpId = Guid.CreateVersion7();
         var usuarioId = Guid.CreateVersion7();
         var recursoId = Guid.CreateVersion7();
 
@@ -335,8 +735,10 @@ public sealed class ClientesInternosTests
         using var cliente = CrearCliente(servidor.Url, TimeSpan.FromSeconds(3));
         var resultado = await new OtpClient(cliente, new CorrelacionFija())
             .ConsumirAsync(
+                autorizacionOtpId,
                 usuarioId,
-                TipoOperacionOTP.ConfirmarDesembolso,
+                operacion,
+                recursoTipo,
                 recursoId,
                 "huella-payload",
                 "123456");
@@ -346,12 +748,15 @@ public sealed class ClientesInternosTests
 
         var peticion = servidor.LogEntries.Should().ContainSingle().Subject.RequestMessage!;
         peticion.Headers!["Idempotency-Key"]!.Single().Should()
-            .Be($"otp-{usuarioId:N}-CONFIRMAR_DESEMBOLSO-{recursoId:N}");
+            .Be($"otp-{autorizacionOtpId:N}");
 
         using var cuerpo = JsonDocument.Parse(peticion.Body!);
+        cuerpo.RootElement.GetProperty("autorizacionOtpId").GetGuid().Should().Be(autorizacionOtpId);
         cuerpo.RootElement.GetProperty("usuarioId").GetGuid().Should().Be(usuarioId);
         cuerpo.RootElement.GetProperty("operacion").GetString()
-            .Should().Be("CONFIRMAR_DESEMBOLSO");
+            .Should().Be(codigoOperacion);
+        cuerpo.RootElement.GetProperty("recursoTipo").GetString()
+            .Should().Be(recursoTipo);
         cuerpo.RootElement.GetProperty("recursoId").GetGuid().Should().Be(recursoId);
         cuerpo.RootElement.GetProperty("huellaPayload").GetString()
             .Should().Be("huella-payload");
@@ -359,12 +764,14 @@ public sealed class ClientesInternosTests
     }
 
     [Theory]
-    [InlineData(403, "OTP_BLOQUEADO")]
-    [InlineData(410, "OTP_EXPIRADO")]
-    [InlineData(422, "OTP_INVALIDO")]
+    [InlineData(403, "OTP_BLOQUEADO", TipoOperacionOTP.ConfirmarDesembolso, "DESEMBOLSO")]
+    [InlineData(410, "OTP_EXPIRADO", TipoOperacionOTP.ConfirmarDesembolso, "DESEMBOLSO")]
+    [InlineData(403, "OTP_BLOQUEADO", TipoOperacionOTP.ModificarDatosPago, "BECA")]
+    [InlineData(410, "OTP_EXPIRADO", TipoOperacionOTP.ModificarDatosPago, "BECA")]
+    [InlineData(422, "OTP_INVALIDO", TipoOperacionOTP.ModificarDatosPago, "BECA")]
     public async Task Debe_DevolverElCodigoDeError_Cuando_MS_PLTRechazaElOtp(
         int estado,
-        string codigo)
+        string codigo, TipoOperacionOTP operacion, string recursoTipo)
     {
         using var servidor = WireMockServer.Start();
 
@@ -381,13 +788,39 @@ public sealed class ClientesInternosTests
         var resultado = await new OtpClient(cliente, new CorrelacionFija())
             .ConsumirAsync(
                 Guid.CreateVersion7(),
-                TipoOperacionOTP.RevocarBeca,
+                Guid.CreateVersion7(),
+                operacion,
+                recursoTipo,
                 Guid.CreateVersion7(),
                 "huella-payload",
                 "123456");
 
         resultado.Consumido.Should().BeFalse();
         resultado.CodigoError.Should().Be(codigo);
+    }
+
+    [Fact]
+    public async Task Debe_UsarClavesDistintas_ParaAutorizacionesDeLaMismaBeca()
+    {
+        using var servidor = WireMockServer.Start();
+        servidor.Given(Request.Create()
+                .WithPath("/internal/v1/otp/consumir").UsingPost())
+            .RespondWith(Response.Create().WithStatusCode(204));
+        using var cliente = CrearCliente(servidor.Url, TimeSpan.FromSeconds(3));
+        var otp = new OtpClient(cliente, new CorrelacionFija());
+        var usuarioId = Guid.CreateVersion7();
+        var becaId = Guid.CreateVersion7();
+        var primera = Guid.CreateVersion7();
+        var segunda = Guid.CreateVersion7();
+
+        await otp.ConsumirAsync(primera, usuarioId, TipoOperacionOTP.ModificarDatosPago,
+            "BECA", becaId, "huella-primera", "123456");
+        await otp.ConsumirAsync(segunda, usuarioId, TipoOperacionOTP.ModificarDatosPago,
+            "BECA", becaId, "huella-segunda", "654321");
+
+        var claves = servidor.LogEntries.Select(item =>
+            item.RequestMessage!.Headers!["Idempotency-Key"]!.Single()).ToArray();
+        claves.Should().BeEquivalentTo($"otp-{primera:N}", $"otp-{segunda:N}");
     }
 
     private static HttpClient CrearCliente(string? url, TimeSpan timeout)

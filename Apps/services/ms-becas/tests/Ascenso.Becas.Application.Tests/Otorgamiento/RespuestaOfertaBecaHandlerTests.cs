@@ -29,6 +29,8 @@ public sealed class RespuestaOfertaBecaHandlerTests
         escenario.Unidad.Confirmaciones.Should().Be(1);
         escenario.Outbox.Confirmados.Should()
             .ContainSingle(evento => evento is OfertaBecaRechazadaEvento);
+        escenario.Programador.Canceladas.Should().ContainSingle()
+            .Which.Should().Be(escenario.Programador.Referencia);
     }
 
     [Fact]
@@ -63,6 +65,24 @@ public sealed class RespuestaOfertaBecaHandlerTests
         escenario.Unidad.Confirmaciones.Should().Be(1);
         escenario.Outbox.Confirmados.Should()
             .ContainSingle(evento => evento is OfertaBecaAnuladaEvento);
+        escenario.Programador.Canceladas.Should().ContainSingle()
+            .Which.Should().Be(escenario.Programador.Referencia);
+    }
+
+    [Fact]
+    public async Task Debe_ConservarElRechazo_Cuando_FallaLaCancelacionDelJob()
+    {
+        var escenario = new EscenarioOtorgamiento();
+        var beca = CrearOfertaPendiente(escenario);
+        escenario.Programador.ErrorCancelar = new InvalidOperationException("Hangfire no disponible");
+
+        await escenario.CrearRechazar().HandleAsync(
+            new RechazarOfertaBecaCommand(beca.Oferta!.Id, "No puedo continuar con el programa."));
+
+        beca.Oferta.Estado.Should().Be(EstadoOferta.RechazadaPorPostulante);
+        escenario.Programador.Canceladas.Should().BeEmpty();
+        escenario.Programador.SolicitudesCancelacion.Should().ContainSingle()
+            .Which.Should().Be(escenario.Programador.Referencia);
     }
 
     [Fact]
