@@ -1,4 +1,5 @@
 using System.Text.Json.Serialization;
+using Ascenso.Becas.Api.Contexto;
 using Ascenso.Becas.Api.Seguridad;
 using Ascenso.Becas.Application.Desembolsos;
 using Ascenso.Becas.Application.Despacho;
@@ -24,6 +25,7 @@ namespace Ascenso.Becas.Api.Controllers.v1;
 [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status409Conflict)]
 [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status412PreconditionFailed)]
 [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status422UnprocessableEntity)]
+[ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status503ServiceUnavailable)]
 public sealed class DesembolsosController : ControllerBase
 {
     private readonly ICommandDispatcher _comandos;
@@ -44,6 +46,7 @@ public sealed class DesembolsosController : ControllerBase
     }
 
     [HttpPost("{becaId:guid}/calendarios-desembolso")]
+    [ProducesResponseType(typeof(Guid), StatusCodes.Status201Created)]
     public async Task<ActionResult<Guid>> Programar(Guid becaId,
         [FromBody] ProgramarCalendarioRequest solicitud, CancellationToken cancellationToken)
     {
@@ -56,6 +59,7 @@ public sealed class DesembolsosController : ControllerBase
     }
 
     [HttpGet("{becaId:guid}/calendarios-desembolso")]
+    [ProducesResponseType(typeof(IReadOnlyList<CalendarioDesembolsoDto>), StatusCodes.Status200OK)]
     public async Task<ActionResult<IReadOnlyList<CalendarioDesembolsoDto>>> ConsultarCalendarios(
         Guid becaId, [FromQuery] int pagina = 1, [FromQuery] int tamanoPagina = 50,
         CancellationToken cancellationToken = default)
@@ -67,9 +71,13 @@ public sealed class DesembolsosController : ControllerBase
     }
 
     [HttpPost("{becaId:guid}/datos-pago")]
+    [ProducesResponseType(typeof(Guid), StatusCodes.Status201Created)]
     public async Task<ActionResult<Guid>> ActualizarDatosPago(Guid becaId,
-        [FromBody] ActualizarDatosPagoRequest solicitud, CancellationToken cancellationToken)
+        [FromBody] ActualizarDatosPagoRequest solicitud,
+        [FromHeader(Name = ContextoOperacionHttp.EncabezadoAutorizacionOtp)] Guid? autorizacionOtpId,
+        CancellationToken cancellationToken)
     {
+        ExigirAutorizacionOtp(autorizacionOtpId);
         await ExigirAlcanceBecaAsync(becaId, cancellationToken);
         var id = await _comandos.EnviarAsync<ActualizarDatosPagoBecarioCommand, Guid>(
             new(becaId, solicitud.NombreBanco, solicitud.CodigoBanco, solicitud.TipoCuenta,
@@ -79,6 +87,7 @@ public sealed class DesembolsosController : ControllerBase
     }
 
     [HttpGet("calendarios-desembolso/{calendarioId:guid}/cuotas")]
+    [ProducesResponseType(typeof(IReadOnlyList<DesembolsoDto>), StatusCodes.Status200OK)]
     public async Task<ActionResult<IReadOnlyList<DesembolsoDto>>> ConsultarCuotas(
         Guid calendarioId, [FromQuery] int pagina = 1, [FromQuery] int tamanoPagina = 50,
         CancellationToken cancellationToken = default)
@@ -90,6 +99,7 @@ public sealed class DesembolsosController : ControllerBase
     }
 
     [HttpPost("calendarios-desembolso/{calendarioId:guid}/cuotas/{numeroCuota:int}/ejecucion")]
+    [ProducesResponseType(typeof(DesembolsoDto), StatusCodes.Status200OK)]
     public async Task<ActionResult<DesembolsoDto>> RegistrarEjecucion(Guid calendarioId,
         int numeroCuota, [FromBody] RegistrarEjecucionRequest solicitud,
         CancellationToken cancellationToken)
@@ -104,6 +114,7 @@ public sealed class DesembolsosController : ControllerBase
     }
 
     [HttpPost("calendarios-desembolso/{calendarioId:guid}/cuotas/{numeroCuota:int}/incidencias")]
+    [ProducesResponseType(typeof(Guid), StatusCodes.Status201Created)]
     public async Task<ActionResult<Guid>> RegistrarIncidencia(Guid calendarioId,
         int numeroCuota, [FromBody] RegistrarIncidenciaRequest solicitud,
         CancellationToken cancellationToken)
@@ -116,6 +127,7 @@ public sealed class DesembolsosController : ControllerBase
     }
 
     [HttpPost("calendarios-desembolso/{calendarioId:guid}/cuotas/{numeroCuota:int}/incidencias/{incidenciaId:guid}/resolver")]
+    [ProducesResponseType(typeof(DesembolsoDto), StatusCodes.Status200OK)]
     public async Task<ActionResult<DesembolsoDto>> ResolverIncidencia(Guid calendarioId,
         int numeroCuota, Guid incidenciaId, CancellationToken cancellationToken)
     {
@@ -125,12 +137,43 @@ public sealed class DesembolsosController : ControllerBase
     }
 
     [HttpPost("calendarios-desembolso/{calendarioId:guid}/cuotas/{numeroCuota:int}/reintentar")]
+    [ProducesResponseType(typeof(DesembolsoDto), StatusCodes.Status200OK)]
     public async Task<ActionResult<DesembolsoDto>> Reintentar(Guid calendarioId,
         int numeroCuota, CancellationToken cancellationToken)
     {
         await ExigirAlcanceCalendarioAsync(calendarioId, cancellationToken);
         return Ok(await _comandos.EnviarAsync<ReintentarDesembolsoCommand,
             DesembolsoDto>(new(calendarioId, numeroCuota), cancellationToken));
+    }
+
+    [HttpPost("calendarios-desembolso/{calendarioId:guid}/cuotas/{numeroCuota:int}/confirmar")]
+    [ProducesResponseType(typeof(DesembolsoDto), StatusCodes.Status200OK)]
+    public async Task<ActionResult<DesembolsoDto>> Confirmar(Guid calendarioId,
+        int numeroCuota, [FromBody] ConfirmarDesembolsoRequest solicitud,
+        [FromHeader(Name = ContextoOperacionHttp.EncabezadoAutorizacionOtp)] Guid? autorizacionOtpId,
+        CancellationToken cancellationToken)
+    {
+        if (numeroCuota <= 0 || solicitud is null
+            || string.IsNullOrWhiteSpace(solicitud.CodigoOtp))
+            throw new ValidacionAplicacionException(new Dictionary<string, string[]>
+            {
+                [nameof(solicitud)] = ["La cuota y el código OTP son obligatorios."]
+            });
+        ExigirAutorizacionOtp(autorizacionOtpId);
+        await ExigirAlcanceCalendarioAsync(calendarioId, cancellationToken);
+        // La confirmación no se despacha hasta que 16.10 garantice el
+        // movimiento contable idempotente en MS-PRG.
+        throw new DependenciaNoDisponibleException("MS-PRG: movimientos-presupuesto");
+    }
+
+    private static void ExigirAutorizacionOtp(Guid? autorizacionOtpId)
+    {
+        if (!autorizacionOtpId.HasValue || autorizacionOtpId.Value == Guid.Empty)
+            throw new ValidacionAplicacionException(new Dictionary<string, string[]>
+            {
+                [ContextoOperacionHttp.EncabezadoAutorizacionOtp] =
+                    ["Se requiere un identificador de autorización OTP válido."]
+            });
     }
 
     private async Task ExigirAlcanceCalendarioAsync(Guid calendarioId, CancellationToken token)
@@ -175,4 +218,6 @@ public sealed class DesembolsosController : ControllerBase
         [property: JsonConverter(typeof(CodigoEnumJsonConverter<EstadoDesembolso>))]
         EstadoDesembolso Estado,
         string Motivo, string ObservacionBanco);
+
+    public sealed record ConfirmarDesembolsoRequest(string CodigoOtp);
 }

@@ -207,10 +207,15 @@ Para `CONFIRMAR_DESEMBOLSO` y `MODIFICAR_DATOS_PAGO`, MS-BEC consume
 `recursoTipo`, `recursoId`, `huellaPayload` (SHA-256 del contenido de la
 operación) y `codigo`. La confirmación usa `recursoTipo = DESEMBOLSO` e ID de
 la cuota; el cambio de cuenta usa `recursoTipo = BECA` e ID de la beca. La
-petición lleva `Idempotency-Key` derivada del identificador de la autorización
-OTP, que distingue operaciones sucesivas sobre la misma beca. MS-BEC no persiste ni registra el código OTP ni el número de cuenta
-en claro. El consumo remoto precede al commit local dentro de la transacción
-de MS-BEC; ambos servicios no comparten una transacción distribuida.
+API pública recibe el identificador de la autorización en
+`X-Autorizacion-OTP-Id` y el código en el cuerpo; el contexto HTTP entrega el
+identificador al caso de uso. La ruta de confirmación permanece cerrada con
+`503` hasta que MS-PRG garantice el movimiento contable de 16.10. La petición
+lleva `Idempotency-Key` derivada del identificador de la autorización OTP,
+que distingue operaciones sucesivas sobre la misma beca. MS-BEC no persiste
+ni registra el código OTP ni el número de cuenta en claro. El consumo remoto
+precede al commit local dentro de la transacción de MS-BEC; ambos servicios
+no comparten una transacción distribuida.
 
 La revocación definitiva también exige OTP (`REVOCAR_BECA`, `recursoTipo = BECA`,
 `recursoId = becaId`). Su caso de uso consume y valida el código en MS-PLT

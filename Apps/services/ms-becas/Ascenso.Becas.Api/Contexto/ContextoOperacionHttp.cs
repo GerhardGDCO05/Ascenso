@@ -12,6 +12,8 @@ namespace Ascenso.Becas.Api.Contexto;
 /// </summary>
 public sealed class ContextoOperacionHttp : IContextoOperacionActual
 {
+    public const string EncabezadoAutorizacionOtp = "X-Autorizacion-OTP-Id";
+
     private readonly IHttpContextAccessor _accesor;
 
     public ContextoOperacionHttp(IHttpContextAccessor accesor)
@@ -61,5 +63,12 @@ public sealed class ContextoOperacionHttp : IContextoOperacionActual
     public string? DireccionIp
         => _accesor.HttpContext?.Connection.RemoteIpAddress?.ToString();
 
-    public Guid? AutorizacionOtpId => null;
+    public Guid? AutorizacionOtpId
+    {
+        get
+        {
+            var valor = _accesor.HttpContext?.Request.Headers[EncabezadoAutorizacionOtp].ToString();
+            return Guid.TryParse(valor, out var id) && id != Guid.Empty ? id : null;
+        }
+    }
 }
