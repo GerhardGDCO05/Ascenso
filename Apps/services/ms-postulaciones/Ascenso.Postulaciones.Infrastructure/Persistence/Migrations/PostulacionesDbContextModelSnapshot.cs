@@ -321,10 +321,19 @@ namespace Ascenso.Postulaciones.Infrastructure.Persistence.Migrations
                         .HasColumnType("integer")
                         .HasColumnName("cantidad_evaluaciones_validas");
 
+                    b.Property<string>("Clasificacion")
+                        .HasMaxLength(20)
+                        .HasColumnType("varchar")
+                        .HasColumnName("clasificacion");
+
                     b.Property<string>("ComentarioRevisionDiscrepancia")
                         .HasMaxLength(1000)
                         .HasColumnType("character varying(1000)")
                         .HasColumnName("comentario_revision_discrepancia");
+
+                    b.Property<Guid?>("ConfirmadoPorUsuarioId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("confirmado_por_usuario_id");
 
                     b.Property<Guid>("ConvocatoriaId")
                         .HasColumnType("uuid")
@@ -349,6 +358,10 @@ namespace Ascenso.Postulaciones.Infrastructure.Persistence.Migrations
                         .HasColumnType("boolean")
                         .HasColumnName("excepcion_evaluador_unico");
 
+                    b.Property<DateTimeOffset?>("FechaConfirmacionRanking")
+                        .HasColumnType("timestamptz")
+                        .HasColumnName("fecha_confirmacion_ranking");
+
                     b.Property<DateTimeOffset>("FechaConsolidacion")
                         .HasColumnType("timestamptz")
                         .HasColumnName("fecha_consolidacion");
@@ -369,6 +382,15 @@ namespace Ascenso.Postulaciones.Infrastructure.Persistence.Migrations
                         .HasMaxLength(1000)
                         .HasColumnType("character varying(1000)")
                         .HasColumnName("justificacion_evaluador_unico");
+
+                    b.Property<decimal?>("MontoEstimadoBeca")
+                        .HasPrecision(12, 2)
+                        .HasColumnType("numeric(12,2)")
+                        .HasColumnName("monto_estimado_beca");
+
+                    b.Property<int?>("PosicionRanking")
+                        .HasColumnType("integer")
+                        .HasColumnName("posicion_ranking");
 
                     b.Property<Guid>("PostulacionId")
                         .HasColumnType("uuid")
@@ -408,6 +430,11 @@ namespace Ascenso.Postulaciones.Infrastructure.Persistence.Migrations
                         .IsUnique()
                         .HasDatabaseName("ux_resultados_consolidados_ranking_postulacion");
 
+                    b.HasIndex("ConvocatoriaId", "PosicionRanking")
+                        .IsUnique()
+                        .HasDatabaseName("ux_resultados_consolidados_ranking_convocatoria_posicion")
+                        .HasFilter("posicion_ranking IS NOT NULL");
+
                     b.HasIndex("ConvocatoriaId", "AlertaDiscrepancia", "DiscrepanciaRevisada")
                         .HasDatabaseName("ix_resultados_consolidados_ranking_convocatoria_discrepancia");
 
@@ -418,6 +445,10 @@ namespace Ascenso.Postulaciones.Infrastructure.Persistence.Migrations
                         {
                             t.HasCheckConstraint("ck_resultados_consolidados_alerta_coherente", "(excepcion_evaluador_unico = true AND alerta_discrepancia = false) OR (excepcion_evaluador_unico = false AND alerta_discrepancia = (diferencia_entre_evaluadores > umbral_discrepancia_aplicado))");
 
+                            t.HasCheckConstraint("ck_resultados_consolidados_clasificacion_valida", "clasificacion IS NULL OR clasificacion IN ('DENTRO_DE_CUPO', 'LISTA_DE_ESPERA')");
+
+                            t.HasCheckConstraint("ck_resultados_consolidados_confirmacion_coherente", "(estado_confirmacion_ranking = 'PROVISIONAL' AND posicion_ranking IS NULL AND monto_estimado_beca IS NULL AND clasificacion IS NULL AND fecha_confirmacion_ranking IS NULL AND confirmado_por_usuario_id IS NULL) OR (estado_confirmacion_ranking = 'CONFIRMADO' AND posicion_ranking IS NOT NULL AND monto_estimado_beca IS NOT NULL AND clasificacion IS NOT NULL AND fecha_confirmacion_ranking IS NOT NULL AND confirmado_por_usuario_id IS NOT NULL) OR estado_confirmacion_ranking NOT IN ('PROVISIONAL', 'CONFIRMADO')");
+
                             t.HasCheckConstraint("ck_resultados_consolidados_diferencia_rango", "diferencia_entre_evaluadores >= 0 AND diferencia_entre_evaluadores <= 100");
 
                             t.HasCheckConstraint("ck_resultados_consolidados_estado_valido", "estado_confirmacion_ranking IN ('PROVISIONAL', 'CONFIRMADO')");
@@ -425,6 +456,8 @@ namespace Ascenso.Postulaciones.Infrastructure.Persistence.Migrations
                             t.HasCheckConstraint("ck_resultados_consolidados_excepcion_coherente", "(excepcion_evaluador_unico = true AND cantidad_evaluaciones_validas = 1 AND justificacion_evaluador_unico IS NOT NULL AND length(btrim(justificacion_evaluador_unico)) > 0 AND autorizador_excepcion_id IS NOT NULL AND diferencia_entre_evaluadores = 0 AND alerta_discrepancia = false) OR (excepcion_evaluador_unico = false AND cantidad_evaluaciones_validas >= 2 AND justificacion_evaluador_unico IS NULL AND autorizador_excepcion_id IS NULL)");
 
                             t.HasCheckConstraint("ck_resultados_consolidados_puntaje_rango", "puntaje_consolidado >= 0 AND puntaje_consolidado <= 100");
+
+                            t.HasCheckConstraint("ck_resultados_consolidados_ranking_campos_rango", "(posicion_ranking IS NULL OR posicion_ranking >= 1) AND (monto_estimado_beca IS NULL OR monto_estimado_beca > 0)");
 
                             t.HasCheckConstraint("ck_resultados_consolidados_revision_coherente", "(discrepancia_revisada = false AND comentario_revision_discrepancia IS NULL AND revisado_por_usuario_id IS NULL AND fecha_revision_discrepancia IS NULL) OR (discrepancia_revisada = true AND alerta_discrepancia = true AND comentario_revision_discrepancia IS NOT NULL AND length(btrim(comentario_revision_discrepancia)) > 0 AND revisado_por_usuario_id IS NOT NULL AND fecha_revision_discrepancia IS NOT NULL)");
 

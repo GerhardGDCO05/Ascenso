@@ -19,6 +19,7 @@ internal static class TraductorExcepcionesPersistencia
     public const string IndiceExcepcionEvaluadorUnicoPostulacionUnico = "ux_excepciones_evaluador_unico_postulacion";
     public const string IndiceEvaluacionAsignacionUnico = "ux_evaluaciones_asignacion_evaluacion";
     public const string IndiceResultadoConsolidadoPostulacionUnico = "ux_resultados_consolidados_ranking_postulacion";
+    public const string IndiceResultadoConsolidadoConvocatoriaPosicionUnico = "ux_resultados_consolidados_ranking_convocatoria_posicion";
 
     public static Exception? TraducirSiAplica(DbUpdateException excepcion)
     {
@@ -73,6 +74,13 @@ internal static class TraductorExcepcionesPersistencia
         if (string.Equals(pg.ConstraintName, IndiceResultadoConsolidadoPostulacionUnico, StringComparison.OrdinalIgnoreCase))
         {
             return new ResultadoConsolidadoDuplicadoException();
+        }
+
+        if (string.Equals(pg.ConstraintName, IndiceResultadoConsolidadoConvocatoriaPosicionUnico, StringComparison.OrdinalIgnoreCase))
+        {
+            return new ExcepcionConflictoConcurrencia(
+                "Ya existe un resultado confirmado con la misma posición de ranking en la convocatoria.",
+                ExcepcionConflictoConcurrencia.CodigoRestriccionUnicidad);
         }
 
         return new ExcepcionConflictoConcurrencia(

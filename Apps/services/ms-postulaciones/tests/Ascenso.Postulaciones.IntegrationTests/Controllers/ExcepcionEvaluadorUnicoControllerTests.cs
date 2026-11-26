@@ -386,6 +386,10 @@ public sealed class ExcepcionEvaluadorUnicoControllerTests : IClassFixture<WebAp
                 servicios.RemoveAll<IResultadoConsolidadoRepository>();
                 servicios.RemoveAll<IConsultaDatosConsolidacionRepository>();
                 servicios.RemoveAll<IProveedorParametrosConsolidacion>();
+                servicios.RemoveAll<IRankingConvocatoriaRepository>();
+                servicios.RemoveAll<IConsultaEstadoEvaluacionesConvocatoriaRepository>();
+                servicios.RemoveAll<IDisponibilidadRankingClient>();
+                servicios.RemoveAll<IProveedorMontoEstimadoBeca>();
                 servicios.RemoveAll<IPeriodoAcademicoClient>();
                 servicios.RemoveAll<ICatalogoAcademicoClient>();
                 servicios.RemoveAll<IConvocatoriaEvaluacionClient>();
@@ -403,6 +407,10 @@ public sealed class ExcepcionEvaluadorUnicoControllerTests : IClassFixture<WebAp
                 servicios.AddSingleton(Substitute.For<IResultadoConsolidadoRepository>());
                 servicios.AddSingleton(Substitute.For<IConsultaDatosConsolidacionRepository>());
                 servicios.AddSingleton(Substitute.For<IProveedorParametrosConsolidacion>());
+                servicios.AddSingleton(Substitute.For<IRankingConvocatoriaRepository>());
+                servicios.AddSingleton(Substitute.For<IConsultaEstadoEvaluacionesConvocatoriaRepository>());
+                servicios.AddSingleton(Substitute.For<IDisponibilidadRankingClient>());
+                servicios.AddSingleton(Substitute.For<IProveedorMontoEstimadoBeca>());
                 servicios.AddSingleton(Substitute.For<IPeriodoAcademicoClient>());
                 servicios.AddSingleton(Substitute.For<ICatalogoAcademicoClient>());
                 servicios.AddSingleton(Substitute.For<IConvocatoriaEvaluacionClient>());

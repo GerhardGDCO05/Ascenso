@@ -946,6 +946,10 @@ public sealed class EvaluacionesControllerTests : IClassFixture<WebApplicationFa
                 servicios.RemoveAll<IResultadoConsolidadoRepository>();
                 servicios.RemoveAll<IConsultaDatosConsolidacionRepository>();
                 servicios.RemoveAll<IProveedorParametrosConsolidacion>();
+                servicios.RemoveAll<IRankingConvocatoriaRepository>();
+                servicios.RemoveAll<IConsultaEstadoEvaluacionesConvocatoriaRepository>();
+                servicios.RemoveAll<IDisponibilidadRankingClient>();
+                servicios.RemoveAll<IProveedorMontoEstimadoBeca>();
                 servicios.RemoveAll<IBloqueadorRubricaEvaluacion>();
                 servicios.RemoveAll<IPeriodoAcademicoClient>();
                 servicios.RemoveAll<ICatalogoAcademicoClient>();
@@ -977,6 +981,10 @@ public sealed class EvaluacionesControllerTests : IClassFixture<WebApplicationFa
                 servicios.AddSingleton(Substitute.For<IResultadoConsolidadoRepository>());
                 servicios.AddSingleton(Substitute.For<IConsultaDatosConsolidacionRepository>());
                 servicios.AddSingleton(Substitute.For<IProveedorParametrosConsolidacion>());
+                servicios.AddSingleton(Substitute.For<IRankingConvocatoriaRepository>());
+                servicios.AddSingleton(Substitute.For<IConsultaEstadoEvaluacionesConvocatoriaRepository>());
+                servicios.AddSingleton(Substitute.For<IDisponibilidadRankingClient>());
+                servicios.AddSingleton(Substitute.For<IProveedorMontoEstimadoBeca>());
                 servicios.AddSingleton(bloqueadorRubrica ?? Substitute.For<IBloqueadorRubricaEvaluacion>());
                 servicios.AddSingleton(Substitute.For<IPeriodoAcademicoClient>());
                 servicios.AddSingleton(Substitute.For<ICatalogoAcademicoClient>());

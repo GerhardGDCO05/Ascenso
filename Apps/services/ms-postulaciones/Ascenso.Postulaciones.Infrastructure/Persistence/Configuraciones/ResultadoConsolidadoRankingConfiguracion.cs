@@ -37,12 +37,22 @@ internal sealed class ResultadoConsolidadoRankingConfiguracion : IEntityTypeConf
             tabla.HasCheckConstraint(
                 "ck_resultados_consolidados_revision_coherente",
                 "(discrepancia_revisada = false AND comentario_revision_discrepancia IS NULL AND revisado_por_usuario_id IS NULL AND fecha_revision_discrepancia IS NULL) OR (discrepancia_revisada = true AND alerta_discrepancia = true AND comentario_revision_discrepancia IS NOT NULL AND length(btrim(comentario_revision_discrepancia)) > 0 AND revisado_por_usuario_id IS NOT NULL AND fecha_revision_discrepancia IS NOT NULL)");
+            tabla.HasCheckConstraint(
+                "ck_resultados_consolidados_clasificacion_valida",
+                $"clasificacion IS NULL OR clasificacion IN ({ConfiguracionPersistencia.ValoresSql<ClasificacionRanking>()})");
+            tabla.HasCheckConstraint(
+                "ck_resultados_consolidados_ranking_campos_rango",
+                "(posicion_ranking IS NULL OR posicion_ranking >= 1) AND (monto_estimado_beca IS NULL OR monto_estimado_beca > 0)");
+            tabla.HasCheckConstraint(
+                "ck_resultados_consolidados_confirmacion_coherente",
+                "(estado_confirmacion_ranking = 'PROVISIONAL' AND posicion_ranking IS NULL AND monto_estimado_beca IS NULL AND clasificacion IS NULL AND fecha_confirmacion_ranking IS NULL AND confirmado_por_usuario_id IS NULL) OR (estado_confirmacion_ranking = 'CONFIRMADO' AND posicion_ranking IS NOT NULL AND monto_estimado_beca IS NOT NULL AND clasificacion IS NOT NULL AND fecha_confirmacion_ranking IS NOT NULL AND confirmado_por_usuario_id IS NOT NULL) OR estado_confirmacion_ranking NOT IN ('PROVISIONAL', 'CONFIRMADO')");
         });
 
         builder.HasKey(resultado => resultado.Id)
             .HasName("pk_resultados_consolidados_ranking");
 
         builder.Ignore(resultado => resultado.EventosDominio);
+        builder.Ignore(resultado => resultado.EsAdjudicable);
 
         ConfiguracionPersistencia.ConfigurarEntidadAuditable(builder);
 
@@ -122,9 +132,39 @@ internal sealed class ResultadoConsolidadoRankingConfiguracion : IEntityTypeConf
             .HasColumnType("timestamptz")
             .IsRequired();
 
+        builder.Property(resultado => resultado.PosicionRanking)
+            .HasColumnName("posicion_ranking")
+            .HasColumnType("integer");
+
+        builder.Property(resultado => resultado.MontoEstimadoBeca)
+            .HasColumnName("monto_estimado_beca")
+            .HasPrecision(12, 2);
+
+        builder.Property(resultado => resultado.Clasificacion)
+            .HasColumnName("clasificacion")
+            .ComoCodigoEnumOpcional()
+            .HasMaxLength(20);
+
+        builder.Property(resultado => resultado.FechaConfirmacionRanking)
+            .HasColumnName("fecha_confirmacion_ranking")
+            .HasColumnType("timestamptz");
+
+        builder.Property(resultado => resultado.ConfirmadoPorUsuarioId)
+            .HasColumnName("confirmado_por_usuario_id")
+            .HasColumnType("uuid");
+
         builder.HasIndex(resultado => resultado.PostulacionId)
             .IsUnique()
             .HasDatabaseName("ux_resultados_consolidados_ranking_postulacion");
+
+        builder.HasIndex(resultado => new
+        {
+            resultado.ConvocatoriaId,
+            resultado.PosicionRanking
+        })
+            .IsUnique()
+            .HasFilter("posicion_ranking IS NOT NULL")
+            .HasDatabaseName("ux_resultados_consolidados_ranking_convocatoria_posicion");
 
         builder.HasIndex(resultado => new
         {
