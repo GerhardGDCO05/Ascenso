@@ -31,8 +31,9 @@
 - [x] **RF-08**: Registro de puntuaciones y comentarios
   - [x] HU 8.1: Registro de puntuaciones y comentarios de evaluadores sobre postulaciones asignadas (2026-11-25)
   - [x] HU 8.2: Visibilidad post-cierre entre coevaluadores y validación del cierre del periodo de revisión (2026-11-25)
-- [ ] **RF-09**: Consolidación y ranking de postulantes
+- [x] **RF-09**: Consolidación y ranking de postulantes
   - [x] HU 9.1: Consolidación automática de puntuaciones definitivas, alertas de discrepancia y excepción de evaluador único (2026-11-26)
+  - [x] HU 9.2: Ranking de postulantes, línea de corte por cupo/presupuesto y confirmación final (2026-11-26)
 - [ ] **RF-10**: Resolución de empates y casos límite / Lista de espera
 - [ ] **RF-39**: Registro de conflictos de interés
 
