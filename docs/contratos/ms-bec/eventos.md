@@ -37,9 +37,22 @@ Los exchanges se nombran `Ascenso.Becas:<nombre-del-payload>`.
 | `CompromisoBecarioCargado` | `becaId`, `compromisoId`, `numeroIntentoCarga`, `estadoCompromiso` |
 | `CompromisoBecarioAprobado` | `becaId`, `compromisoId`, `estadoCompromiso` |
 | `CompromisoBecarioRechazado` | `becaId`, `compromisoId`, `estadoCompromiso` |
+| `DesembolsoProgramado` | `becaId`, `calendarioId`, `desembolsoId` |
+| `DesembolsoConfirmadoConOTP` | `becaId`, `calendarioId`, `desembolsoId` |
+| `DesembolsoFallido` | `becaId`, `calendarioId`, `desembolsoId` |
+| `DesembolsoDevuelto` | `becaId`, `calendarioId`, `desembolsoId` |
+| `DesembolsoReintentado` | `becaId`, `calendarioId`, `desembolsoId` |
+| `DesembolsoCancelado` | `becaId`, `calendarioId`, `desembolsoId`; se encola al cancelar una cuota por revocación |
+| `DesembolsosBecaSuspendidos` | `becaId`, `suspensionId`, `programaBecaId`, `periodoAcademicoId`, `saldoPendiente`; se encola al suspender la beca |
+| `DesembolsosBecaReanudados` | `becaId`, `suspensionId`, `programaBecaId`, `periodoAcademicoId`, `saldoPendiente`; se encola al reanudar la beca |
+| `BecaRevocadaDefinitivamente` | `becaId`, `programaBecaId`, `periodoAcademicoId`, `estadoBeca`, `tipoCierre`; se encola al revocar definitivamente |
 
 El payload representa el estado resultante; las transiciones de oferta y beca
 se publican mediante Outbox.
+`DesembolsosBecaSuspendidos`, `DesembolsosBecaReanudados` y
+`BecaRevocadaDefinitivamente` informan los cambios de estado. Los movimientos
+de saldo y cupo en MS-PRG requieren la llamada REST idempotente de 17.6; estos
+eventos no ejecutan movimientos presupuestarios.
 
 ## Consumidos desde MS-PRG
 

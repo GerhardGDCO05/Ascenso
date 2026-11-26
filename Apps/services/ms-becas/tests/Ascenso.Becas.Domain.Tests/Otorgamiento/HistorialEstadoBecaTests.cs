@@ -51,7 +51,7 @@ public sealed class HistorialEstadoBecaTests
         var beca = PruebasOtorgamiento.CrearBecaActiva();
         var contador = beca.Historial.Count;
 
-        beca.Suspender(PruebasOtorgamiento.Contexto(
+        PruebasOtorgamiento.Suspender(beca, PruebasOtorgamiento.Contexto(
             PruebasOtorgamiento.FechaBase.AddDays(5),
             Justificacion));
         Assert.Equal(contador + 1, beca.Historial.Count);

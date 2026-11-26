@@ -123,6 +123,25 @@ public static class RegistroMensajeria
         transporte.Message<EventoIntegracion<CompromisoBecarioRechazado>>(
             mensaje => mensaje.SetEntityName(
                 NombresMensajeria.IntercambioSalida(nameof(CompromisoBecarioRechazado))));
+
+        transporte.Message<EventoIntegracion<DesembolsoProgramado>>(
+            mensaje => mensaje.SetEntityName(NombresMensajeria.IntercambioSalida(nameof(DesembolsoProgramado))));
+        transporte.Message<EventoIntegracion<DesembolsoConfirmadoConOTP>>(
+            mensaje => mensaje.SetEntityName(NombresMensajeria.IntercambioSalida(nameof(DesembolsoConfirmadoConOTP))));
+        transporte.Message<EventoIntegracion<DesembolsoFallido>>(
+            mensaje => mensaje.SetEntityName(NombresMensajeria.IntercambioSalida(nameof(DesembolsoFallido))));
+        transporte.Message<EventoIntegracion<DesembolsoDevuelto>>(
+            mensaje => mensaje.SetEntityName(NombresMensajeria.IntercambioSalida(nameof(DesembolsoDevuelto))));
+        transporte.Message<EventoIntegracion<DesembolsoReintentado>>(
+            mensaje => mensaje.SetEntityName(NombresMensajeria.IntercambioSalida(nameof(DesembolsoReintentado))));
+        transporte.Message<EventoIntegracion<DesembolsoCancelado>>(
+            mensaje => mensaje.SetEntityName(NombresMensajeria.IntercambioSalida(nameof(DesembolsoCancelado))));
+        transporte.Message<EventoIntegracion<DesembolsosBecaSuspendidos>>(
+            mensaje => mensaje.SetEntityName(NombresMensajeria.IntercambioSalida(nameof(DesembolsosBecaSuspendidos))));
+        transporte.Message<EventoIntegracion<DesembolsosBecaReanudados>>(
+            mensaje => mensaje.SetEntityName(NombresMensajeria.IntercambioSalida(nameof(DesembolsosBecaReanudados))));
+        transporte.Message<EventoIntegracion<BecaRevocadaDefinitivamente>>(
+            mensaje => mensaje.SetEntityName(NombresMensajeria.IntercambioSalida(nameof(BecaRevocadaDefinitivamente))));
     }
 
     private static void ConfigurarIntercambiosEntrada(IRabbitMqBusFactoryConfigurator transporte)

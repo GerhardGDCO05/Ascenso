@@ -6,6 +6,7 @@ using Ascenso.Becas.Infrastructure.Persistence.Consultas;
 using Ascenso.Becas.Infrastructure.Persistence.Proyecciones;
 using Ascenso.Becas.Infrastructure.Persistence.Repositorios;
 using Ascenso.Becas.Infrastructure.Persistence.UnidadDeTrabajo;
+using Ascenso.Becas.Infrastructure.Seguridad;
 using Ascenso.Becas.Infrastructure.Tiempo;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
@@ -33,6 +34,8 @@ public static class RegistroPersistencia
 
         servicios.AddScoped<IAlmacenIdempotencia, AlmacenIdempotencia>();
         servicios.AddScoped<IBecaRepository, BecaRepository>();
+        servicios.AddScoped<ICalendarioDesembolsoRepository, CalendarioDesembolsoRepository>();
+        servicios.AddScoped<IDatosPagoBecarioRepository, DatosPagoBecarioRepository>();
         servicios.AddScoped<IOfertaBecaRepository, OfertaBecaRepository>();
         servicios.AddScoped<ICompromisoBecarioRepository, CompromisoBecarioRepository>();
         servicios.AddScoped<IUnitOfWork, UnidadDeTrabajo>();
@@ -41,6 +44,8 @@ public static class RegistroPersistencia
         servicios.AddScoped<IConsultasBeca, ConsultasBeca>();
         servicios.AddScoped<ActualizadorProyeccionesRef>();
         servicios.AddSingleton<IClock, RelojSistema>();
+        servicios.AddSingleton<ICifradorCuentaBancaria>(_ =>
+            CifradorCuentaBancariaAesGcm.DesdeSecretoDeEntorno("BECAS_CUENTAS_AES_KEY_B64"));
 
         return servicios;
     }

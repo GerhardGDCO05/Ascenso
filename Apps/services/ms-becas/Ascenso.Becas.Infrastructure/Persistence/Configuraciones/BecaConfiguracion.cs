@@ -186,6 +186,16 @@ internal sealed class BecaConfiguracion : IEntityTypeConfiguration<Beca>
             .HasField("_historial")
             .UsePropertyAccessMode(PropertyAccessMode.Field);
 
+        builder.HasMany(beca => beca.Suspensiones)
+            .WithOne()
+            .HasForeignKey(suspension => suspension.BecaId)
+            .HasConstraintName("fk_suspension_desembolso_beca")
+            .OnDelete(DeleteBehavior.Cascade);
+
+        builder.Navigation(beca => beca.Suspensiones)
+            .HasField("_suspensiones")
+            .UsePropertyAccessMode(PropertyAccessMode.Field);
+
         builder.HasIndex(beca => beca.CodigoBeca)
             .IsUnique()
             .HasDatabaseName("ux_beca_codigo");

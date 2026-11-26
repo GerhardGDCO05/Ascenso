@@ -8,13 +8,14 @@ using Ascenso.Becas.Domain.Ports;
 namespace Ascenso.Becas.Infrastructure.Clientes;
 
 /// <summary>
-/// Cliente de <c>MS-POS</c> para consultar la adjudicabilidad de una
-/// postulación. Propaga <c>X-Correlation-Id</c>, aplica el timeout del
-/// <see cref="HttpClient"/> y traduce el <c>404</c> al código interno
-/// <c>POSTULACION_NO_ENCONTRADA</c>.
+/// Cliente de <c>MS-POS</c> para consultar la adjudicabilidad y marcar una
+/// postulación como otorgada. Propaga <c>X-Correlation-Id</c>, aplica el
+/// timeout del <see cref="HttpClient"/> y traduce los rechazos del proveedor.
 /// </summary>
 public sealed class PostulacionesClient : IPostulacionesClient
 {
+    public const string EncabezadoIdempotencia = "Idempotency-Key";
+
     private readonly HttpClient _cliente;
     private readonly ICorrelacionContexto _correlacion;
 
@@ -103,6 +104,112 @@ public sealed class PostulacionesClient : IPostulacionesClient
             resultado.NumeroDocumentoEstudiante ?? string.Empty,
             resultado.ConvocatoriaOrigenId,
             resultado.MotivoNoAdjudicable);
+    }
+
+    public async Task OtorgarAsync(
+        Guid postulacionId,
+        Guid ofertaId,
+        CancellationToken cancellationToken = default)
+    {
+        if (postulacionId == Guid.Empty)
+        {
+            throw new ArgumentException(
+                "El identificador de la postulación es obligatorio.",
+                nameof(postulacionId));
+        }
+
+        if (ofertaId == Guid.Empty)
+        {
+            throw new ArgumentException(
+                "El identificador de la oferta es obligatorio.",
+                nameof(ofertaId));
+        }
+
+        using var solicitud = SolicitudIntegracion.Crear(
+            HttpMethod.Post,
+            $"internal/v1/postulaciones/{postulacionId}/otorgar",
+            _correlacion);
+
+        solicitud.Headers.TryAddWithoutValidation(
+            EncabezadoIdempotencia,
+            $"otorgar-{ofertaId}");
+
+        using var respuesta = await _cliente.SendAsync(
+            solicitud,
+            HttpCompletionOption.ResponseHeadersRead,
+            cancellationToken);
+
+        if (respuesta.StatusCode is HttpStatusCode.Conflict
+            or HttpStatusCode.UnprocessableEntity)
+        {
+            var cuerpo = await SolicitudIntegracion.LeerCuerpoAsync(
+                respuesta,
+                cancellationToken);
+            var error = LeerError(cuerpo);
+            var estado = (int)respuesta.StatusCode;
+
+            throw new PostulacionOtorgamientoRechazadaException(
+                string.IsNullOrWhiteSpace(error.Codigo)
+                    ? estado == 409
+                        ? "POSTULACION_NO_TRANSICIONABLE"
+                        : "POSTULACION_NO_OTORGABLE"
+                    : error.Codigo,
+                string.IsNullOrWhiteSpace(error.Mensaje)
+                    ? "MS-POS rechazó el otorgamiento de la postulación."
+                    : error.Mensaje,
+                estado);
+        }
+
+        if (!respuesta.IsSuccessStatusCode)
+        {
+            throw new HttpRequestException(
+                $"MS-POS respondió {(int)respuesta.StatusCode} al otorgar la postulación.",
+                inner: null,
+                respuesta.StatusCode);
+        }
+    }
+
+    private static ErrorIntegracion LeerError(string cuerpo)
+    {
+        if (string.IsNullOrWhiteSpace(cuerpo))
+        {
+            return new ErrorIntegracion(null, null);
+        }
+
+        try
+        {
+            var error = JsonSerializer.Deserialize<RespuestaError>(
+                cuerpo,
+                SolicitudIntegracion.OpcionesJson);
+
+            return new ErrorIntegracion(
+                error?.Codigo ?? error?.Code,
+                error?.Mensaje ?? error?.Message ?? error?.Detail);
+        }
+        catch (JsonException)
+        {
+            return new ErrorIntegracion(null, null);
+        }
+    }
+
+    private sealed record ErrorIntegracion(string? Codigo, string? Mensaje);
+
+    private sealed record RespuestaError
+    {
+        [JsonPropertyName("codigo")]
+        public string? Codigo { get; init; }
+
+        [JsonPropertyName("code")]
+        public string? Code { get; init; }
+
+        [JsonPropertyName("mensaje")]
+        public string? Mensaje { get; init; }
+
+        [JsonPropertyName("message")]
+        public string? Message { get; init; }
+
+        [JsonPropertyName("detail")]
+        public string? Detail { get; init; }
     }
 
     private sealed record RespuestaAdjudicabilidad

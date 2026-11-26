@@ -12,9 +12,15 @@ public sealed class PostulacionesClientFalso : IPostulacionesClient
 
     public Exception? Error { get; set; }
 
+    public Exception? ErrorOtorgar { get; set; }
+
     public Guid? PostulacionSolicitada { get; private set; }
 
+    public (Guid PostulacionId, Guid OfertaId)? OtorgamientoSolicitado { get; private set; }
+
     public int Llamadas { get; private set; }
+
+    public int Otorgamientos { get; private set; }
 
     public Task<ResultadoAdjudicabilidad> ObtenerAdjudicabilidadAsync(
         Guid postulacionId,
@@ -31,5 +37,22 @@ public sealed class PostulacionesClientFalso : IPostulacionesClient
 
         return Task.FromResult(
             Resultado ?? throw new InvalidOperationException("La prueba no configuró el resultado de adjudicabilidad."));
+    }
+
+    public Task OtorgarAsync(
+        Guid postulacionId,
+        Guid ofertaId,
+        CancellationToken cancellationToken = default)
+    {
+        cancellationToken.ThrowIfCancellationRequested();
+        Otorgamientos++;
+        OtorgamientoSolicitado = (postulacionId, ofertaId);
+
+        if (ErrorOtorgar is not null)
+        {
+            throw ErrorOtorgar;
+        }
+
+        return Task.CompletedTask;
     }
 }

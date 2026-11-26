@@ -22,8 +22,13 @@
 - [ ] **RF-03**: Carga de documentos de soporte
 - [ ] **RF-04**: Verificación automática de elegibilidad básica
 - [ ] **RF-05**: Retiro voluntario de postulación
-- [ ] **RF-06**: Conformación de comités evaluadores
+- [x] **RF-06**: Conformación de comités evaluadores
+  - [x] HU 6.1: Conformación del comité evaluador por programa y convocatoria (2026-11-22)
+  - [x] HU 6.2: Asignación de postulaciones a evaluadores del comité (2026-11-24)
+  - [x] HU 6.3: Autorización de excepción de evaluador único por el coordinador (2026-11-24)
 - [ ] **RF-07**: Configuración de rúbricas de evaluación
+  - [x] HU 7.1: Gestión de criterios, pesos porcentuales y publicación de rúbricas (2026-11-21)
+  - [x] HU 7.2: Bloqueo de rúbricas publicadas al iniciar evaluación o primera calificación (2026-11-22)
 - [ ] **RF-08**: Registro de puntuaciones y comentarios
 - [ ] **RF-09**: Consolidación y ranking de postulantes
 - [ ] **RF-10**: Resolución de empates y casos límite / Lista de espera
@@ -42,8 +47,8 @@
 
 *Otorgamiento, ciclo de vida de la beca, desembolsos y seguimiento académico.*
 
-- [x] **RF-15**: Emisión de carta de otorgamiento / Oferta
-- [x] **RF-16**: Aceptación o rechazo formal de la beca
+- [ ] **RF-15**: Emisión de carta de otorgamiento / Oferta (flujo base implementado; integraciones pendientes)
+- [ ] **RF-16**: Aceptación o rechazo formal de la beca (flujo base implementado; cierre de reserva pendiente)
 - [x] **RF-17**: Firma de compromiso del becario
 - [ ] **RF-19**: Programación de calendarios de desembolsos
 - [ ] **RF-20**: Registro y confirmación de pagos con OTP

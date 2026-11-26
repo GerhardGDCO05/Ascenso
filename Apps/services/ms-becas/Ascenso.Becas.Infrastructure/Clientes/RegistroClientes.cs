@@ -13,6 +13,7 @@ namespace Ascenso.Becas.Infrastructure.Clientes;
 /// </summary>
 public static class RegistroClientes
 {
+    private const int TimeoutMaximoSegundos = 3;
     private const string ClientePostulaciones = "postulaciones";
     private const string ClienteProgramas = "programas";
     private const string ClientePlataforma = "plataforma";
@@ -65,6 +66,11 @@ public static class RegistroClientes
                 proveedor.GetRequiredKeyedService<HttpClient>(ClienteProgramas),
                 proveedor.GetRequiredService<ICorrelacionContexto>()));
 
+        servicios.AddScoped<IPeriodosAcademicosClient>(proveedor =>
+            new PeriodosAcademicosClient(
+                proveedor.GetRequiredKeyedService<HttpClient>(ClientePlataforma),
+                proveedor.GetRequiredService<ICorrelacionContexto>()));
+
         servicios.AddScoped<IOtpClient>(proveedor =>
             new OtpClient(
                 proveedor.GetRequiredKeyedService<HttpClient>(ClientePlataforma),
@@ -95,14 +101,16 @@ public static class RegistroClientes
         return new HttpClient(handler)
         {
             BaseAddress = baseAddress,
-            Timeout = TimeSpan.FromSeconds(timeoutSegundos)
+            Timeout = TimeSpan.FromSeconds(
+                Math.Min(timeoutSegundos, TimeoutMaximoSegundos))
         };
     }
 
     private static HttpClient CrearClienteBase(int timeoutSegundos)
         => new(CrearHandler())
         {
-            Timeout = TimeSpan.FromSeconds(timeoutSegundos)
+            Timeout = TimeSpan.FromSeconds(
+                Math.Min(timeoutSegundos, TimeoutMaximoSegundos))
         };
 
     private static SocketsHttpHandler CrearHandler()

@@ -1,8 +1,10 @@
 using System.Collections;
+using Ascenso.Becas.Application.Desembolsos;
 using Ascenso.Becas.Application.Despacho;
 using Ascenso.Becas.Application.Otorgamiento.Comandos.AceptarOfertaBeca;
 using Ascenso.Becas.Application.Otorgamiento.Comandos.AnularOfertaBeca;
 using Ascenso.Becas.Application.Otorgamiento.Comandos.CargarCompromisoBecario;
+using Ascenso.Becas.Application.Otorgamiento.Comandos.CicloVidaBeca;
 using Ascenso.Becas.Application.Otorgamiento.Comandos.EmitirOfertaBeca;
 using Ascenso.Becas.Application.Otorgamiento.Comandos.ExpirarOfertaBeca;
 using Ascenso.Becas.Application.Otorgamiento.Comandos.RechazarOfertaBeca;
@@ -45,6 +47,12 @@ public sealed class RegistroAplicacionTests
         servicios.Should().Contain(descriptor =>
             descriptor.ServiceType == typeof(IValidator<RevisarCompromisoBecarioCommand>));
         servicios.Should().Contain(descriptor =>
+            descriptor.ServiceType == typeof(IValidator<SuspenderBecaCommand>));
+        servicios.Should().Contain(descriptor =>
+            descriptor.ServiceType == typeof(IValidator<ReanudarBecaCommand>));
+        servicios.Should().Contain(descriptor =>
+            descriptor.ServiceType == typeof(IValidator<RevocarBecaDefinitivamenteCommand>));
+        servicios.Should().Contain(descriptor =>
             descriptor.ServiceType == typeof(IValidator<ConsultarBecasActivasQuery>));
         servicios.Should().Contain(descriptor =>
             descriptor.ServiceType == typeof(IValidator<ObtenerOfertaQuery>));
@@ -74,11 +82,24 @@ public sealed class RegistroAplicacionTests
         servicios.Should().Contain(descriptor =>
             descriptor.ServiceType == typeof(ICommandHandler<RevisarCompromisoBecarioCommand, CompromisoRevisadoDto>));
         servicios.Should().Contain(descriptor =>
+            descriptor.ServiceType == typeof(ICommandHandler<SuspenderBecaCommand, Guid>));
+        servicios.Should().Contain(descriptor =>
+            descriptor.ServiceType == typeof(ICommandHandler<ReanudarBecaCommand, Guid>));
+        servicios.Should().Contain(descriptor =>
+            descriptor.ServiceType == typeof(ICommandHandler<RevocarBecaDefinitivamenteCommand>));
+        servicios.Should().Contain(descriptor =>
             descriptor.ServiceType == typeof(IQueryHandler<ObtenerOfertaQuery, OfertaBecaDto>));
         servicios.Should().Contain(descriptor =>
             descriptor.ServiceType == typeof(IQueryHandler<ObtenerBecaQuery, BecaDto>));
         servicios.Should().Contain(descriptor =>
             descriptor.ServiceType == typeof(IQueryHandler<ConsultarBecasActivasQuery, IReadOnlyList<BecaActivaDto>>));
+
+        foreach (var contrato in typeof(CasosUsoDesembolso).GetInterfaces())
+        {
+            servicios.Should().Contain(descriptor =>
+                descriptor.ServiceType == contrato
+                && descriptor.ImplementationType == typeof(CasosUsoDesembolso));
+        }
     }
 
     private sealed class ColeccionServicios : IServiceCollection

@@ -2,8 +2,10 @@ using Ascenso.Becas.Application.Comun;
 using Ascenso.Becas.Application.Despacho;
 using Ascenso.Becas.Application.Excepciones;
 using Ascenso.Becas.Application.Otorgamiento.Puertos;
+using Ascenso.Becas.Application.Otorgamiento.Servicios;
 using Ascenso.Becas.Domain.Otorgamiento.Agregados;
 using Ascenso.Becas.Domain.Ports;
+using Microsoft.Extensions.Logging;
 
 namespace Ascenso.Becas.Application.Otorgamiento.Comandos.RechazarOfertaBeca;
 
@@ -18,6 +20,8 @@ public sealed class RechazarOfertaBecaHandler : ICommandHandler<RechazarOfertaBe
     private readonly IBecaRepository _repositorio;
     private readonly IUnitOfWork _unidadDeTrabajo;
     private readonly IOutboxBeca _outbox;
+    private readonly IProgramadorExpiracionOfertas _programador;
+    private readonly ILogger<RechazarOfertaBecaHandler> _logger;
 
     public RechazarOfertaBecaHandler(
         IContextoOperacionActual contextoActual,
@@ -25,7 +29,9 @@ public sealed class RechazarOfertaBecaHandler : ICommandHandler<RechazarOfertaBe
         IMetricasOtorgamiento metricas,
         IBecaRepository repositorio,
         IUnitOfWork unidadDeTrabajo,
-        IOutboxBeca outbox)
+        IOutboxBeca outbox,
+        IProgramadorExpiracionOfertas programador,
+        ILogger<RechazarOfertaBecaHandler> logger)
     {
         _contextoActual = contextoActual ?? throw new ArgumentNullException(nameof(contextoActual));
         _reloj = reloj ?? throw new ArgumentNullException(nameof(reloj));
@@ -33,6 +39,8 @@ public sealed class RechazarOfertaBecaHandler : ICommandHandler<RechazarOfertaBe
         _repositorio = repositorio ?? throw new ArgumentNullException(nameof(repositorio));
         _unidadDeTrabajo = unidadDeTrabajo ?? throw new ArgumentNullException(nameof(unidadDeTrabajo));
         _outbox = outbox ?? throw new ArgumentNullException(nameof(outbox));
+        _programador = programador ?? throw new ArgumentNullException(nameof(programador));
+        _logger = logger ?? throw new ArgumentNullException(nameof(logger));
     }
 
     public async Task HandleAsync(
@@ -69,6 +77,11 @@ public sealed class RechazarOfertaBecaHandler : ICommandHandler<RechazarOfertaBe
             },
             cancellationToken);
 
+        await CanceladorExpiracionOferta.CancelarAsync(
+            _programador,
+            _logger,
+            command.OfertaId,
+            referencia.Oferta?.ReferenciaJobExpiracionHangfireId);
         _metricas.OfertaRechazada();
     }
 

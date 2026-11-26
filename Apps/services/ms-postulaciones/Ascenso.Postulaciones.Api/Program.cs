@@ -4,6 +4,7 @@ using Ascenso.Postulaciones.Application;
 using Ascenso.Postulaciones.Application.Interfaces;
 using Ascenso.Postulaciones.Infrastructure;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.IdentityModel.Tokens;
 using Microsoft.OpenApi;
 
@@ -72,7 +73,31 @@ builder.Services
         };
     });
 
-builder.Services.AddAuthorization();
+builder.Services.AddAuthorization(options =>
+{
+    options.AddPolicy(
+        PoliticasAutorizacionRubricas.CoordinadorPrograma,
+        policy => policy.RequireRole(PoliticasAutorizacionRubricas.RolCoordinadorPrograma));
+
+    options.AddPolicy(
+        PoliticasAutorizacionRubricas.LecturaRubrica,
+        policy => policy.RequireRole(
+            PoliticasAutorizacionRubricas.RolCoordinadorPrograma,
+            PoliticasAutorizacionRubricas.RolMiembroComite));
+
+    options.AddPolicy(
+        PoliticasAutorizacionComites.GestionComitesEvaluadores,
+        policy => policy.RequireRole(PoliticasAutorizacionComites.RolCoordinadorPrograma));
+
+    options.AddPolicy(
+        PoliticasAutorizacionAsignaciones.GestionAsignacionesEvaluacion,
+        policy => policy.RequireRole(PoliticasAutorizacionAsignaciones.RolCoordinadorPrograma));
+
+    options.AddPolicy(
+        PoliticasAutorizacionAsignaciones.ConsultaMisAsignaciones,
+        policy => policy.RequireRole(PoliticasAutorizacionAsignaciones.RolMiembroComite));
+});
+builder.Services.AddSingleton<IAuthorizationMiddlewareResultHandler, ManejadorResultadoAutorizacionRubricas>();
 
 builder.Services.AgregarAplicacionPostulaciones();
 
