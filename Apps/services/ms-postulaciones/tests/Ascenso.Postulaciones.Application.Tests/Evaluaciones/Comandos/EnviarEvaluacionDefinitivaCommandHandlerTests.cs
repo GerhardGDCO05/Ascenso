@@ -34,6 +34,8 @@ public sealed class EnviarEvaluacionDefinitivaCommandHandlerTests
     private readonly IUsuarioActual _usuarioActual = Substitute.For<IUsuarioActual>();
     private readonly IConsultaAsignacionParaEvaluacionRepository _asignacionRepository =
         Substitute.For<IConsultaAsignacionParaEvaluacionRepository>();
+    private readonly IConvocatoriaEvaluacionClient _convocatoriaClient =
+        Substitute.For<IConvocatoriaEvaluacionClient>();
     private readonly IEvaluacionRepository _evaluacionRepository =
         Substitute.For<IEvaluacionRepository>();
     private readonly IComiteEvaluadorRepository _comiteRepository =
@@ -49,6 +51,14 @@ public sealed class EnviarEvaluacionDefinitivaCommandHandlerTests
         _usuarioActual.EstaAutenticado.Returns(true);
         _usuarioActual.UsuarioId.Returns(_evaluadorId);
         _unitOfWork.GuardarCambiosAsync(Arg.Any<CancellationToken>()).Returns(Task.FromResult(1));
+        _convocatoriaClient
+            .ObtenerVentanaRevisionAsync(Arg.Any<Guid>(), Arg.Any<CancellationToken>())
+            .Returns(call => Task.FromResult<VentanaRevisionConvocatoria?>(
+                new VentanaRevisionConvocatoria(
+                    call.ArgAt<Guid>(0),
+                    EstadoConvocatoriaExterna.Publicada,
+                    _ahora.AddDays(-10),
+                    _fechaLimite.AddDays(10))));
     }
 
     [Fact]
@@ -203,6 +213,7 @@ public sealed class EnviarEvaluacionDefinitivaCommandHandlerTests
         => new(
             _usuarioActual,
             _asignacionRepository,
+            _convocatoriaClient,
             _evaluacionRepository,
             _comiteRepository,
             _rubricaRepository,

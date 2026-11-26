@@ -15,6 +15,7 @@ public sealed class GuardarBorradorEvaluacionCommandHandler
 {
     private readonly IUsuarioActual _usuarioActual;
     private readonly IConsultaAsignacionParaEvaluacionRepository _asignacionRepository;
+    private readonly IConvocatoriaEvaluacionClient _convocatoriaClient;
     private readonly IComiteEvaluadorRepository _comiteRepository;
     private readonly IConsultaRubricaParaEvaluacionRepository _rubricaRepository;
     private readonly IEvaluacionRepository _evaluacionRepository;
@@ -26,6 +27,7 @@ public sealed class GuardarBorradorEvaluacionCommandHandler
     public GuardarBorradorEvaluacionCommandHandler(
         IUsuarioActual usuarioActual,
         IConsultaAsignacionParaEvaluacionRepository asignacionRepository,
+        IConvocatoriaEvaluacionClient convocatoriaClient,
         IComiteEvaluadorRepository comiteRepository,
         IConsultaRubricaParaEvaluacionRepository rubricaRepository,
         IEvaluacionRepository evaluacionRepository,
@@ -36,6 +38,7 @@ public sealed class GuardarBorradorEvaluacionCommandHandler
     {
         _usuarioActual = usuarioActual ?? throw new ArgumentNullException(nameof(usuarioActual));
         _asignacionRepository = asignacionRepository ?? throw new ArgumentNullException(nameof(asignacionRepository));
+        _convocatoriaClient = convocatoriaClient ?? throw new ArgumentNullException(nameof(convocatoriaClient));
         _comiteRepository = comiteRepository ?? throw new ArgumentNullException(nameof(comiteRepository));
         _rubricaRepository = rubricaRepository ?? throw new ArgumentNullException(nameof(rubricaRepository));
         _evaluacionRepository = evaluacionRepository ?? throw new ArgumentNullException(nameof(evaluacionRepository));
@@ -64,6 +67,13 @@ public sealed class GuardarBorradorEvaluacionCommandHandler
             throw new EvaluacionConfidencialException();
         }
 
+        var ahora = _timeProvider.GetUtcNow();
+
+        var ventanaRevision = await _convocatoriaClient
+            .ObtenerVentanaRevisionAsync(asignacion.ConvocatoriaId, cancellationToken)
+            ?? throw new ConvocatoriaNoEncontradaException();
+        ventanaRevision.AsegurarPeriodoAbiertoParaEvaluacion(ahora);
+
         var comite = await _comiteRepository
             .ObtenerPorIdAsync(asignacion.ComiteEvaluadorId, cancellationToken)
             ?? throw new ComiteNoEncontradoException();
@@ -85,7 +95,6 @@ public sealed class GuardarBorradorEvaluacionCommandHandler
                 item.Comentario))
             .ToArray();
 
-        var ahora = _timeProvider.GetUtcNow();
         bool esCreacion;
 
         if (evaluacion is null)

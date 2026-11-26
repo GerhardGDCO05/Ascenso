@@ -13,6 +13,7 @@ public sealed class EnviarEvaluacionDefinitivaCommandHandler
 {
     private readonly IUsuarioActual _usuarioActual;
     private readonly IConsultaAsignacionParaEvaluacionRepository _asignacionRepository;
+    private readonly IConvocatoriaEvaluacionClient _convocatoriaClient;
     private readonly IEvaluacionRepository _evaluacionRepository;
     private readonly IComiteEvaluadorRepository _comiteRepository;
     private readonly IConsultaRubricaParaEvaluacionRepository _rubricaRepository;
@@ -24,6 +25,7 @@ public sealed class EnviarEvaluacionDefinitivaCommandHandler
     public EnviarEvaluacionDefinitivaCommandHandler(
         IUsuarioActual usuarioActual,
         IConsultaAsignacionParaEvaluacionRepository asignacionRepository,
+        IConvocatoriaEvaluacionClient convocatoriaClient,
         IEvaluacionRepository evaluacionRepository,
         IComiteEvaluadorRepository comiteRepository,
         IConsultaRubricaParaEvaluacionRepository rubricaRepository,
@@ -34,6 +36,7 @@ public sealed class EnviarEvaluacionDefinitivaCommandHandler
     {
         _usuarioActual = usuarioActual ?? throw new ArgumentNullException(nameof(usuarioActual));
         _asignacionRepository = asignacionRepository ?? throw new ArgumentNullException(nameof(asignacionRepository));
+        _convocatoriaClient = convocatoriaClient ?? throw new ArgumentNullException(nameof(convocatoriaClient));
         _evaluacionRepository = evaluacionRepository ?? throw new ArgumentNullException(nameof(evaluacionRepository));
         _comiteRepository = comiteRepository ?? throw new ArgumentNullException(nameof(comiteRepository));
         _rubricaRepository = rubricaRepository ?? throw new ArgumentNullException(nameof(rubricaRepository));
@@ -62,6 +65,13 @@ public sealed class EnviarEvaluacionDefinitivaCommandHandler
             throw new EvaluacionConfidencialException();
         }
 
+        var ahora = _timeProvider.GetUtcNow();
+
+        var ventanaRevision = await _convocatoriaClient
+            .ObtenerVentanaRevisionAsync(asignacion.ConvocatoriaId, cancellationToken)
+            ?? throw new ConvocatoriaNoEncontradaException();
+        ventanaRevision.AsegurarPeriodoAbiertoParaEvaluacion(ahora);
+
         var evaluacion = await _evaluacionRepository
             .ObtenerParaActualizarPorAsignacionAsync(asignacion.Id, cancellationToken)
             ?? throw new EvaluacionNoEncontradaException();
@@ -76,8 +86,6 @@ public sealed class EnviarEvaluacionDefinitivaCommandHandler
                 comite.ConvocatoriaId,
                 cancellationToken)
             ?? throw new RubricaNoEncontradaException();
-
-        var ahora = _timeProvider.GetUtcNow();
 
         evaluacion.EnviarDefinitiva(
             rubrica,

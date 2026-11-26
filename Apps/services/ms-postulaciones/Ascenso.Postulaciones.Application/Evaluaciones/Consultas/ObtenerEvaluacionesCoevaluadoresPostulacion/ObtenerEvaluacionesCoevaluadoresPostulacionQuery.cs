@@ -1,0 +1,3 @@
+namespace Ascenso.Postulaciones.Application.Evaluaciones.Consultas.ObtenerEvaluacionesCoevaluadoresPostulacion;
+
+public sealed record class ObtenerEvaluacionesCoevaluadoresPostulacionQuery(Guid PostulacionId);
