@@ -19,4 +19,9 @@ public sealed record class DetalleResultadoConsolidadoDto(
     string EstadoConfirmacionRanking,
     DateTimeOffset FechaConsolidacion,
     int Version,
-    IReadOnlyList<NotaEvaluacionIndividualDto> Evaluaciones);
+    IReadOnlyList<NotaEvaluacionIndividualDto> Evaluaciones,
+    int? PosicionRanking = null,
+    decimal? MontoEstimadoBeca = null,
+    string? Clasificacion = null,
+    DateTimeOffset? FechaConfirmacionRanking = null,
+    Guid? ConfirmadoPorUsuarioId = null);

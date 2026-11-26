@@ -28,7 +28,12 @@ public static class ConsolidacionMapeador
             resultado.FechaRevisionDiscrepancia,
             resultado.EstadoConfirmacionRanking.ACodigo(),
             resultado.FechaConsolidacion,
-            resultado.Version);
+            resultado.Version,
+            resultado.PosicionRanking,
+            resultado.MontoEstimadoBeca,
+            resultado.Clasificacion?.ACodigo(),
+            resultado.FechaConfirmacionRanking,
+            resultado.ConfirmadoPorUsuarioId);
     }
 
     public static NotaEvaluacionIndividualDto ANotaIndividualDto(this Evaluacion evaluacion)
@@ -88,6 +93,11 @@ public static class ConsolidacionMapeador
             resultado.EstadoConfirmacionRanking.ACodigo(),
             resultado.FechaConsolidacion,
             resultado.Version,
-            notasOrdenadas);
+            notasOrdenadas,
+            resultado.PosicionRanking,
+            resultado.MontoEstimadoBeca,
+            resultado.Clasificacion?.ACodigo(),
+            resultado.FechaConfirmacionRanking,
+            resultado.ConfirmadoPorUsuarioId);
     }
 }
