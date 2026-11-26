@@ -96,6 +96,14 @@ builder.Services.AddAuthorization(options =>
     options.AddPolicy(
         PoliticasAutorizacionAsignaciones.ConsultaMisAsignaciones,
         policy => policy.RequireRole(PoliticasAutorizacionAsignaciones.RolMiembroComite));
+
+    options.AddPolicy(
+        PoliticasAutorizacionEvaluaciones.GestionMisEvaluaciones,
+        policy => policy.RequireRole(PoliticasAutorizacionEvaluaciones.RolMiembroComite));
+
+    options.AddPolicy(
+        PoliticasAutorizacionEvaluaciones.SupervisionEvaluaciones,
+        policy => policy.RequireRole(PoliticasAutorizacionEvaluaciones.RolCoordinadorPrograma));
 });
 builder.Services.AddSingleton<IAuthorizationMiddlewareResultHandler, ManejadorResultadoAutorizacionRubricas>();
 

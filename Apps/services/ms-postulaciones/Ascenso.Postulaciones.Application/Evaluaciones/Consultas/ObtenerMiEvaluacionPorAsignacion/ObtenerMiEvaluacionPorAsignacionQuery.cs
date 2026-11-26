@@ -1,0 +1,3 @@
+namespace Ascenso.Postulaciones.Application.Evaluaciones.Consultas.ObtenerMiEvaluacionPorAsignacion;
+
+public sealed record class ObtenerMiEvaluacionPorAsignacionQuery(Guid AsignacionEvaluacionId);

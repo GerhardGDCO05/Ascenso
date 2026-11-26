@@ -13,12 +13,11 @@
 
 ## 📝 MS-POS (Postulaciones y Evaluación)
 
-*Postulación, elegibilidad, comité y selección.*
+*Postulación, elegibilidad, comité y selección. MS-POS consume el contrato interno de lectura de convocatorias publicado por MS-PRG; no crea ni duplica el agregado.*
 
 - [x] **RF-01**: Registro de postulantes y perfil socioeconómico
   - [x] HU 1.1: Registro de datos personales y académicos base (2026-11-15)
   - [x] HU 1.2: Registro del perfil socioeconómico y grupo familiar (2026-11-19)
-- [ ] **RF-02**: Publicación de convocatorias
 - [ ] **RF-03**: Carga de documentos de soporte
 - [ ] **RF-04**: Verificación automática de elegibilidad básica
 - [ ] **RF-05**: Retiro voluntario de postulación
@@ -30,14 +29,16 @@
   - [x] HU 7.1: Gestión de criterios, pesos porcentuales y publicación de rúbricas (2026-11-21)
   - [x] HU 7.2: Bloqueo de rúbricas publicadas al iniciar evaluación o primera calificación (2026-11-22)
 - [ ] **RF-08**: Registro de puntuaciones y comentarios
+  - [x] HU 8.1: Registro de puntuaciones y comentarios de evaluadores sobre postulaciones asignadas (2026-11-25)
 - [ ] **RF-09**: Consolidación y ranking de postulantes
 - [ ] **RF-10**: Resolución de empates y casos límite / Lista de espera
 - [ ] **RF-39**: Registro de conflictos de interés
 
 ## 💼 MS-PRG (Programas y Presupuesto)
 
-*Programas, fondos, donantes, convenios y control presupuestario.*
+*Programas, fondos, donantes, convenios, control presupuestario y convocatorias.*
 
+- [x] **RF-02**: Creación, configuración y publicación de convocatorias (HU 2.1; contrato de lectura consumido por MS-POS)
 - [x] **RF-11**: Registro y configuración de programas de becas
 - [x] **RF-12**: Gestión de presupuesto y disponibilidad de cupos
 - [x] **RF-13**: Alta y gestión de donantes / aportes

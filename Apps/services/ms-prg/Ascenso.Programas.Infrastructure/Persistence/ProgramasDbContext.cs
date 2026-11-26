@@ -1,3 +1,5 @@
+using Ascenso.Programas.Domain.Convocatorias.Agregados;
+using Ascenso.Programas.Domain.Convocatorias.Entidades;
 using Ascenso.Programas.Domain.Donantes.Agregados;
 using Ascenso.Programas.Domain.Donantes.Entidades;
 using Ascenso.Programas.Domain.Excepciones;
@@ -44,6 +46,10 @@ public sealed class ProgramasDbContext : DbContext, IUnitOfWork
 
     public DbSet<MovimientoPresupuestario> MovimientosPresupuestarios => Set<MovimientoPresupuestario>();
 
+    public DbSet<Convocatoria> Convocatorias => Set<Convocatoria>();
+
+    public DbSet<DocumentoRequerido> DocumentosRequeridos => Set<DocumentoRequerido>();
+
     public async Task<int> GuardarCambiosAsync(CancellationToken cancellationToken = default)
     {
         try
@@ -85,6 +91,11 @@ public sealed class ProgramasDbContext : DbContext, IUnitOfWork
             if (string.Equals(pg.ConstraintName, "ux_reserva_presupuestaria_programa_referencia", StringComparison.OrdinalIgnoreCase))
             {
                 throw new ReservaConParametrosDistintosException(Guid.Empty, Guid.Empty);
+            }
+
+            if (string.Equals(pg.ConstraintName, "ux_convocatoria_codigo", StringComparison.OrdinalIgnoreCase))
+            {
+                throw new CodigoConvocatoriaDuplicadoException(pg.Detail ?? "duplicado");
             }
 
             throw;

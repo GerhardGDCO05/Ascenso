@@ -40,6 +40,9 @@ public static class DependencyInjection
         services.AddScoped<IComiteEvaluadorRepository, ComiteEvaluadorRepository>();
         services.AddScoped<IAsignacionEvaluacionRepository, AsignacionEvaluacionRepository>();
         services.AddScoped<IExcepcionEvaluadorUnicoRepository, ExcepcionEvaluadorUnicoRepository>();
+        services.AddScoped<IEvaluacionRepository, EvaluacionRepository>();
+        services.AddScoped<IConsultaAsignacionParaEvaluacionRepository, ConsultaAsignacionParaEvaluacionRepository>();
+        services.AddScoped<IConsultaRubricaParaEvaluacionRepository, ConsultaRubricaParaEvaluacionRepository>();
 
         if (configuration is not null)
         {

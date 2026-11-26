@@ -1,4 +1,6 @@
+using Ascenso.Programas.Api.Configuracion;
 using Ascenso.Programas.Api.Middlewares;
+using Ascenso.Programas.Api.Seguridad;
 using Ascenso.Programas.Application;
 using Ascenso.Programas.Infrastructure;
 using Ascenso.Programas.Infrastructure.Persistence;
@@ -10,13 +12,15 @@ builder.Services.AddControllers();
 builder.Services.AddOpenApi();
 builder.Services.AddProblemDetails();
 builder.Services.AddExceptionHandler<ManejadorExcepcionesDominio>();
+builder.Services.AgregarSeguridadProgramas(builder.Configuration);
 
 builder.Services.AgregarAplicacionProgramas();
 
 var cadenaConexionProgramas = builder.Configuration.GetConnectionString("Programas");
 if (!string.IsNullOrWhiteSpace(cadenaConexionProgramas))
 {
-    builder.Services.AgregarInfraestructuraProgramas(cadenaConexionProgramas);
+    builder.Services.AgregarInfraestructuraProgramas(cadenaConexionProgramas, builder.Configuration);
+    builder.Services.AgregarHangfireProgramas(cadenaConexionProgramas, builder.Configuration);
 }
 
 var allowedOrigins = builder.Configuration
@@ -50,9 +54,11 @@ if (app.Environment.IsDevelopment())
 }
 
 app.UseCors("Frontend");
+app.UseAuthentication();
 app.UseAuthorization();
 
 app.MapControllers();
+app.UsarHangfireProgramas();
 
 app.Run();
 
