@@ -17,4 +17,7 @@ public sealed record DatosReporteAcademico(
     string TipoMimeComprobante,
     FuenteReporte FuenteEntrega,
     Guid UniversidadAliadaId,
-    DateOnly FechaLimitePeriodo);
+    DateOnly FechaLimitePeriodo,
+    int? HorasServicioCumplidas = null,
+    string? UrlComprobanteServicio = null,
+    string? HashComprobanteServicioSha256 = null);

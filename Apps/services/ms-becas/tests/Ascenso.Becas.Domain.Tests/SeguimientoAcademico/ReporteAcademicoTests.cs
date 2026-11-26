@@ -75,9 +75,9 @@ public sealed class ReporteAcademicoTests
 
         Assert.Throws<InvalidOperationException>(() => reporte.ResolverRevision(true, revisor));
         reporte.IniciarRevision(revisor);
-        reporte.ResolverRevision(true, revisor);
+        reporte.ResolverRevision(false, revisor);
 
-        Assert.Equal(EstadoReporteAcademico.Aprobado, reporte.Estado);
+        Assert.Equal(EstadoReporteAcademico.Rechazado, reporte.Estado);
         Assert.Equal(revisor.UsuarioAutorId, reporte.RevisadoPorUsuarioId);
         Assert.Equal(revisor.Fecha, reporte.FechaRevision);
     }

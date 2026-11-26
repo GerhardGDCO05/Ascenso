@@ -37,6 +37,8 @@ El DDD V7 nombra `EstadoMatricula`, `FuenteReporte`, `EstadoReporteAcademico`, `
 
 `ReporteAcademico` mantiene la URI inmutable `gs://` del comprobante PDF y los metadatos SHA-256, tamaño y MIME exigidos por la política de archivos del DDD; no almacena el binario. El promedio usa escala 0–20 con dos decimales. Las materias y créditos no pueden ser negativos; los créditos aprobados requieren alguna materia aprobada y una matrícula no vigente no puede declarar materias en curso. La entrega tardía compara la fecha UTC de recepción con la fecha límite del periodo. El estado comienza en `ENTREGADO` y la revisión explícita pasa por `EN_REVISION` antes de `APROBADO` o `RECHAZADO`.
 
+Para resolver la condición `HORAS_SERVICIO_POR_PERIODO`, el reporte añade las horas cumplidas y, si son positivas, una referencia `gs://` y hash SHA-256 del comprobante. La evaluación falla cerrada si se exigen horas y no se declara el valor. `EvaluacionPermanencia` es hija del reporte; compara las cuatro condiciones del snapshot de `OfertaBeca`, recomienda la consecuencia configurada si hay incumplimiento y registra por separado la decisión del coordinador y la aplicación efectiva. El contrato local se detalla en `docs/contratos/ms-bec/seguimiento-academico.md`.
+
 ### 1. Solución, capas y reglas de dependencia
 
 Se crea `Ascenso.Becas.sln` con esta estructura:

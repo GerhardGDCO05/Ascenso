@@ -1,5 +1,7 @@
 using Ascenso.Becas.Domain.Otorgamiento.Agregados;
 using Ascenso.Becas.Domain.Otorgamiento.Entidades;
+using Ascenso.Becas.Domain.SeguimientoAcademico.Agregados;
+using Ascenso.Becas.Domain.SeguimientoAcademico.Entidades;
 using Ascenso.Becas.Infrastructure.Persistence.Modelos;
 using MassTransit;
 using Microsoft.EntityFrameworkCore;
@@ -26,6 +28,10 @@ public sealed class BecasDbContext : DbContext
     public DbSet<CompromisoBecario> CompromisosBecarios => Set<CompromisoBecario>();
 
     public DbSet<HistorialEstadoBeca> HistorialEstadosBeca => Set<HistorialEstadoBeca>();
+
+    public DbSet<ReporteAcademico> ReportesAcademicos => Set<ReporteAcademico>();
+
+    public DbSet<EvaluacionPermanencia> EvaluacionesPermanencia => Set<EvaluacionPermanencia>();
 
     public DbSet<ProgramaBecaRef> ProgramasBecaRef => Set<ProgramaBecaRef>();
 

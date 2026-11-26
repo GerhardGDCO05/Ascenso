@@ -553,6 +553,254 @@ namespace Ascenso.Becas.Infrastructure.Persistence.Migraciones
                         });
                 });
 
+            modelBuilder.Entity("Ascenso.Becas.Domain.SeguimientoAcademico.Agregados.ReporteAcademico", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid")
+                        .HasColumnName("id");
+
+                    b.Property<Guid>("BecaId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("beca_id");
+
+                    b.Property<int>("CreditosAprobados")
+                        .HasColumnType("integer")
+                        .HasColumnName("creditos_aprobados");
+
+                    b.Property<bool>("EntregaTardia")
+                        .HasColumnType("boolean")
+                        .HasColumnName("entrega_tardia");
+
+                    b.Property<string>("Estado")
+                        .IsRequired()
+                        .HasMaxLength(20)
+                        .HasColumnType("varchar")
+                        .HasColumnName("estado");
+
+                    b.Property<string>("EstadoMatricula")
+                        .IsRequired()
+                        .HasMaxLength(30)
+                        .HasColumnType("varchar")
+                        .HasColumnName("estado_matricula");
+
+                    b.Property<DateTimeOffset>("FechaCreacion")
+                        .HasColumnType("timestamptz")
+                        .HasColumnName("fecha_creacion");
+
+                    b.Property<DateTimeOffset>("FechaEntrega")
+                        .HasColumnType("timestamptz")
+                        .HasColumnName("fecha_entrega");
+
+                    b.Property<DateOnly>("FechaLimitePeriodo")
+                        .HasColumnType("date")
+                        .HasColumnName("fecha_limite_periodo");
+
+                    b.Property<DateTimeOffset?>("FechaRevision")
+                        .HasColumnType("timestamptz")
+                        .HasColumnName("fecha_revision");
+
+                    b.Property<DateTimeOffset>("FechaUltimaModificacion")
+                        .HasColumnType("timestamptz")
+                        .HasColumnName("fecha_ultima_modificacion");
+
+                    b.Property<string>("FuenteEntrega")
+                        .IsRequired()
+                        .HasMaxLength(20)
+                        .HasColumnType("varchar")
+                        .HasColumnName("fuente_entrega");
+
+                    b.Property<string>("HashComprobanteServicioSha256")
+                        .HasMaxLength(64)
+                        .HasColumnType("character varying(64)")
+                        .HasColumnName("hash_comprobante_servicio_sha256");
+
+                    b.Property<string>("HashComprobanteSha256")
+                        .IsRequired()
+                        .HasMaxLength(64)
+                        .HasColumnType("character varying(64)")
+                        .HasColumnName("hash_comprobante_sha256");
+
+                    b.Property<int?>("HorasServicioCumplidas")
+                        .HasColumnType("integer")
+                        .HasColumnName("horas_servicio_cumplidas");
+
+                    b.Property<int>("MateriasAprobadas")
+                        .HasColumnType("integer")
+                        .HasColumnName("materias_aprobadas");
+
+                    b.Property<int>("MateriasCursando")
+                        .HasColumnType("integer")
+                        .HasColumnName("materias_cursando");
+
+                    b.Property<int>("MateriasReprobadas")
+                        .HasColumnType("integer")
+                        .HasColumnName("materias_reprobadas");
+
+                    b.Property<Guid>("PeriodoAcademicoId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("periodo_academico_id");
+
+                    b.Property<decimal>("PromedioPeriodo")
+                        .HasPrecision(4, 2)
+                        .HasColumnType("numeric(4,2)")
+                        .HasColumnName("promedio_periodo");
+
+                    b.Property<Guid?>("RevisadoPorUsuarioId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("revisado_por_usuario_id");
+
+                    b.Property<long>("TamanioComprobanteBytes")
+                        .HasColumnType("bigint")
+                        .HasColumnName("tamanio_comprobante_bytes");
+
+                    b.Property<string>("TipoMimeComprobante")
+                        .IsRequired()
+                        .HasMaxLength(100)
+                        .HasColumnType("character varying(100)")
+                        .HasColumnName("tipo_mime_comprobante");
+
+                    b.Property<Guid>("UniversidadAliadaId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("universidad_aliada_id");
+
+                    b.Property<string>("UrlComprobanteNotasFirebase")
+                        .IsRequired()
+                        .HasMaxLength(2048)
+                        .HasColumnType("character varying(2048)")
+                        .HasColumnName("url_comprobante_notas_firebase");
+
+                    b.Property<string>("UrlComprobanteServicio")
+                        .HasMaxLength(2048)
+                        .HasColumnType("character varying(2048)")
+                        .HasColumnName("url_comprobante_servicio");
+
+                    b.Property<Guid>("UsuarioCreacionId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("usuario_creacion_id");
+
+                    b.Property<Guid>("UsuarioModificacionId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("usuario_modificacion_id");
+
+                    b.Property<int>("Version")
+                        .IsConcurrencyToken()
+                        .HasColumnType("integer")
+                        .HasColumnName("version");
+
+                    b.HasKey("Id")
+                        .HasName("pk_reporte_academico");
+
+                    b.HasIndex("BecaId", "PeriodoAcademicoId")
+                        .HasDatabaseName("ix_reporte_academico_beca_periodo");
+
+                    b.ToTable("reporte_academico", "becas", t =>
+                        {
+                            t.HasCheckConstraint("ck_reporte_academico_estado", "estado IN ('ENTREGADO', 'EN_REVISION', 'APROBADO', 'RECHAZADO')");
+
+                            t.HasCheckConstraint("ck_reporte_academico_estado_matricula", "estado_matricula IN ('MATRICULADO', 'NO_MATRICULADO', 'RETIRADO')");
+
+                            t.HasCheckConstraint("ck_reporte_academico_fuente", "fuente_entrega IN ('BECARIO', 'UNIVERSIDAD')");
+
+                            t.HasCheckConstraint("ck_reporte_academico_horas", "horas_servicio_cumplidas IS NULL OR horas_servicio_cumplidas >= 0");
+
+                            t.HasCheckConstraint("ck_reporte_academico_materias", "materias_aprobadas >= 0 AND materias_reprobadas >= 0 AND materias_cursando >= 0 AND creditos_aprobados >= 0");
+
+                            t.HasCheckConstraint("ck_reporte_academico_promedio", "promedio_periodo >= 0 AND promedio_periodo <= 20");
+                        });
+                });
+
+            modelBuilder.Entity("Ascenso.Becas.Domain.SeguimientoAcademico.Entidades.EvaluacionPermanencia", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid")
+                        .HasColumnName("id");
+
+                    b.Property<Guid>("BecaId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("beca_id");
+
+                    b.Property<string>("ConsecuenciaAplicada")
+                        .HasMaxLength(30)
+                        .HasColumnType("varchar")
+                        .HasColumnName("consecuencia_aplicada");
+
+                    b.Property<string>("ConsecuenciaRecomendada")
+                        .HasMaxLength(30)
+                        .HasColumnType("varchar")
+                        .HasColumnName("consecuencia_recomendada");
+
+                    b.Property<bool>("CumpleCondiciones")
+                        .HasColumnType("boolean")
+                        .HasColumnName("cumple_condiciones");
+
+                    b.Property<string>("EstadoConfirmacion")
+                        .IsRequired()
+                        .HasMaxLength(30)
+                        .HasColumnType("varchar")
+                        .HasColumnName("estado_confirmacion");
+
+                    b.Property<Guid?>("EvaluadoPorCoordinadorId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("evaluado_por_coordinador_id");
+
+                    b.Property<DateTimeOffset>("FechaCreacion")
+                        .HasColumnType("timestamptz")
+                        .HasColumnName("fecha_creacion");
+
+                    b.Property<DateTimeOffset>("FechaEvaluacion")
+                        .HasColumnType("timestamptz")
+                        .HasColumnName("fecha_evaluacion");
+
+                    b.Property<DateTimeOffset>("FechaUltimaModificacion")
+                        .HasColumnType("timestamptz")
+                        .HasColumnName("fecha_ultima_modificacion");
+
+                    b.Property<string>("MotivoDecision")
+                        .HasMaxLength(2000)
+                        .HasColumnType("character varying(2000)")
+                        .HasColumnName("motivo_decision");
+
+                    b.Property<Guid>("ReporteAcademicoId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("reporte_academico_id");
+
+                    b.Property<string>("SiguientePasoBecario")
+                        .HasMaxLength(2000)
+                        .HasColumnType("character varying(2000)")
+                        .HasColumnName("siguiente_paso_becario");
+
+                    b.Property<Guid>("UsuarioCreacionId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("usuario_creacion_id");
+
+                    b.Property<Guid>("UsuarioModificacionId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("usuario_modificacion_id");
+
+                    b.Property<int>("Version")
+                        .IsConcurrencyToken()
+                        .HasColumnType("integer")
+                        .HasColumnName("version");
+
+                    b.HasKey("Id")
+                        .HasName("pk_evaluacion_permanencia");
+
+                    b.HasIndex("ReporteAcademicoId")
+                        .IsUnique()
+                        .HasDatabaseName("ux_evaluacion_permanencia_reporte");
+
+                    b.ToTable("evaluacion_permanencia", "becas", t =>
+                        {
+                            t.HasCheckConstraint("ck_evaluacion_permanencia_aplicada", "consecuencia_aplicada IS NULL OR consecuencia_aplicada IN ('LLAMADO_ATENCION', 'SUSPENSION', 'REVOCACION')");
+
+                            t.HasCheckConstraint("ck_evaluacion_permanencia_estado", "estado_confirmacion IN ('PENDIENTE_CONFIRMACION', 'CONFIRMADA', 'RECHAZADA')");
+
+                            t.HasCheckConstraint("ck_evaluacion_permanencia_recomendada", "consecuencia_recomendada IS NULL OR consecuencia_recomendada IN ('LLAMADO_ATENCION', 'SUSPENSION', 'REVOCACION')");
+                        });
+                });
+
             modelBuilder.Entity("Ascenso.Becas.Infrastructure.Persistence.Modelos.ConvenioRef", b =>
                 {
                     b.Property<Guid>("UniversidadAliadaId")
@@ -1074,6 +1322,76 @@ namespace Ascenso.Becas.Infrastructure.Persistence.Migraciones
                         .IsRequired();
                 });
 
+            modelBuilder.Entity("Ascenso.Becas.Domain.SeguimientoAcademico.Agregados.ReporteAcademico", b =>
+                {
+                    b.HasOne("Ascenso.Becas.Domain.Otorgamiento.Agregados.Beca", null)
+                        .WithMany()
+                        .HasForeignKey("BecaId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired()
+                        .HasConstraintName("fk_reporte_academico_beca");
+                });
+
+            modelBuilder.Entity("Ascenso.Becas.Domain.SeguimientoAcademico.Entidades.EvaluacionPermanencia", b =>
+                {
+                    b.HasOne("Ascenso.Becas.Domain.SeguimientoAcademico.Agregados.ReporteAcademico", null)
+                        .WithOne("Evaluacion")
+                        .HasForeignKey("Ascenso.Becas.Domain.SeguimientoAcademico.Entidades.EvaluacionPermanencia", "ReporteAcademicoId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired()
+                        .HasConstraintName("fk_evaluacion_permanencia_reporte");
+
+                    b.OwnsMany("Ascenso.Becas.Domain.SeguimientoAcademico.ValueObjects.CondicionPermanenciaEvaluada", "DetalleCondiciones", b1 =>
+                        {
+                            b1.Property<Guid>("id")
+                                .ValueGeneratedOnAdd()
+                                .HasColumnType("uuid")
+                                .HasColumnName("id");
+
+                            b1.Property<string>("Condicion")
+                                .IsRequired()
+                                .HasMaxLength(40)
+                                .HasColumnType("varchar")
+                                .HasColumnName("condicion");
+
+                            b1.Property<bool>("Cumple")
+                                .HasColumnType("boolean")
+                                .HasColumnName("cumple");
+
+                            b1.Property<string>("ValorObtenido")
+                                .IsRequired()
+                                .HasMaxLength(40)
+                                .HasColumnType("character varying(40)")
+                                .HasColumnName("valor_obtenido");
+
+                            b1.Property<string>("ValorRequerido")
+                                .IsRequired()
+                                .HasMaxLength(40)
+                                .HasColumnType("character varying(40)")
+                                .HasColumnName("valor_requerido");
+
+                            b1.Property<Guid>("evaluacion_permanencia_id")
+                                .HasColumnType("uuid");
+
+                            b1.HasKey("id")
+                                .HasName("pk_condicion_permanencia_evaluada");
+
+                            b1.HasIndex("evaluacion_permanencia_id", "Condicion")
+                                .IsUnique()
+                                .HasDatabaseName("ux_condicion_permanencia_evaluada_tipo");
+
+                            b1.ToTable("condicion_permanencia_evaluada", "becas", t =>
+                                {
+                                    t.HasCheckConstraint("ck_condicion_permanencia_evaluada_tipo", "condicion IN ('PROMEDIO_MINIMO', 'MATERIAS_MINIMAS_APROBADAS', 'MAXIMO_MATERIAS_REPROBADAS', 'HORAS_SERVICIO_POR_PERIODO')");
+                                });
+
+                            b1.WithOwner()
+                                .HasForeignKey("evaluacion_permanencia_id");
+                        });
+
+                    b.Navigation("DetalleCondiciones");
+                });
+
             modelBuilder.Entity("Ascenso.Becas.Infrastructure.Persistence.Modelos.ProgramaBecaRef", b =>
                 {
                     b.OwnsOne("Ascenso.Becas.Domain.ValueObjects.CondicionesPermanencia", "CondicionesPermanencia", b1 =>
@@ -1174,6 +1492,11 @@ namespace Ascenso.Becas.Infrastructure.Persistence.Migraciones
                     b.Navigation("Historial");
 
                     b.Navigation("Oferta");
+                });
+
+            modelBuilder.Entity("Ascenso.Becas.Domain.SeguimientoAcademico.Agregados.ReporteAcademico", b =>
+                {
+                    b.Navigation("Evaluacion");
                 });
 #pragma warning restore 612, 618
         }

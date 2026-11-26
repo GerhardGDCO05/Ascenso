@@ -2,6 +2,8 @@ using Ascenso.Becas.Domain.Comun;
 using Ascenso.Becas.Domain.Enums;
 using Ascenso.Becas.Domain.Otorgamiento.ValueObjects;
 using Ascenso.Becas.Domain.SeguimientoAcademico.Datos;
+using Ascenso.Becas.Domain.SeguimientoAcademico.Entidades;
+using Ascenso.Becas.Domain.ValueObjects;
 
 namespace Ascenso.Becas.Domain.SeguimientoAcademico.Agregados;
 
@@ -24,6 +26,9 @@ public sealed class ReporteAcademico : AggregateRoot
         MateriasReprobadas = datos.MateriasReprobadas;
         MateriasCursando = datos.MateriasCursando;
         CreditosAprobados = datos.CreditosAprobados;
+        HorasServicioCumplidas = datos.HorasServicioCumplidas;
+        UrlComprobanteServicio = datos.UrlComprobanteServicio?.Trim();
+        HashComprobanteServicioSha256 = datos.HashComprobanteServicioSha256?.ToUpperInvariant();
         EstadoMatricula = datos.EstadoMatricula;
         UrlComprobanteNotasFirebase = datos.UrlComprobanteNotasFirebase.Trim();
         HashComprobanteSha256 = datos.HashComprobanteSha256.ToUpperInvariant();
@@ -44,6 +49,9 @@ public sealed class ReporteAcademico : AggregateRoot
     public int MateriasReprobadas { get; private set; }
     public int MateriasCursando { get; private set; }
     public int CreditosAprobados { get; private set; }
+    public int? HorasServicioCumplidas { get; private set; }
+    public string? UrlComprobanteServicio { get; private set; }
+    public string? HashComprobanteServicioSha256 { get; private set; }
     public EstadoMatricula EstadoMatricula { get; private set; }
     public string UrlComprobanteNotasFirebase { get; private set; } = string.Empty;
     public string HashComprobanteSha256 { get; private set; } = string.Empty;
@@ -57,6 +65,7 @@ public sealed class ReporteAcademico : AggregateRoot
     public EstadoReporteAcademico Estado { get; private set; }
     public Guid? RevisadoPorUsuarioId { get; private set; }
     public DateTimeOffset? FechaRevision { get; private set; }
+    public EvaluacionPermanencia? Evaluacion { get; private set; }
 
     public static ReporteAcademico Registrar(DatosReporteAcademico datos,
         ContextoOperacion contexto)
@@ -81,9 +90,46 @@ public sealed class ReporteAcademico : AggregateRoot
         ArgumentNullException.ThrowIfNull(contexto);
         if (Estado != EstadoReporteAcademico.EnRevision)
             throw new InvalidOperationException("El reporte debe estar en revisión.");
+        if (aprobado && (Evaluacion is null
+            || Evaluacion.EstadoConfirmacion != EstadoConsecuencia.Confirmada))
+            throw new InvalidOperationException("La evaluación debe estar confirmada antes de aprobar el reporte.");
         Estado = aprobado ? EstadoReporteAcademico.Aprobado : EstadoReporteAcademico.Rechazado;
         RevisadoPorUsuarioId = contexto.UsuarioAutorId;
         FechaRevision = contexto.Fecha;
+        ActualizarAuditoria(contexto.UsuarioAutorId, contexto.Fecha);
+    }
+
+    public EvaluacionPermanencia Evaluar(CondicionesPermanencia condiciones,
+        ContextoOperacion contexto)
+    {
+        ArgumentNullException.ThrowIfNull(condiciones);
+        ArgumentNullException.ThrowIfNull(contexto);
+        if (Estado != EstadoReporteAcademico.EnRevision || Evaluacion is not null)
+            throw new InvalidOperationException("El reporte debe estar en revisión y sin evaluación previa.");
+        if (condiciones.HorasServicioPorPeriodo > 0 && HorasServicioCumplidas is null)
+            throw new InvalidOperationException("Falta la evidencia de horas de servicio requeridas.");
+
+        Evaluacion = EvaluacionPermanencia.Crear(this, condiciones, contexto);
+        ActualizarAuditoria(contexto.UsuarioAutorId, contexto.Fecha);
+        return Evaluacion;
+    }
+
+    public void DecidirConsecuencia(bool confirmar, string motivoDecision,
+        string siguientePasoBecario, ContextoOperacion contexto)
+    {
+        ArgumentNullException.ThrowIfNull(contexto);
+        if (Evaluacion is null)
+            throw new InvalidOperationException("El reporte no tiene evaluación de permanencia.");
+        Evaluacion.Decidir(confirmar, motivoDecision, siguientePasoBecario, contexto);
+        ActualizarAuditoria(contexto.UsuarioAutorId, contexto.Fecha);
+    }
+
+    public void MarcarConsecuenciaAplicada(ContextoOperacion contexto)
+    {
+        ArgumentNullException.ThrowIfNull(contexto);
+        if (Evaluacion is null)
+            throw new InvalidOperationException("El reporte no tiene evaluación de permanencia.");
+        Evaluacion.MarcarConsecuenciaAplicada(contexto);
         ActualizarAuditoria(contexto.UsuarioAutorId, contexto.Fecha);
     }
 
@@ -98,6 +144,7 @@ public sealed class ReporteAcademico : AggregateRoot
             || decimal.Round(datos.PromedioPeriodo, 2) != datos.PromedioPeriodo
             || datos.MateriasAprobadas < 0 || datos.MateriasReprobadas < 0
             || datos.MateriasCursando < 0 || datos.CreditosAprobados < 0
+            || datos.HorasServicioCumplidas < 0
             || (datos.CreditosAprobados > 0 && datos.MateriasAprobadas == 0)
             || (datos.EstadoMatricula != EstadoMatricula.Matriculado
                 && datos.MateriasCursando > 0))
@@ -114,5 +161,16 @@ public sealed class ReporteAcademico : AggregateRoot
             || datos.TamanioComprobanteBytes is <= 0 or > TamanioMaximoComprobante
             || datos.TipoMimeComprobante != "application/pdf")
             throw new ArgumentException("El comprobante PDF del reporte es inválido.", nameof(datos));
+
+        if (datos.HorasServicioCumplidas > 0
+            && (string.IsNullOrWhiteSpace(datos.UrlComprobanteServicio)
+                || !Uri.TryCreate(datos.UrlComprobanteServicio, UriKind.Absolute,
+                    out var comprobanteServicio)
+                || comprobanteServicio.Scheme != "gs"
+                || string.IsNullOrWhiteSpace(comprobanteServicio.Host)
+                || comprobanteServicio.AbsolutePath is "" or "/"
+                || datos.HashComprobanteServicioSha256?.Length != 64
+                || !datos.HashComprobanteServicioSha256.All(Uri.IsHexDigit)))
+            throw new ArgumentException("La evidencia de horas de servicio es inválida.", nameof(datos));
     }
 }
