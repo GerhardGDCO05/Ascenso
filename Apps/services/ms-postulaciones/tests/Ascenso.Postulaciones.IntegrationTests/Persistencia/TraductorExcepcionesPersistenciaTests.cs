@@ -113,6 +113,18 @@ public sealed class TraductorExcepcionesPersistenciaTests
     }
 
     [Fact]
+    public void Debe_TraducirAResultadoConsolidadoDuplicado_Cuando_FallaIndiceDeResultadoConsolidadoPorPostulacion()
+    {
+        var excepcion = CrearDbUpdateUnicidad(TraductorExcepcionesPersistencia.IndiceResultadoConsolidadoPostulacionUnico);
+
+        var traducida = TraductorExcepcionesPersistencia.TraducirSiAplica(excepcion);
+
+        var duplicado = traducida.Should().BeOfType<ResultadoConsolidadoDuplicadoException>().Subject;
+        duplicado.Codigo.Should().Be(ResultadoConsolidadoDuplicadoException.CodigoError);
+        duplicado.EstadoHttp.Should().Be(409);
+    }
+
+    [Fact]
     public void Debe_TraducirAConflictoConCodigoRestriccionUnicidad_Cuando_FallaIndiceDeOrdenDeCriterio()
     {
         var excepcion = CrearDbUpdateUnicidad(TraductorExcepcionesPersistencia.IndiceCriterioRubricaOrdenUnico);

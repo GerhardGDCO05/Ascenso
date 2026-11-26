@@ -1,3 +1,4 @@
+using Ascenso.Postulaciones.Application.Consolidacion.Interfaces;
 using Ascenso.Postulaciones.Application.Evaluaciones.Comandos.EnviarEvaluacionDefinitiva;
 using Ascenso.Postulaciones.Application.Evaluaciones.Interfaces;
 using Ascenso.Postulaciones.Application.Interfaces;
@@ -43,6 +44,8 @@ public sealed class EnviarEvaluacionDefinitivaVentanaRevisionTests
         Substitute.For<IConsultaRubricaParaEvaluacionRepository>();
     private readonly IBloqueadorRubricaEvaluacion _bloqueadorRubrica =
         Substitute.For<IBloqueadorRubricaEvaluacion>();
+    private readonly IConsolidadorPostulacionEvaluacion _consolidadorPostulacion =
+        Substitute.For<IConsolidadorPostulacionEvaluacion>();
     private readonly IUnitOfWork _unitOfWork = Substitute.For<IUnitOfWork>();
 
     public EnviarEvaluacionDefinitivaVentanaRevisionTests()
@@ -231,6 +234,7 @@ public sealed class EnviarEvaluacionDefinitivaVentanaRevisionTests
             _comiteRepository,
             _rubricaRepository,
             _bloqueadorRubrica,
+            _consolidadorPostulacion,
             _unitOfWork,
             new EnviarEvaluacionDefinitivaCommandValidator(),
             new RelojFijo(ahora));

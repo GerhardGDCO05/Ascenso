@@ -104,6 +104,16 @@ builder.Services.AddAuthorization(options =>
     options.AddPolicy(
         PoliticasAutorizacionEvaluaciones.SupervisionEvaluaciones,
         policy => policy.RequireRole(PoliticasAutorizacionEvaluaciones.RolCoordinadorPrograma));
+
+    options.AddPolicy(
+        PoliticasAutorizacionConsolidacion.ConsultaConsolidacion,
+        policy => policy.RequireRole(
+            PoliticasAutorizacionConsolidacion.RolCoordinadorPrograma,
+            PoliticasAutorizacionConsolidacion.RolDireccion));
+
+    options.AddPolicy(
+        PoliticasAutorizacionConsolidacion.GestionConsolidacion,
+        policy => policy.RequireRole(PoliticasAutorizacionConsolidacion.RolCoordinadorPrograma));
 });
 builder.Services.AddSingleton<IAuthorizationMiddlewareResultHandler, ManejadorResultadoAutorizacionRubricas>();
 

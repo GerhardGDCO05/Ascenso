@@ -9,6 +9,12 @@ using Ascenso.Postulaciones.Application.Comites.Comandos.CrearComiteEvaluador;
 using Ascenso.Postulaciones.Application.Comites.Comandos.DesvincularMiembroComite;
 using Ascenso.Postulaciones.Application.Comites.Consultas.ObtenerComiteEvaluador;
 using Ascenso.Postulaciones.Application.Comites.Consultas.ObtenerComitePorPrograma;
+using Ascenso.Postulaciones.Application.Consolidacion.Comandos.ConsolidarPostulacion;
+using Ascenso.Postulaciones.Application.Consolidacion.Comandos.RevisarDiscrepanciaConsolidacion;
+using Ascenso.Postulaciones.Application.Consolidacion.Consultas.ListarResultadosConsolidadosConvocatoria;
+using Ascenso.Postulaciones.Application.Consolidacion.Consultas.ObtenerResultadoConsolidadoPostulacion;
+using Ascenso.Postulaciones.Application.Consolidacion.Interfaces;
+using Ascenso.Postulaciones.Application.Consolidacion.Servicios;
 using Ascenso.Postulaciones.Application.Evaluaciones.Comandos.EnviarEvaluacionDefinitiva;
 using Ascenso.Postulaciones.Application.Evaluaciones.Comandos.GuardarBorradorEvaluacion;
 using Ascenso.Postulaciones.Application.Evaluaciones.Consultas.ObtenerEvaluacionesCoevaluadoresPostulacion;
@@ -68,6 +74,11 @@ public static class DependencyInjection
         services.AddScoped<ObtenerMisEvaluacionesQueryHandler>();
         services.AddScoped<ObtenerEvaluacionesPostulacionQueryHandler>();
         services.AddScoped<ObtenerEvaluacionesCoevaluadoresPostulacionQueryHandler>();
+        services.AddScoped<IConsolidadorPostulacionEvaluacion, ConsolidadorPostulacionEvaluacionAdapter>();
+        services.AddScoped<ConsolidarPostulacionCommandHandler>();
+        services.AddScoped<RevisarDiscrepanciaConsolidacionCommandHandler>();
+        services.AddScoped<ObtenerResultadoConsolidadoPostulacionQueryHandler>();
+        services.AddScoped<ListarResultadosConsolidadosConvocatoriaQueryHandler>();
 
         return services;
     }

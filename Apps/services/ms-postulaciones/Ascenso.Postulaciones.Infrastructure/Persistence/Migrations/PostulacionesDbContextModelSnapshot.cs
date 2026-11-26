@@ -303,6 +303,135 @@ namespace Ascenso.Postulaciones.Infrastructure.Persistence.Migrations
                         });
                 });
 
+            modelBuilder.Entity("Ascenso.Postulaciones.Domain.Consolidacion.Agregados.ResultadoConsolidadoRanking", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .HasColumnType("uuid")
+                        .HasColumnName("id");
+
+                    b.Property<bool>("AlertaDiscrepancia")
+                        .HasColumnType("boolean")
+                        .HasColumnName("alerta_discrepancia");
+
+                    b.Property<Guid?>("AutorizadorExcepcionId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("autorizador_excepcion_id");
+
+                    b.Property<int>("CantidadEvaluacionesValidas")
+                        .HasColumnType("integer")
+                        .HasColumnName("cantidad_evaluaciones_validas");
+
+                    b.Property<string>("ComentarioRevisionDiscrepancia")
+                        .HasMaxLength(1000)
+                        .HasColumnType("character varying(1000)")
+                        .HasColumnName("comentario_revision_discrepancia");
+
+                    b.Property<Guid>("ConvocatoriaId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("convocatoria_id");
+
+                    b.Property<decimal>("DiferenciaEntreEvaluadores")
+                        .HasPrecision(5, 2)
+                        .HasColumnType("numeric(5,2)")
+                        .HasColumnName("diferencia_entre_evaluadores");
+
+                    b.Property<bool>("DiscrepanciaRevisada")
+                        .HasColumnType("boolean")
+                        .HasColumnName("discrepancia_revisada");
+
+                    b.Property<string>("EstadoConfirmacionRanking")
+                        .IsRequired()
+                        .HasMaxLength(20)
+                        .HasColumnType("varchar")
+                        .HasColumnName("estado_confirmacion_ranking");
+
+                    b.Property<bool>("ExcepcionEvaluadorUnico")
+                        .HasColumnType("boolean")
+                        .HasColumnName("excepcion_evaluador_unico");
+
+                    b.Property<DateTimeOffset>("FechaConsolidacion")
+                        .HasColumnType("timestamptz")
+                        .HasColumnName("fecha_consolidacion");
+
+                    b.Property<DateTimeOffset>("FechaCreacion")
+                        .HasColumnType("timestamptz")
+                        .HasColumnName("fecha_creacion");
+
+                    b.Property<DateTimeOffset?>("FechaRevisionDiscrepancia")
+                        .HasColumnType("timestamptz")
+                        .HasColumnName("fecha_revision_discrepancia");
+
+                    b.Property<DateTimeOffset>("FechaUltimaModificacion")
+                        .HasColumnType("timestamptz")
+                        .HasColumnName("fecha_ultima_modificacion");
+
+                    b.Property<string>("JustificacionEvaluadorUnico")
+                        .HasMaxLength(1000)
+                        .HasColumnType("character varying(1000)")
+                        .HasColumnName("justificacion_evaluador_unico");
+
+                    b.Property<Guid>("PostulacionId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("postulacion_id");
+
+                    b.Property<decimal>("PuntajeConsolidado")
+                        .HasPrecision(5, 2)
+                        .HasColumnType("numeric(5,2)")
+                        .HasColumnName("puntaje_consolidado");
+
+                    b.Property<Guid?>("RevisadoPorUsuarioId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("revisado_por_usuario_id");
+
+                    b.Property<decimal>("UmbralDiscrepanciaAplicado")
+                        .HasPrecision(5, 2)
+                        .HasColumnType("numeric(5,2)")
+                        .HasColumnName("umbral_discrepancia_aplicado");
+
+                    b.Property<Guid>("UsuarioCreacionId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("usuario_creacion_id");
+
+                    b.Property<Guid>("UsuarioModificacionId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("usuario_modificacion_id");
+
+                    b.Property<int>("Version")
+                        .IsConcurrencyToken()
+                        .HasColumnType("integer")
+                        .HasColumnName("version");
+
+                    b.HasKey("Id")
+                        .HasName("pk_resultados_consolidados_ranking");
+
+                    b.HasIndex("PostulacionId")
+                        .IsUnique()
+                        .HasDatabaseName("ux_resultados_consolidados_ranking_postulacion");
+
+                    b.HasIndex("ConvocatoriaId", "AlertaDiscrepancia", "DiscrepanciaRevisada")
+                        .HasDatabaseName("ix_resultados_consolidados_ranking_convocatoria_discrepancia");
+
+                    b.HasIndex("ConvocatoriaId", "PuntajeConsolidado", "FechaConsolidacion", "Id")
+                        .HasDatabaseName("ix_resultados_consolidados_ranking_convocatoria_puntaje");
+
+                    b.ToTable("resultados_consolidados_ranking", "postulaciones", t =>
+                        {
+                            t.HasCheckConstraint("ck_resultados_consolidados_alerta_coherente", "(excepcion_evaluador_unico = true AND alerta_discrepancia = false) OR (excepcion_evaluador_unico = false AND alerta_discrepancia = (diferencia_entre_evaluadores > umbral_discrepancia_aplicado))");
+
+                            t.HasCheckConstraint("ck_resultados_consolidados_diferencia_rango", "diferencia_entre_evaluadores >= 0 AND diferencia_entre_evaluadores <= 100");
+
+                            t.HasCheckConstraint("ck_resultados_consolidados_estado_valido", "estado_confirmacion_ranking IN ('PROVISIONAL', 'CONFIRMADO')");
+
+                            t.HasCheckConstraint("ck_resultados_consolidados_excepcion_coherente", "(excepcion_evaluador_unico = true AND cantidad_evaluaciones_validas = 1 AND justificacion_evaluador_unico IS NOT NULL AND length(btrim(justificacion_evaluador_unico)) > 0 AND autorizador_excepcion_id IS NOT NULL AND diferencia_entre_evaluadores = 0 AND alerta_discrepancia = false) OR (excepcion_evaluador_unico = false AND cantidad_evaluaciones_validas >= 2 AND justificacion_evaluador_unico IS NULL AND autorizador_excepcion_id IS NULL)");
+
+                            t.HasCheckConstraint("ck_resultados_consolidados_puntaje_rango", "puntaje_consolidado >= 0 AND puntaje_consolidado <= 100");
+
+                            t.HasCheckConstraint("ck_resultados_consolidados_revision_coherente", "(discrepancia_revisada = false AND comentario_revision_discrepancia IS NULL AND revisado_por_usuario_id IS NULL AND fecha_revision_discrepancia IS NULL) OR (discrepancia_revisada = true AND alerta_discrepancia = true AND comentario_revision_discrepancia IS NOT NULL AND length(btrim(comentario_revision_discrepancia)) > 0 AND revisado_por_usuario_id IS NOT NULL AND fecha_revision_discrepancia IS NOT NULL)");
+
+                            t.HasCheckConstraint("ck_resultados_consolidados_umbral_rango", "umbral_discrepancia_aplicado > 0 AND umbral_discrepancia_aplicado <= 100");
+                        });
+                });
+
             modelBuilder.Entity("Ascenso.Postulaciones.Domain.Evaluaciones.Agregados.Evaluacion", b =>
                 {
                     b.Property<Guid>("Id")
