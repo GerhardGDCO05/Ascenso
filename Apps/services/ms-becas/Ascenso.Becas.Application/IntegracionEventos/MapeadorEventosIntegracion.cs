@@ -2,6 +2,8 @@ using Ascenso.Becas.Domain.Comun;
 using Ascenso.Becas.Domain.Desembolsos.Eventos;
 using Ascenso.Becas.Domain.Enums;
 using Ascenso.Becas.Domain.Otorgamiento.Eventos;
+using Ascenso.Becas.Domain.Renovacion.Eventos;
+using Ascenso.Becas.Domain.SeguimientoAcademico.Eventos;
 
 namespace Ascenso.Becas.Application.IntegracionEventos;
 
@@ -21,6 +23,33 @@ public static class MapeadorEventosIntegracion
 
         return evento switch
         {
+            RenovacionBecaSolicitadaEvento item => Envolver(item,
+                item.SolicitudRenovacionId,
+                new RenovacionBecaSolicitada(item.SolicitudRenovacionId,
+                    item.BecaId, item.PeriodoOrigenId,
+                    item.PeriodoSolicitadoId), aggregateVersion),
+            BecaConcluidaPorVencimientoRenovacionEvento item => Envolver(item,
+                item.BecaId,
+                new BecaConcluidaPorVencimientoRenovacion(item.BecaId,
+                    item.CadenaBecaId, item.ProgramaBecaId,
+                    item.PeriodoOrigenId, item.PeriodoSolicitadoId),
+                aggregateVersion),
+            ReporteAcademicoEntregadoEvento item => Envolver(item, item.ReporteAcademicoId,
+                new ReporteAcademicoEntregado(item.ReporteAcademicoId, item.BecaId,
+                    item.PeriodoAcademicoId, item.FechaLimitePeriodo, item.EntregaTardia),
+                aggregateVersion),
+            AlertaReporteAcademicoTardioEvento item => Envolver(item, item.ReporteAcademicoId,
+                new AlertaReporteAcademicoTardio(item.ReporteAcademicoId, item.BecaId,
+                    item.ProgramaBecaId, item.PeriodoAcademicoId, item.FechaLimitePeriodo),
+                aggregateVersion),
+            EvaluacionPermanenciaRegistradaEvento item => Envolver(item, item.ReporteAcademicoId,
+                new EvaluacionPermanenciaRegistrada(item.EvaluacionPermanenciaId,
+                    item.ReporteAcademicoId, item.BecaId, item.CumpleCondiciones,
+                    item.ConsecuenciaRecomendada?.ACodigo()), aggregateVersion),
+            ConsecuenciaPermanenciaAplicadaEvento item => Envolver(item, item.ReporteAcademicoId,
+                new ConsecuenciaPermanenciaAplicada(item.EvaluacionPermanenciaId,
+                    item.ReporteAcademicoId, item.BecaId,
+                    item.ConsecuenciaAplicada.ACodigo()), aggregateVersion),
             DesembolsosBecaSuspendidosEvento item => Envolver(item, item.BecaId,
                 new DesembolsosBecaSuspendidos(item.BecaId, item.SuspensionId,
                     item.ProgramaBecaId, item.PeriodoAcademicoId, item.SaldoPendiente), aggregateVersion),

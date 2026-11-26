@@ -20,18 +20,18 @@ public interface IProgramasClient
     Task ConfirmarReservaAsync(
         Guid programaBecaId,
         Guid reservaId,
-        Guid ofertaId,
+        Guid referenciaId,
         CancellationToken cancellationToken = default);
 
     Task ActivarReservaAsync(
         Guid programaBecaId,
         Guid reservaId,
-        Guid ofertaId,
+        Guid referenciaId,
         CancellationToken cancellationToken = default);
 
     Task LiberarReservaAsync(
         Guid programaBecaId,
         Guid reservaId,
-        Guid ofertaId,
+        Guid referenciaId,
         CancellationToken cancellationToken = default);
 }

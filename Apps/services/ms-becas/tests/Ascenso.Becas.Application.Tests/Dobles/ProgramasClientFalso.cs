@@ -66,17 +66,17 @@ public sealed class ProgramasClientFalso : IProgramasClient
     }
 
     public Task ConfirmarReservaAsync(
-        Guid programaBecaId, Guid reservaId, Guid ofertaId,
+        Guid programaBecaId, Guid reservaId, Guid referenciaId,
         CancellationToken cancellationToken = default)
         => Task.CompletedTask;
 
     public Task ActivarReservaAsync(
-        Guid programaBecaId, Guid reservaId, Guid ofertaId,
+        Guid programaBecaId, Guid reservaId, Guid referenciaId,
         CancellationToken cancellationToken = default)
         => Task.CompletedTask;
 
     public Task LiberarReservaAsync(
-        Guid programaBecaId, Guid reservaId, Guid ofertaId,
+        Guid programaBecaId, Guid reservaId, Guid referenciaId,
         CancellationToken cancellationToken = default)
         => Task.CompletedTask;
 }

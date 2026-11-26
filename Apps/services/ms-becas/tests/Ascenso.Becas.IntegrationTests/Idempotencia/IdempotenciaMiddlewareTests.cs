@@ -164,6 +164,34 @@ public sealed class IdempotenciaMiddlewareTests
     }
 
     [Fact]
+    public async Task Debe_EntregarUnaSolaVezElReporteAcademicoConLaMismaClave()
+    {
+        var almacen = new AlmacenIdempotenciaEnMemoria();
+        var ruta = $"/api/v1/becas/{Guid.CreateVersion7()}/reportes-academicos";
+        var publicaciones = 0;
+        RequestDelegate registrar = async contexto =>
+        {
+            publicaciones++;
+            contexto.Response.StatusCode = StatusCodes.Status201Created;
+            await contexto.Response.WriteAsync("""{"reporteAcademicoId":"1"}""");
+        };
+
+        var primera = CrearContextoMultipart("----reporte-uno");
+        primera.Request.Path = ruta;
+        await InvocarAsync(primera, almacen, registrar);
+
+        var repeticion = CrearContextoMultipart("----reporte-dos");
+        repeticion.Request.Path = ruta;
+        var cuerpo = await InvocarAsync(repeticion, almacen, registrar);
+
+        publicaciones.Should().Be(1);
+        repeticion.Response.StatusCode.Should().Be(StatusCodes.Status201Created);
+        cuerpo.Should().Be("""{"reporteAcademicoId":"1"}""");
+        repeticion.Response.Headers[IdempotenciaConstantes.EncabezadoReplay]
+            .ToString().Should().Be("true");
+    }
+
+    [Fact]
     public async Task Debe_Rechazar_Cuando_FaltaLaClaveDeIdempotencia()
     {
         var almacen = new AlmacenIdempotenciaEnMemoria();

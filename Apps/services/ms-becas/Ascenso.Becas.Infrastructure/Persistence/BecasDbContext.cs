@@ -2,6 +2,7 @@ using Ascenso.Becas.Domain.Desembolsos.Agregados;
 using Ascenso.Becas.Domain.Desembolsos.Entidades;
 using Ascenso.Becas.Domain.Otorgamiento.Agregados;
 using Ascenso.Becas.Domain.Otorgamiento.Entidades;
+using Ascenso.Becas.Domain.Renovacion.Agregados;
 using Ascenso.Becas.Domain.SeguimientoAcademico.Agregados;
 using Ascenso.Becas.Domain.SeguimientoAcademico.Entidades;
 using Ascenso.Becas.Infrastructure.Persistence.Modelos;
@@ -40,6 +41,8 @@ public sealed class BecasDbContext : DbContext
     public DbSet<HistorialEstadoBeca> HistorialEstadosBeca => Set<HistorialEstadoBeca>();
 
     public DbSet<ReporteAcademico> ReportesAcademicos => Set<ReporteAcademico>();
+
+    public DbSet<SolicitudRenovacion> SolicitudesRenovacion => Set<SolicitudRenovacion>();
 
     public DbSet<EvaluacionPermanencia> EvaluacionesPermanencia => Set<EvaluacionPermanencia>();
 

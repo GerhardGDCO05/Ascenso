@@ -117,6 +117,24 @@ internal sealed class BecaConfiguracion : IEntityTypeConfiguration<Beca>
                 .IsFixedLength();
         });
 
+        builder.OwnsOne(beca => beca.CondicionesPermanenciaSnapshot, condiciones =>
+        {
+            condiciones.Property(valor => valor.PromedioMinimoRenovacion)
+                .HasColumnName("condiciones_snapshot_promedio_minimo_renovacion")
+                .HasPrecision(4, 2);
+            condiciones.Property(valor => valor.MateriasMinimasAprobadas)
+                .HasColumnName("condiciones_snapshot_materias_minimas_aprobadas");
+            condiciones.Property(valor => valor.MaximoMateriasReprobadas)
+                .HasColumnName("condiciones_snapshot_maximo_materias_reprobadas");
+            condiciones.Property(valor => valor.HorasServicioPorPeriodo)
+                .HasColumnName("condiciones_snapshot_horas_servicio_por_periodo");
+            condiciones.Property(valor => valor.ConsecuenciaIncumplimiento)
+                .HasColumnName("condiciones_snapshot_consecuencia_incumplimiento")
+                .ComoCodigoEnum().HasMaxLength(30);
+        });
+        builder.Navigation(beca => beca.CondicionesPermanenciaSnapshot)
+            .IsRequired(false);
+
         builder.Property(beca => beca.CostoMatriculaReferenciaSnapshotId)
             .HasColumnName("costo_matricula_referencia_snapshot_id")
             .HasColumnType("uuid");

@@ -7,7 +7,10 @@ using Ascenso.Becas.Application.Otorgamiento.Puertos;
 using Ascenso.Becas.Domain.Comun;
 using Ascenso.Becas.Domain.Desembolsos.Datos;
 using Ascenso.Becas.Domain.Enums;
+using Ascenso.Becas.Domain.Otorgamiento.Datos;
+using Ascenso.Becas.Domain.Otorgamiento.ValueObjects;
 using Ascenso.Becas.Domain.Ports;
+using Ascenso.Becas.Domain.ValueObjects;
 using Ascenso.Becas.Infrastructure.Persistence.Repositorios;
 using Ascenso.Becas.Infrastructure.Persistence.UnidadDeTrabajo;
 using Ascenso.Becas.Infrastructure.Seguridad;
@@ -78,6 +81,43 @@ public sealed class CasosUsoDesembolsoTests
             new ProgramarCalendarioDesembolsoCommand(beca.Id, beca.PeriodoVigenteActualId,
                 FrecuenciaDesembolso.Mensual, DestinatarioPago.Becario, 1501m,
                 fecha, fecha, [new CuotaProgramada(1, fecha, 1501m)])));
+        Assert.Contains("EXCEDE_OFERTA", error.Message);
+    }
+
+    [Fact]
+    public async Task ProgramaCalendarioDeSucesoraSinOfertaConSuMontoAprobado()
+    {
+        await using var db = _fixture.CrearContexto();
+        var anterior = DatosPrueba.CrearBecaActiva(DatosPrueba.CrearDatosBeca(),
+            DatosPrueba.CrearContextoOperacion());
+        var contexto = DatosPrueba.CrearContextoOperacion();
+        anterior.IniciarRenovacion(contexto);
+        var periodoNuevo = Guid.CreateVersion7();
+        var sucesora = anterior.CrearSucesoraPorRenovacion(new DatosBecaSucesora(
+            periodoNuevo, Guid.CreateVersion7(), 1600m, Guid.CreateVersion7(),
+            new PoliticaCobertura(TipoCobertura.Parcial, 60m, 0m, "USD"),
+            anterior.Oferta!.CondicionesSnapshot, false, false,
+            DatosPrueba.NuevoCodigoBeca(), null), contexto);
+        anterior.Renovar(new ContextoOperacion(contexto.UsuarioAutorId,
+            contexto.CorrelacionId, contexto.Fecha,
+            "Renovación aprobada con reserva confirmada."));
+        db.Becas.AddRange(anterior, sucesora);
+        await db.SaveChangesAsync();
+        var casos = CrearCasos(db);
+        var fecha = new DateOnly(2026, 9, 1);
+
+        var calendarioId = await casos.HandleAsync(
+            new ProgramarCalendarioDesembolsoCommand(sucesora.Id,
+                periodoNuevo, FrecuenciaDesembolso.Mensual,
+                DestinatarioPago.Becario, 1600m, fecha, fecha,
+                [new CuotaProgramada(1, fecha, 1600m)]));
+        var error = await Assert.ThrowsAsync<ArgumentException>(() =>
+            casos.HandleAsync(new ProgramarCalendarioDesembolsoCommand(
+                sucesora.Id, periodoNuevo, FrecuenciaDesembolso.Mensual,
+                DestinatarioPago.Becario, 1601m, fecha, fecha,
+                [new CuotaProgramada(1, fecha, 1601m)])));
+
+        Assert.NotEqual(Guid.Empty, calendarioId);
         Assert.Contains("EXCEDE_OFERTA", error.Message);
     }
 

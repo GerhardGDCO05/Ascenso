@@ -1,5 +1,13 @@
 namespace Ascenso.Becas.Application.IntegracionEventos;
 
+public sealed record RenovacionBecaSolicitada(
+    Guid SolicitudRenovacionId, Guid BecaId, Guid PeriodoOrigenId,
+    Guid PeriodoSolicitadoId);
+
+public sealed record BecaConcluidaPorVencimientoRenovacion(
+    Guid BecaId, Guid CadenaBecaId, Guid ProgramaBecaId,
+    Guid PeriodoOrigenId, Guid PeriodoSolicitadoId);
+
 public sealed record DesembolsosBecaSuspendidos(
     Guid BecaId, Guid SuspensionId, Guid ProgramaBecaId,
     Guid PeriodoAcademicoId, decimal SaldoPendiente);
@@ -104,3 +112,23 @@ public sealed record CompromisoBecarioRechazado(
     Guid BecaId,
     Guid CompromisoId,
     string EstadoCompromiso);
+
+/// <summary>Hito de entrega sin datos académicos personales.</summary>
+public sealed record ReporteAcademicoEntregado(
+    Guid ReporteAcademicoId, Guid BecaId, Guid PeriodoAcademicoId,
+    DateOnly FechaLimitePeriodo, bool EntregaTardia);
+
+/// <summary>Solicitud de alerta a MS-PLT para el coordinador del programa.</summary>
+public sealed record AlertaReporteAcademicoTardio(
+    Guid ReporteAcademicoId, Guid BecaId, Guid ProgramaBecaId,
+    Guid PeriodoAcademicoId, DateOnly FechaLimitePeriodo);
+
+/// <summary>Resultado de permanencia sin calificaciones ni identidad personal.</summary>
+public sealed record EvaluacionPermanenciaRegistrada(
+    Guid EvaluacionPermanenciaId, Guid ReporteAcademicoId, Guid BecaId,
+    bool CumpleCondiciones, string? ConsecuenciaRecomendada);
+
+/// <summary>Consecuencia ejecutada sobre una evaluación confirmada.</summary>
+public sealed record ConsecuenciaPermanenciaAplicada(
+    Guid EvaluacionPermanenciaId, Guid ReporteAcademicoId, Guid BecaId,
+    string ConsecuenciaAplicada);

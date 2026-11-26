@@ -12,7 +12,7 @@ son:
 
 | Claim | Tipo/uso | Responsable |
 | :--- | :--- | :--- |
-| `roles` | Uno o más roles de realm. Se usan `POSTULANTE`, `BECARIO`, `COORDINADOR_PROGRAMA` y `DIRECCION`. | Keycloak / MS-PLT |
+| `roles` | Uno o más roles de realm. Se usan `POSTULANTE`, `BECARIO`, `ENLACE_UNIVERSIDAD`, `COORDINADOR_PROGRAMA` y `DIRECCION`. | Keycloak / MS-PLT |
 | `postulante_id` | UUID de la persona propietaria; requerido para autorizar como postulante/becario. | MS-PLT |
 | `programa_ids` | Lista de UUIDs de programas habilitados para el coordinador. `DIRECCION` tiene alcance global. | MS-PLT |
 | `acr` | Evidencia alternativa de 2FA; por defecto debe ser `urn:ascenso:loa:2fa`. | Keycloak / MS-PLT |
@@ -24,6 +24,11 @@ programa, la autorización falla cerrada. La API responde `401
 SEGUNDO_FACTOR_REQUERIDO` cuando un rol administrativo no presenta evidencia
 de 2FA, y `403 PERMISO_DENEGADO` cuando el usuario no tiene propiedad o
 alcance.
+
+La carga académica del rol `ENLACE_UNIVERSIDAD` permanece cerrada con `403`:
+MS-BEC todavía no dispone de un claim universitario acordado ni de un contrato
+para verificar que esa universidad puede reportar sobre la beca concreta.
+El identificador enviado en el formulario no prueba esa relación.
 
 La configuración local del realm sirve para pruebas. MS-PLT debe confirmar
 los nombres finales, el formato de `programa_ids`, los mappers del access

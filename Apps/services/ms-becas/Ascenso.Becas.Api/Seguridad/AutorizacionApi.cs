@@ -31,6 +31,7 @@ public static class AutorizacionApi
         servicios.AddSingleton<IAuthorizationHandler, AlcanceProgramaHandler>();
         servicios.AddSingleton<IAuthorizationHandler, PropiedadPostulanteHandler>();
         servicios.AddSingleton<IAuthorizationHandler, CuentaServicioHandler>();
+        servicios.AddSingleton<IUniversidadBecaAutorizacion, UniversidadBecaAutorizacionNoDisponible>();
         servicios.AddSingleton<
             IAuthorizationMiddlewareResultHandler,
             AutorizacionResultadoHandler>();

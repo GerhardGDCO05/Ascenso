@@ -2,6 +2,7 @@ using Ascenso.Becas.Domain.Enums;
 using Ascenso.Becas.Domain.Otorgamiento.ValueObjects;
 using Ascenso.Becas.Domain.SeguimientoAcademico.Agregados;
 using Ascenso.Becas.Domain.SeguimientoAcademico.Datos;
+using Ascenso.Becas.Domain.SeguimientoAcademico.Eventos;
 
 namespace Ascenso.Becas.Domain.Tests.SeguimientoAcademico;
 
@@ -23,6 +24,9 @@ public sealed class ReporteAcademicoTests
         Assert.False(reporte.EntregaTardia);
         Assert.Equal(new string('A', 64), reporte.HashComprobanteSha256);
         Assert.Null(reporte.FechaRevision);
+        Assert.Single(reporte.EventosDominio.OfType<ReporteAcademicoEntregadoEvento>());
+        reporte.PrepararAlertaTardia(Guid.CreateVersion7(), CrearContexto());
+        Assert.Empty(reporte.EventosDominio.OfType<AlertaReporteAcademicoTardioEvento>());
     }
 
     [Fact]
@@ -34,10 +38,30 @@ public sealed class ReporteAcademicoTests
 
         Assert.True(reporte.EntregaTardia);
         Assert.Equal(_fecha, reporte.FechaEntrega);
+        var programaId = Guid.CreateVersion7();
+        reporte.PrepararAlertaTardia(programaId, CrearContexto());
+        reporte.PrepararAlertaTardia(programaId, CrearContexto());
+        var alerta = Assert.Single(
+            reporte.EventosDominio.OfType<AlertaReporteAcademicoTardioEvento>());
+        Assert.Equal(programaId, alerta.ProgramaBecaId);
+    }
+
+    [Fact]
+    public void ConservaReferenciaEstableDelAlmacenamientoLocal()
+    {
+        var datos = CrearDatos() with
+        {
+            UrlComprobanteNotasFirebase = "file:///tmp/ascenso/reportes/notas.pdf"
+        };
+
+        var reporte = ReporteAcademico.Registrar(datos, CrearContexto());
+
+        Assert.Equal(datos.UrlComprobanteNotasFirebase,
+            reporte.UrlComprobanteNotasFirebase);
     }
 
     [Theory]
-    [InlineData("https://archivo.example/notas.pdf", "application/pdf", 1024)]
+    [InlineData("https://archivo.example/notas.pdf?firma=temporal", "application/pdf", 1024)]
     [InlineData("gs://becas/notas.pdf", "image/png", 1024)]
     [InlineData("gs://becas/notas.pdf", "application/pdf", 5242881)]
     [InlineData("gs://becas", "application/pdf", 1024)]

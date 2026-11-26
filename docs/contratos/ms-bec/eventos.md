@@ -37,6 +37,10 @@ Los exchanges se nombran `Ascenso.Becas:<nombre-del-payload>`.
 | `CompromisoBecarioCargado` | `becaId`, `compromisoId`, `numeroIntentoCarga`, `estadoCompromiso` |
 | `CompromisoBecarioAprobado` | `becaId`, `compromisoId`, `estadoCompromiso` |
 | `CompromisoBecarioRechazado` | `becaId`, `compromisoId`, `estadoCompromiso` |
+| `ReporteAcademicoEntregado` | `reporteAcademicoId`, `becaId`, `periodoAcademicoId`, `fechaLimitePeriodo`, `entregaTardia`; sin notas ni datos personales |
+| `AlertaReporteAcademicoTardio` | `reporteAcademicoId`, `becaId`, `programaBecaId`, `periodoAcademicoId`, `fechaLimitePeriodo`; señal para que MS-PLT avise al coordinador |
+| `EvaluacionPermanenciaRegistrada` | `evaluacionPermanenciaId`, `reporteAcademicoId`, `becaId`, `cumpleCondiciones`, `consecuenciaRecomendada`; sin calificaciones ni datos socioeconómicos |
+| `ConsecuenciaPermanenciaAplicada` | `evaluacionPermanenciaId`, `reporteAcademicoId`, `becaId`, `consecuenciaAplicada`; se emite después de aplicar una consecuencia confirmada |
 | `DesembolsoProgramado` | `becaId`, `calendarioId`, `desembolsoId` |
 | `DesembolsoConfirmadoConOTP` | `becaId`, `calendarioId`, `desembolsoId` |
 | `DesembolsoFallido` | `becaId`, `calendarioId`, `desembolsoId` |
@@ -46,6 +50,8 @@ Los exchanges se nombran `Ascenso.Becas:<nombre-del-payload>`.
 | `DesembolsosBecaSuspendidos` | `becaId`, `suspensionId`, `programaBecaId`, `periodoAcademicoId`, `saldoPendiente`; se encola al suspender la beca |
 | `DesembolsosBecaReanudados` | `becaId`, `suspensionId`, `programaBecaId`, `periodoAcademicoId`, `saldoPendiente`; se encola al reanudar la beca |
 | `BecaRevocadaDefinitivamente` | `becaId`, `programaBecaId`, `periodoAcademicoId`, `estadoBeca`, `tipoCierre`; se encola al revocar definitivamente |
+| `RenovacionBecaSolicitada` | `solicitudRenovacionId`, `becaId`, `periodoOrigenId`, `periodoSolicitadoId`; se encola al solicitar y persistir |
+| `BecaConcluidaPorVencimientoRenovacion` | `becaId`, `cadenaBecaId`, `programaBecaId`, `periodoOrigenId`, `periodoSolicitadoId`; se encola después de confirmar la liberación del cupo ocupado |
 
 El payload representa el estado resultante; las transiciones de oferta y beca
 se publican mediante Outbox.
@@ -53,6 +59,9 @@ se publican mediante Outbox.
 `BecaRevocadaDefinitivamente` informan los cambios de estado. Los movimientos
 de saldo y cupo en MS-PRG requieren la llamada REST idempotente de 17.6; estos
 eventos no ejecutan movimientos presupuestarios.
+Los contratos `RenovacionBecaAprobada` y `BecaActivadaNuevoPeriodo` se
+publicarán únicamente cuando la aprobación cree y confirme la beca sucesora
+con la reserva de MS-PRG. No se emiten desde solicitudes pendientes.
 
 ## Consumidos desde MS-PRG
 

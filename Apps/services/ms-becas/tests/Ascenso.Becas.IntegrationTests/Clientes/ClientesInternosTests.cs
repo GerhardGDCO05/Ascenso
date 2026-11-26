@@ -321,6 +321,50 @@ public sealed class ClientesInternosTests
     }
 
     [Fact]
+    public async Task Debe_ReservarRenovacionConReferenciaYClaveEstable()
+    {
+        using var servidor = WireMockServer.Start();
+        var programaId = Guid.CreateVersion7();
+        var solicitudId = Guid.CreateVersion7();
+        var periodoId = Guid.CreateVersion7();
+        var reservaId = Guid.CreateVersion7();
+        servidor
+            .Given(Request.Create()
+                .WithPath($"/internal/v1/programas/{programaId}/reservas")
+                .UsingPost())
+            .RespondWith(Response.Create()
+                .WithStatusCode(201)
+                .WithHeader("Content-Type", "application/json")
+                .WithBody(JsonSerializer.Serialize(new
+                {
+                    reservaId,
+                    estado = "PENDIENTE",
+                    monto = 1600m,
+                    cupos = 1,
+                    expiraEn = DateTimeOffset.UtcNow.AddMinutes(5)
+                })));
+
+        using var cliente = CrearCliente(servidor.Url, TimeSpan.FromSeconds(3));
+        var programas = new ProgramasClient(cliente, new CorrelacionFija());
+        var solicitud = new SolicitudReservaPresupuesto(
+            "RENOVACION", solicitudId, periodoId, 1600m, 1);
+
+        var resultado = await programas.ReservarAsync(programaId, solicitud);
+
+        resultado.ReservaId.Should().Be(reservaId);
+        var peticion = servidor.LogEntries.Should().ContainSingle().Subject.RequestMessage!;
+        peticion.Headers!["Idempotency-Key"]!.Single()
+            .Should().Be($"renovacion-{solicitudId}");
+        using var cuerpo = JsonDocument.Parse(peticion.Body!);
+        cuerpo.RootElement.GetProperty("referenciaTipo").GetString()
+            .Should().Be("RENOVACION");
+        cuerpo.RootElement.GetProperty("referenciaId").GetGuid()
+            .Should().Be(solicitudId);
+        cuerpo.RootElement.GetProperty("periodoAcademicoId").GetGuid()
+            .Should().Be(periodoId);
+    }
+
+    [Fact]
     public async Task Debe_MapearEl409_Cuando_MS_PRGSinCupoOPresupuesto()
     {
         using var servidor = WireMockServer.Start();

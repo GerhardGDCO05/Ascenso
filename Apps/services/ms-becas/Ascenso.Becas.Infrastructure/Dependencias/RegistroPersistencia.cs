@@ -1,6 +1,10 @@
 using Ascenso.Becas.Application.Idempotencia;
 using Ascenso.Becas.Application.Otorgamiento.Puertos;
+using Ascenso.Becas.Application.Renovacion.Puertos;
+using Ascenso.Becas.Application.Renovacion.Servicios;
+using Ascenso.Becas.Application.SeguimientoAcademico.Puertos;
 using Ascenso.Becas.Domain.Ports;
+using Ascenso.Becas.Infrastructure.Clientes;
 using Ascenso.Becas.Infrastructure.Persistence;
 using Ascenso.Becas.Infrastructure.Persistence.Consultas;
 using Ascenso.Becas.Infrastructure.Persistence.Proyecciones;
@@ -34,6 +38,14 @@ public static class RegistroPersistencia
 
         servicios.AddScoped<IAlmacenIdempotencia, AlmacenIdempotencia>();
         servicios.AddScoped<IBecaRepository, BecaRepository>();
+        servicios.AddScoped<IReporteAcademicoRepository, ReporteAcademicoRepository>();
+        servicios.AddScoped<ISolicitudRenovacionRepository, SolicitudRenovacionRepository>();
+        servicios.AddScoped<IConsultasRenovacion, ConsultasRenovacion>();
+        servicios.AddScoped<ICalendarioAcademicoPrograma, CalendarioAcademicoProgramaNoDisponible>();
+        servicios.AddScoped<IVentanaRenovacionPrograma, VentanaRenovacionProgramaNoDisponible>();
+        servicios.AddScoped<IPresupuestoRenovacionPrograma, PresupuestoRenovacionProgramaNoDisponible>();
+        servicios.AddScoped<ILiberacionCupoPrograma, LiberacionCupoProgramaNoDisponible>();
+        servicios.AddScoped<EvaluadorElegibilidadRenovacion>();
         servicios.AddScoped<ICalendarioDesembolsoRepository, CalendarioDesembolsoRepository>();
         servicios.AddScoped<IDatosPagoBecarioRepository, DatosPagoBecarioRepository>();
         servicios.AddScoped<IOfertaBecaRepository, OfertaBecaRepository>();

@@ -62,7 +62,11 @@ public sealed class CasosUsoDesembolso :
         var beca = await ObtenerBecaAsync(command.BecaId, cancellationToken);
         if (beca.Estado != EstadoBeca.Activa || beca.PeriodoVigenteActualId != command.PeriodoAcademicoId)
             throw new ConflictoOperacionException("La beca debe estar activa en el periodo solicitado.");
-        if (beca.Oferta is null || command.MontoMaximoAprobadoPeriodo > beca.Oferta.MontoOfertaPorPeriodo)
+        var techoAprobado = beca.Oferta?.MontoOfertaPorPeriodo
+            ?? (beca.BecaAnteriorId is not null
+                ? beca.MontoComprometidoPeriodoActual : 0m);
+        if (techoAprobado <= 0m
+            || command.MontoMaximoAprobadoPeriodo > techoAprobado)
             throw new ArgumentException("EXCEDE_OFERTA: el techo supera el monto de la oferta.");
         if (await _calendarios.ObtenerPorBecaYPeriodoAsync(command.BecaId,
             command.PeriodoAcademicoId, cancellationToken) is not null)

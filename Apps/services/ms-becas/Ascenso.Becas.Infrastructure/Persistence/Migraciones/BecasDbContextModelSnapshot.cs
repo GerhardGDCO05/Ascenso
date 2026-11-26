@@ -1059,6 +1059,116 @@ namespace Ascenso.Becas.Infrastructure.Persistence.Migraciones
                         });
                 });
 
+            modelBuilder.Entity("Ascenso.Becas.Domain.Renovacion.Agregados.SolicitudRenovacion", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid")
+                        .HasColumnName("id");
+
+                    b.Property<Guid>("BecaId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("beca_id");
+
+                    b.Property<bool>("CumpleRendimientoAcademico")
+                        .HasColumnType("boolean")
+                        .HasColumnName("cumple_rendimiento_academico");
+
+                    b.Property<string>("Estado")
+                        .IsRequired()
+                        .HasMaxLength(30)
+                        .HasColumnType("varchar")
+                        .HasColumnName("estado");
+
+                    b.Property<Guid?>("EvaluadoPorCoordinadorId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("evaluado_por_coordinador_id");
+
+                    b.Property<DateTimeOffset>("FechaCreacion")
+                        .HasColumnType("timestamptz")
+                        .HasColumnName("fecha_creacion");
+
+                    b.Property<DateTimeOffset?>("FechaDecision")
+                        .HasColumnType("timestamptz")
+                        .HasColumnName("fecha_decision");
+
+                    b.Property<DateOnly>("FechaLimiteVentanaRenovacion")
+                        .HasColumnType("date")
+                        .HasColumnName("fecha_limite_ventana_renovacion");
+
+                    b.Property<DateTimeOffset>("FechaSolicitud")
+                        .HasColumnType("timestamptz")
+                        .HasColumnName("fecha_solicitud");
+
+                    b.Property<DateTimeOffset>("FechaUltimaModificacion")
+                        .HasColumnType("timestamptz")
+                        .HasColumnName("fecha_ultima_modificacion");
+
+                    b.Property<decimal>("MontoReservadoRenovacion")
+                        .HasPrecision(18, 2)
+                        .HasColumnType("numeric(18,2)")
+                        .HasColumnName("monto_reservado_renovacion");
+
+                    b.Property<string>("MotivoDecision")
+                        .HasMaxLength(2000)
+                        .HasColumnType("character varying(2000)")
+                        .HasColumnName("motivo_decision");
+
+                    b.Property<Guid>("PeriodoOrigenId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("periodo_origen_id");
+
+                    b.Property<Guid>("PeriodoSolicitadoId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("periodo_solicitado_id");
+
+                    b.Property<string>("ReferenciaJobVencimientoId")
+                        .HasMaxLength(200)
+                        .HasColumnType("character varying(200)")
+                        .HasColumnName("referencia_job_vencimiento_id");
+
+                    b.Property<Guid?>("ReservaPresupuestoId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("reserva_presupuesto_id");
+
+                    b.Property<bool>("TienePresupuestoDisponible")
+                        .HasColumnType("boolean")
+                        .HasColumnName("tiene_presupuesto_disponible");
+
+                    b.Property<Guid>("UsuarioCreacionId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("usuario_creacion_id");
+
+                    b.Property<Guid>("UsuarioModificacionId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("usuario_modificacion_id");
+
+                    b.Property<int>("Version")
+                        .IsConcurrencyToken()
+                        .HasColumnType("integer")
+                        .HasColumnName("version");
+
+                    b.HasKey("Id")
+                        .HasName("pk_solicitud_renovacion");
+
+                    b.HasIndex("BecaId", "PeriodoSolicitadoId")
+                        .IsUnique()
+                        .HasDatabaseName("ux_solicitud_renovacion_beca_periodo");
+
+                    b.ToTable("solicitud_renovacion", "becas", t =>
+                        {
+                            t.HasCheckConstraint("ck_solicitud_renovacion_elegibilidad", "cumple_rendimiento_academico AND tiene_presupuesto_disponible");
+
+                            t.HasCheckConstraint("ck_solicitud_renovacion_estado", "estado IN ('SOLICITADA_EN_CURSO', 'APROBADA', 'RECHAZADA', 'EXPIRADA_CONCLUIDA')");
+
+                            t.HasCheckConstraint("ck_solicitud_renovacion_fechas", "fecha_limite_ventana_renovacion >= (fecha_solicitud AT TIME ZONE 'UTC')::date");
+
+                            t.HasCheckConstraint("ck_solicitud_renovacion_monto_reserva", "(reserva_presupuesto_id IS NULL AND monto_reservado_renovacion = 0) OR (reserva_presupuesto_id IS NOT NULL AND monto_reservado_renovacion > 0)");
+
+                            t.HasCheckConstraint("ck_solicitud_renovacion_periodos", "periodo_origen_id <> periodo_solicitado_id");
+                        });
+                });
+
             modelBuilder.Entity("Ascenso.Becas.Domain.SeguimientoAcademico.Agregados.ReporteAcademico", b =>
                 {
                     b.Property<Guid>("Id")
@@ -1773,8 +1883,46 @@ namespace Ascenso.Becas.Infrastructure.Persistence.Migraciones
                                 .HasForeignKey("BecaId");
                         });
 
+                    b.OwnsOne("Ascenso.Becas.Domain.ValueObjects.CondicionesPermanencia", "CondicionesPermanenciaSnapshot", b1 =>
+                        {
+                            b1.Property<Guid>("BecaId")
+                                .HasColumnType("uuid");
+
+                            b1.Property<string>("ConsecuenciaIncumplimiento")
+                                .IsRequired()
+                                .HasMaxLength(30)
+                                .HasColumnType("varchar")
+                                .HasColumnName("condiciones_snapshot_consecuencia_incumplimiento");
+
+                            b1.Property<int>("HorasServicioPorPeriodo")
+                                .HasColumnType("integer")
+                                .HasColumnName("condiciones_snapshot_horas_servicio_por_periodo");
+
+                            b1.Property<int>("MateriasMinimasAprobadas")
+                                .HasColumnType("integer")
+                                .HasColumnName("condiciones_snapshot_materias_minimas_aprobadas");
+
+                            b1.Property<int>("MaximoMateriasReprobadas")
+                                .HasColumnType("integer")
+                                .HasColumnName("condiciones_snapshot_maximo_materias_reprobadas");
+
+                            b1.Property<decimal>("PromedioMinimoRenovacion")
+                                .HasPrecision(4, 2)
+                                .HasColumnType("numeric(4,2)")
+                                .HasColumnName("condiciones_snapshot_promedio_minimo_renovacion");
+
+                            b1.HasKey("BecaId");
+
+                            b1.ToTable("beca", "becas");
+
+                            b1.WithOwner()
+                                .HasForeignKey("BecaId");
+                        });
+
                     b.Navigation("CoberturaAplicada")
                         .IsRequired();
+
+                    b.Navigation("CondicionesPermanenciaSnapshot");
                 });
 
             modelBuilder.Entity("Ascenso.Becas.Domain.Otorgamiento.Entidades.CompromisoBecario", b =>
@@ -1854,6 +2002,16 @@ namespace Ascenso.Becas.Infrastructure.Persistence.Migraciones
                         .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired()
                         .HasConstraintName("fk_suspension_desembolso_beca");
+                });
+
+            modelBuilder.Entity("Ascenso.Becas.Domain.Renovacion.Agregados.SolicitudRenovacion", b =>
+                {
+                    b.HasOne("Ascenso.Becas.Domain.Otorgamiento.Agregados.Beca", null)
+                        .WithMany()
+                        .HasForeignKey("BecaId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired()
+                        .HasConstraintName("fk_solicitud_renovacion_beca");
                 });
 
             modelBuilder.Entity("Ascenso.Becas.Domain.SeguimientoAcademico.Agregados.ReporteAcademico", b =>

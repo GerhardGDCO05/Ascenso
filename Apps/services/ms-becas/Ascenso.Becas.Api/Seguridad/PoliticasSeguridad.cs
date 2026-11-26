@@ -23,6 +23,8 @@ public static class PoliticasSeguridad
 
     public const string RolBecario = "BECARIO";
 
+    public const string RolEnlaceUniversidad = "ENLACE_UNIVERSIDAD";
+
     /// <summary>
     /// Roles que pueden ejecutar operaciones administrativas de otorgamiento.
     /// </summary>

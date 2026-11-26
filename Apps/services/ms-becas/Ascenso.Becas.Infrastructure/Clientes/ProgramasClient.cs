@@ -10,8 +10,8 @@ using Ascenso.Becas.Domain.ValueObjects;
 namespace Ascenso.Becas.Infrastructure.Clientes;
 
 /// <summary>
-/// Cliente de <c>MS-PRG</c> para reservar cupo y presupuesto al emitir una
-/// oferta. Usa una <c>Idempotency-Key</c> estable por oferta y traduce los
+/// Cliente de <c>MS-PRG</c> para reservar cupo y presupuesto. Usa una
+/// <c>Idempotency-Key</c> estable por referencia y traduce los
 /// rechazos de negocio a los códigos internos del servicio.
 /// </summary>
 public sealed class ProgramasClient : IProgramasClient
@@ -224,6 +224,14 @@ public sealed class ProgramasClient : IProgramasClient
                 nameof(solicitud));
         }
 
+        var prefijoIdempotencia = solicitud.ReferenciaTipo switch
+        {
+            "OFERTA_BECA" => "oferta",
+            "RENOVACION" => "renovacion",
+            _ => throw new ArgumentException(
+                "El tipo de referencia de la reserva no es válido.", nameof(solicitud))
+        };
+
         using var peticion = SolicitudIntegracion.Crear(
             HttpMethod.Post,
             $"internal/v1/programas/{programaBecaId}/reservas",
@@ -231,7 +239,7 @@ public sealed class ProgramasClient : IProgramasClient
 
         peticion.Headers.TryAddWithoutValidation(
             EncabezadoIdempotencia,
-            $"oferta-{solicitud.ReferenciaId}");
+            $"{prefijoIdempotencia}-{solicitud.ReferenciaId}");
 
         peticion.Content = SolicitudIntegracion.ContenidoJson(new
         {
@@ -300,37 +308,37 @@ public sealed class ProgramasClient : IProgramasClient
     public Task ConfirmarReservaAsync(
         Guid programaBecaId,
         Guid reservaId,
-        Guid ofertaId,
+        Guid referenciaId,
         CancellationToken cancellationToken = default)
         => CambiarEstadoReservaAsync(
-            programaBecaId, reservaId, ofertaId, "confirmar", cancellationToken);
+            programaBecaId, reservaId, referenciaId, "confirmar", cancellationToken);
 
     public Task ActivarReservaAsync(
         Guid programaBecaId,
         Guid reservaId,
-        Guid ofertaId,
+        Guid referenciaId,
         CancellationToken cancellationToken = default)
         => CambiarEstadoReservaAsync(
-            programaBecaId, reservaId, ofertaId, "activar", cancellationToken);
+            programaBecaId, reservaId, referenciaId, "activar", cancellationToken);
 
     public Task LiberarReservaAsync(
         Guid programaBecaId,
         Guid reservaId,
-        Guid ofertaId,
+        Guid referenciaId,
         CancellationToken cancellationToken = default)
         => CambiarEstadoReservaAsync(
-            programaBecaId, reservaId, ofertaId, "liberar", cancellationToken);
+            programaBecaId, reservaId, referenciaId, "liberar", cancellationToken);
 
     private async Task CambiarEstadoReservaAsync(
         Guid programaBecaId,
         Guid reservaId,
-        Guid ofertaId,
+        Guid referenciaId,
         string operacion,
         CancellationToken cancellationToken)
     {
         ValidarIdentificador(programaBecaId, nameof(programaBecaId));
         ValidarIdentificador(reservaId, nameof(reservaId));
-        ValidarIdentificador(ofertaId, nameof(ofertaId));
+        ValidarIdentificador(referenciaId, nameof(referenciaId));
 
         using var peticion = SolicitudIntegracion.Crear(
             HttpMethod.Post,
@@ -338,7 +346,7 @@ public sealed class ProgramasClient : IProgramasClient
             _correlacion);
         peticion.Headers.TryAddWithoutValidation(
             EncabezadoIdempotencia,
-            $"{operacion}-{ofertaId}");
+            $"{operacion}-{referenciaId}");
 
         using var respuesta = await _cliente.SendAsync(
             peticion,

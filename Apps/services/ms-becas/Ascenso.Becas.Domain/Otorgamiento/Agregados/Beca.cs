@@ -88,6 +88,8 @@ public sealed class Beca : AggregateRoot
 
     public OfertaBeca? Oferta { get; private set; }
 
+    public CondicionesPermanencia? CondicionesPermanenciaSnapshot { get; private set; }
+
     public CompromisoBecario? Compromiso { get; private set; }
 
     public IReadOnlyCollection<HistorialEstadoBeca> Historial => _historial.AsReadOnly();
@@ -204,6 +206,7 @@ public sealed class Beca : AggregateRoot
             ofertaId);
 
         Oferta = oferta;
+        CondicionesPermanenciaSnapshot = datos.CondicionesSnapshot;
         ActualizarAuditoria(contexto.UsuarioAutorId, contexto.Fecha);
         RegistrarHistorialOferta(
             estadoAnterior: null,
@@ -472,6 +475,101 @@ public sealed class Beca : AggregateRoot
             estadoTerminalIrreversible: true);
     }
 
+    public Beca CrearSucesoraPorRenovacion(DatosBecaSucesora datos,
+        ContextoOperacion contexto)
+    {
+        ArgumentNullException.ThrowIfNull(datos);
+        ArgumentNullException.ThrowIfNull(contexto);
+        if (Estado != EstadoBeca.Activa || !TieneRenovacionEnCurso
+            || PeriodosCursados >= DuracionTotalPeriodos)
+            throw new InvalidOperationException(
+                "La beca debe estar activa, en renovación y dentro de su duración.");
+        if (datos.PeriodoSolicitadoId == Guid.Empty
+            || datos.PeriodoSolicitadoId == PeriodoVigenteActualId
+            || datos.CostoMatriculaReferenciaSnapshotId == Guid.Empty
+            || datos.ReservaPresupuestoConfirmadaId == Guid.Empty
+            || datos.MontoComprometidoPeriodo <= 0m
+            || CalculadoraMontoOferta.Redondear(datos.MontoComprometidoPeriodo)
+                != datos.MontoComprometidoPeriodo
+            || datos.CoberturaAplicada is null
+            || datos.CondicionesSnapshot is null
+            || string.IsNullOrWhiteSpace(datos.CodigoBeca)
+            || datos.CodigoBeca.Trim().Length > 20
+            || (datos.RequiereNuevaFirma && !datos.RequiereCompromisoFirmado))
+            throw new ArgumentException("Los datos de la beca sucesora son inválidos.", nameof(datos));
+
+        var debeFirmar = datos.RequiereCompromisoFirmado
+            && (datos.RequiereNuevaFirma || !CompromisoFirmadoAprobado);
+        if (debeFirmar && string.IsNullOrWhiteSpace(datos.UrlPlantillaCompromiso))
+            throw new ArgumentException(
+                "La nueva firma requiere una plantilla de compromiso.", nameof(datos));
+
+        var sucesora = new Beca(UuidV7.Nuevo(), contexto)
+        {
+            CadenaBecaId = CadenaBecaId,
+            BecaAnteriorId = Id,
+            CodigoBeca = datos.CodigoBeca.Trim(),
+            PostulanteEstudianteId = PostulanteEstudianteId,
+            NumeroDocumentoEstudiante = NumeroDocumentoEstudiante,
+            PostulacionOrigenId = PostulacionOrigenId,
+            ProgramaBecaId = ProgramaBecaId,
+            ConvocatoriaOrigenId = ConvocatoriaOrigenId,
+            PeriodoOtorgamientoId = datos.PeriodoSolicitadoId,
+            PeriodoVigenteActualId = datos.PeriodoSolicitadoId,
+            PeriodosCursados = PeriodosCursados + 1,
+            DuracionTotalPeriodos = DuracionTotalPeriodos,
+            CoberturaAplicada = new PoliticaCobertura(
+                datos.CoberturaAplicada.Modalidad,
+                datos.CoberturaAplicada.PorcentajeCobertura,
+                datos.CoberturaAplicada.MontoFijoPeriodo,
+                datos.CoberturaAplicada.Moneda),
+            CostoMatriculaReferenciaSnapshotId = datos.CostoMatriculaReferenciaSnapshotId,
+            MontoComprometidoPeriodoActual = datos.MontoComprometidoPeriodo,
+            MontoDesembolsadoPeriodoActual = 0m,
+            Estado = EstadoBeca.Activa,
+            TipoCierre = null,
+            PermiteAcumulacion = PermiteAcumulacion,
+            RequiereCompromisoFirmado = datos.RequiereCompromisoFirmado,
+            CompromisoFirmadoAprobado = datos.RequiereCompromisoFirmado
+                && !debeFirmar && CompromisoFirmadoAprobado,
+            HabilitadaParaDesembolso = !debeFirmar,
+            TieneRenovacionEnCurso = false,
+            FechaOtorgamiento = DateOnly.FromDateTime(contexto.Fecha.UtcDateTime),
+            FechaActivacion = DateOnly.FromDateTime(contexto.Fecha.UtcDateTime),
+            FechaConclusionORevocacion = null,
+            CondicionesPermanenciaSnapshot = datos.CondicionesSnapshot
+        };
+        if (debeFirmar)
+            sucesora.Compromiso = CompromisoBecario.Crear(
+                sucesora.Id, datos.UrlPlantillaCompromiso!, contexto);
+        sucesora.RegistrarHistorialBeca(null, EstadoBeca.Activa,
+            "Activación por renovación del periodo anterior", contexto,
+            estadoTerminalIrreversible: false);
+        return sucesora;
+    }
+
+    public void IniciarRenovacion(ContextoOperacion contexto)
+    {
+        ArgumentNullException.ThrowIfNull(contexto);
+        if (Estado != EstadoBeca.Activa || TieneRenovacionEnCurso)
+            throw new InvalidOperationException(
+                "La beca debe estar activa y sin otra renovación en curso.");
+
+        TieneRenovacionEnCurso = true;
+        ActualizarAuditoria(contexto.UsuarioAutorId, contexto.Fecha);
+    }
+
+    public void RechazarRenovacionEnCurso(ContextoOperacion contexto)
+    {
+        ArgumentNullException.ThrowIfNull(contexto);
+        if (Estado != EstadoBeca.Activa || !TieneRenovacionEnCurso)
+            throw new InvalidOperationException(
+                "La beca no tiene una renovación activa que pueda rechazarse.");
+
+        TieneRenovacionEnCurso = false;
+        ActualizarAuditoria(contexto.UsuarioAutorId, contexto.Fecha);
+    }
+
     public void Concluir(ContextoOperacion contexto)
     {
         ArgumentNullException.ThrowIfNull(contexto);
@@ -492,6 +590,19 @@ public sealed class Beca : AggregateRoot
             "Conclusión de la beca",
             contexto,
             estadoTerminalIrreversible: true);
+    }
+
+    public void ConcluirPorVencimientoRenovacion(Guid periodoSolicitadoId,
+        ContextoOperacion contexto)
+    {
+        if (periodoSolicitadoId == Guid.Empty
+            || periodoSolicitadoId == PeriodoVigenteActualId)
+            throw new ArgumentException("El periodo siguiente es inválido.",
+                nameof(periodoSolicitadoId));
+        Concluir(contexto);
+        RegistrarEventoDominio(new BecaConcluidaPorVencimientoRenovacionEvento(
+            Id, CadenaBecaId, ProgramaBecaId, PeriodoVigenteActualId,
+            periodoSolicitadoId, contexto.CorrelacionId, contexto.Fecha));
     }
 
     public void Revocar(ContextoOperacion contexto)

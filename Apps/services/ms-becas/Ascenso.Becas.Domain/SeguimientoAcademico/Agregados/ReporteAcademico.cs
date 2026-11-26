@@ -3,6 +3,7 @@ using Ascenso.Becas.Domain.Enums;
 using Ascenso.Becas.Domain.Otorgamiento.ValueObjects;
 using Ascenso.Becas.Domain.SeguimientoAcademico.Datos;
 using Ascenso.Becas.Domain.SeguimientoAcademico.Entidades;
+using Ascenso.Becas.Domain.SeguimientoAcademico.Eventos;
 using Ascenso.Becas.Domain.ValueObjects;
 
 namespace Ascenso.Becas.Domain.SeguimientoAcademico.Agregados;
@@ -73,7 +74,24 @@ public sealed class ReporteAcademico : AggregateRoot
         ArgumentNullException.ThrowIfNull(datos);
         ArgumentNullException.ThrowIfNull(contexto);
         Validar(datos);
-        return new ReporteAcademico(datos, contexto);
+        var reporte = new ReporteAcademico(datos, contexto);
+        reporte.RegistrarEventoDominio(new ReporteAcademicoEntregadoEvento(
+            reporte.Id, reporte.BecaId, reporte.PeriodoAcademicoId,
+            reporte.FechaLimitePeriodo, reporte.EntregaTardia,
+            contexto.CorrelacionId, contexto.Fecha));
+        return reporte;
+    }
+
+    /// <summary>Emite la alerta únicamente cuando la entrega superó el plazo oficial.</summary>
+    public void PrepararAlertaTardia(Guid programaBecaId, ContextoOperacion contexto)
+    {
+        ArgumentNullException.ThrowIfNull(contexto);
+        if (programaBecaId == Guid.Empty)
+            throw new ArgumentException("El programa es obligatorio.", nameof(programaBecaId));
+        if (EntregaTardia && !EventosDominio.OfType<AlertaReporteAcademicoTardioEvento>().Any())
+            RegistrarEventoDominio(new AlertaReporteAcademicoTardioEvento(
+                Id, BecaId, programaBecaId, PeriodoAcademicoId,
+                FechaLimitePeriodo, contexto.CorrelacionId, contexto.Fecha));
     }
 
     public void IniciarRevision(ContextoOperacion contexto)
@@ -111,6 +129,10 @@ public sealed class ReporteAcademico : AggregateRoot
 
         Evaluacion = EvaluacionPermanencia.Crear(this, condiciones, contexto);
         ActualizarAuditoria(contexto.UsuarioAutorId, contexto.Fecha);
+        RegistrarEventoDominio(new EvaluacionPermanenciaRegistradaEvento(
+            Evaluacion.Id, Id, BecaId, Evaluacion.CumpleCondiciones,
+            Evaluacion.ConsecuenciaRecomendada,
+            contexto.CorrelacionId, contexto.Fecha));
         return Evaluacion;
     }
 
@@ -131,6 +153,9 @@ public sealed class ReporteAcademico : AggregateRoot
             throw new InvalidOperationException("El reporte no tiene evaluación de permanencia.");
         Evaluacion.MarcarConsecuenciaAplicada(contexto);
         ActualizarAuditoria(contexto.UsuarioAutorId, contexto.Fecha);
+        RegistrarEventoDominio(new ConsecuenciaPermanenciaAplicadaEvento(
+            Evaluacion.Id, Id, BecaId, Evaluacion.ConsecuenciaAplicada!.Value,
+            contexto.CorrelacionId, contexto.Fecha));
     }
 
     private static void Validar(DatosReporteAcademico datos)
@@ -150,11 +175,7 @@ public sealed class ReporteAcademico : AggregateRoot
                 && datos.MateriasCursando > 0))
             throw new ArgumentException("El rendimiento o la matrícula del reporte son incoherentes.", nameof(datos));
 
-        if (string.IsNullOrWhiteSpace(datos.UrlComprobanteNotasFirebase)
-            || !Uri.TryCreate(datos.UrlComprobanteNotasFirebase, UriKind.Absolute,
-                out var referencia)
-            || referencia.Scheme != "gs" || string.IsNullOrWhiteSpace(referencia.Host)
-            || referencia.AbsolutePath is "" or "/"
+        if (!EsReferenciaEstable(datos.UrlComprobanteNotasFirebase)
             || string.IsNullOrWhiteSpace(datos.HashComprobanteSha256)
             || datos.HashComprobanteSha256.Length != 64
             || !datos.HashComprobanteSha256.All(Uri.IsHexDigit)
@@ -163,14 +184,27 @@ public sealed class ReporteAcademico : AggregateRoot
             throw new ArgumentException("El comprobante PDF del reporte es inválido.", nameof(datos));
 
         if (datos.HorasServicioCumplidas > 0
-            && (string.IsNullOrWhiteSpace(datos.UrlComprobanteServicio)
-                || !Uri.TryCreate(datos.UrlComprobanteServicio, UriKind.Absolute,
-                    out var comprobanteServicio)
-                || comprobanteServicio.Scheme != "gs"
-                || string.IsNullOrWhiteSpace(comprobanteServicio.Host)
-                || comprobanteServicio.AbsolutePath is "" or "/"
+            && (!EsReferenciaEstable(datos.UrlComprobanteServicio)
                 || datos.HashComprobanteServicioSha256?.Length != 64
                 || !datos.HashComprobanteServicioSha256.All(Uri.IsHexDigit)))
             throw new ArgumentException("La evidencia de horas de servicio es inválida.", nameof(datos));
+    }
+
+    private static bool EsReferenciaEstable(string? valor)
+    {
+        if (string.IsNullOrWhiteSpace(valor)
+            || !Uri.TryCreate(valor, UriKind.Absolute, out var referencia)
+            || referencia.AbsolutePath is "" or "/"
+            || !string.IsNullOrEmpty(referencia.Query)
+            || !string.IsNullOrEmpty(referencia.Fragment))
+            return false;
+
+        return referencia.Scheme switch
+        {
+            "gs" => !string.IsNullOrWhiteSpace(referencia.Host),
+            "file" => referencia.IsFile,
+            "http" or "https" => !string.IsNullOrWhiteSpace(referencia.Host),
+            _ => false
+        };
     }
 }
