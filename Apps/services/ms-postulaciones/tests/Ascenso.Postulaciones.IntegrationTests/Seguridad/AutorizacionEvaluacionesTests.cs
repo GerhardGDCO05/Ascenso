@@ -9,6 +9,7 @@ using Ascenso.Postulaciones.Domain.Asignaciones.Agregados;
 using Ascenso.Postulaciones.Domain.Comites.Agregados;
 using Ascenso.Postulaciones.Domain.Enums;
 using Ascenso.Postulaciones.Domain.Evaluaciones.Agregados;
+using Ascenso.Postulaciones.Domain.Evaluaciones.ObjetosValor;
 using Ascenso.Postulaciones.Domain.Interfaces;
 using Ascenso.Postulaciones.Domain.Interfaces.Contratos;
 using Ascenso.Postulaciones.Domain.Rubricas.Agregados;
@@ -355,11 +356,99 @@ public sealed class AutorizacionEvaluacionesTests : IClassFixture<WebApplication
         respSupervision.StatusCode.Should().Be(HttpStatusCode.OK);
     }
 
+    [Fact]
+    public async Task Debe_ExigirPoliticaGestionMisEvaluacionesEnEndpointDeCoevaluadores_Cuando_SeEvaluaPorRolYSinToken()
+    {
+        var ahora = DateTimeOffset.UtcNow;
+        var programaBecaId = Guid.NewGuid();
+        var convocatoriaId = Guid.NewGuid();
+        var coordinadorId = Guid.NewGuid();
+        var evaluadorId = Guid.NewGuid();
+        var postulacionId = Guid.NewGuid();
+
+        var comite = ComiteEvaluador.Crear(
+            programaBecaId,
+            convocatoriaId,
+            "Comité Seguridad Coevaluadores",
+            evaluadorId,
+            ahora.AddDays(-10),
+            coordinadorId);
+        var miembro = comite.Miembros.First();
+
+        var asignacion = AsignacionEvaluacion.Crear(
+            comite,
+            miembro.Id,
+            postulacionId,
+            ahora.AddDays(-9),
+            ahora.AddDays(-1),
+            coordinadorId);
+
+        var repoCoevaluadores = Substitute.For<IConsultaEvaluacionesCoevaluadoresRepository>();
+        repoCoevaluadores.ObtenerAsignacionVigenteEvaluadorAsync(
+                postulacionId,
+                evaluadorId,
+                Arg.Any<CancellationToken>())
+            .Returns(asignacion);
+        repoCoevaluadores.ListarDefinitivasDeCoevaluadoresAsync(
+                postulacionId,
+                evaluadorId,
+                Arg.Any<CancellationToken>())
+            .Returns([]);
+
+        var convocatoriaClient = Substitute.For<IConvocatoriaEvaluacionClient>();
+        convocatoriaClient.ObtenerVentanaRevisionAsync(
+                convocatoriaId,
+                Arg.Any<CancellationToken>())
+            .Returns(new VentanaRevisionConvocatoria(
+                convocatoriaId,
+                EstadoConvocatoriaExterna.Cerrada,
+                ahora.AddDays(-8),
+                ahora.AddMinutes(-30)));
+
+        using var fabrica = CrearFabrica(
+            repoCoevaluadores: repoCoevaluadores,
+            convocatoriaClient: convocatoriaClient);
+
+        // 1. Sin token -> 401 Unauthorized
+        using var clienteAnonimo = fabrica.CreateClient();
+        var respSinToken = await clienteAnonimo.GetAsync(
+            $"/api/v1/evaluaciones/postulaciones/{postulacionId}/coevaluadores");
+        respSinToken.StatusCode.Should().Be(HttpStatusCode.Unauthorized);
+
+        // 2. ADMIN_FINANCIERO y COORDINADOR_PROGRAMA -> 403 Forbidden con codigo = PERMISO_DENEGADO
+        foreach (var rolNoAutorizado in new[] { "ADMIN_FINANCIERO", "COORDINADOR_PROGRAMA" })
+        {
+            using var clienteNoAutorizado = fabrica.CreateClient();
+            clienteNoAutorizado.DefaultRequestHeaders.Add(HeaderSub, Guid.NewGuid().ToString());
+            clienteNoAutorizado.DefaultRequestHeaders.Add(HeaderRol, rolNoAutorizado);
+
+            var respDenegado = await clienteNoAutorizado.GetAsync(
+                $"/api/v1/evaluaciones/postulaciones/{postulacionId}/coevaluadores");
+
+            respDenegado.StatusCode.Should().Be(HttpStatusCode.Forbidden);
+            using var doc = JsonDocument.Parse(await respDenegado.Content.ReadAsStringAsync());
+            doc.RootElement.GetProperty("status").GetInt32().Should().Be((int)HttpStatusCode.Forbidden);
+            doc.RootElement.GetProperty("codigo").GetString()
+                .Should().Be(ManejadorResultadoAutorizacionRubricas.CodigoPermisoDenegado);
+        }
+
+        // 3. MIEMBRO_COMITE -> 200 OK
+        using var clienteMiembro = fabrica.CreateClient();
+        clienteMiembro.DefaultRequestHeaders.Add(HeaderSub, evaluadorId.ToString());
+        clienteMiembro.DefaultRequestHeaders.Add(HeaderRol, "MIEMBRO_COMITE");
+
+        var respAutorizado = await clienteMiembro.GetAsync(
+            $"/api/v1/evaluaciones/postulaciones/{postulacionId}/coevaluadores");
+        respAutorizado.StatusCode.Should().Be(HttpStatusCode.OK);
+    }
+
     private WebApplicationFactory<Program> CrearFabrica(
         IConsultaAsignacionParaEvaluacionRepository? repoAsignacion = null,
         IComiteEvaluadorRepository? repoComites = null,
         IConsultaRubricaParaEvaluacionRepository? repoRubrica = null,
-        IEvaluacionRepository? repoEvaluacion = null)
+        IEvaluacionRepository? repoEvaluacion = null,
+        IConsultaEvaluacionesCoevaluadoresRepository? repoCoevaluadores = null,
+        IConvocatoriaEvaluacionClient? convocatoriaClient = null)
     {
         return _fabricaBase.WithWebHostBuilder(constructor =>
         {
@@ -373,10 +462,25 @@ public sealed class AutorizacionEvaluacionesTests : IClassFixture<WebApplication
                 servicios.RemoveAll<IEvaluacionRepository>();
                 servicios.RemoveAll<IConsultaAsignacionParaEvaluacionRepository>();
                 servicios.RemoveAll<IConsultaRubricaParaEvaluacionRepository>();
+                servicios.RemoveAll<IConsultaEvaluacionesCoevaluadoresRepository>();
                 servicios.RemoveAll<IBloqueadorRubricaEvaluacion>();
                 servicios.RemoveAll<IPeriodoAcademicoClient>();
                 servicios.RemoveAll<ICatalogoAcademicoClient>();
+                servicios.RemoveAll<IConvocatoriaEvaluacionClient>();
                 servicios.RemoveAll<IUnitOfWork>();
+
+                var clienteConvocatoriaPorDefecto = Substitute.For<IConvocatoriaEvaluacionClient>();
+                clienteConvocatoriaPorDefecto
+                    .ObtenerVentanaRevisionAsync(Arg.Any<Guid>(), Arg.Any<CancellationToken>())
+                    .Returns(callInfo =>
+                    {
+                        var ahora = DateTimeOffset.UtcNow;
+                        return new VentanaRevisionConvocatoria(
+                            callInfo.ArgAt<Guid>(0),
+                            EstadoConvocatoriaExterna.Publicada,
+                            ahora.AddDays(-10),
+                            ahora.AddDays(30));
+                    });
 
                 servicios.AddSingleton(Substitute.For<IPostulanteRepository>());
                 servicios.AddSingleton(Substitute.For<IRubricaRepository>());
@@ -386,9 +490,11 @@ public sealed class AutorizacionEvaluacionesTests : IClassFixture<WebApplication
                 servicios.AddSingleton(repoEvaluacion ?? Substitute.For<IEvaluacionRepository>());
                 servicios.AddSingleton(repoAsignacion ?? Substitute.For<IConsultaAsignacionParaEvaluacionRepository>());
                 servicios.AddSingleton(repoRubrica ?? Substitute.For<IConsultaRubricaParaEvaluacionRepository>());
+                servicios.AddSingleton(repoCoevaluadores ?? Substitute.For<IConsultaEvaluacionesCoevaluadoresRepository>());
                 servicios.AddSingleton(Substitute.For<IBloqueadorRubricaEvaluacion>());
                 servicios.AddSingleton(Substitute.For<IPeriodoAcademicoClient>());
                 servicios.AddSingleton(Substitute.For<ICatalogoAcademicoClient>());
+                servicios.AddSingleton(convocatoriaClient ?? clienteConvocatoriaPorDefecto);
                 servicios.AddSingleton(Substitute.For<IUnitOfWork>());
                 servicios.AddSingleton(TimeProvider.System);
 

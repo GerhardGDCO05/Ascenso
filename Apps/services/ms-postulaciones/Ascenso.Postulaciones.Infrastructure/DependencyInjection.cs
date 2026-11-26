@@ -43,6 +43,7 @@ public static class DependencyInjection
         services.AddScoped<IEvaluacionRepository, EvaluacionRepository>();
         services.AddScoped<IConsultaAsignacionParaEvaluacionRepository, ConsultaAsignacionParaEvaluacionRepository>();
         services.AddScoped<IConsultaRubricaParaEvaluacionRepository, ConsultaRubricaParaEvaluacionRepository>();
+        services.AddScoped<IConsultaEvaluacionesCoevaluadoresRepository, ConsultaEvaluacionesCoevaluadoresRepository>();
 
         if (configuration is not null)
         {
@@ -64,6 +65,12 @@ public static class DependencyInjection
         });
 
         services.AddHttpClient<ICatalogoAcademicoClient, CatalogoAcademicoClient>((proveedor, cliente) =>
+        {
+            var opciones = proveedor.GetRequiredService<IOptions<ServiciosExternosOptions>>().Value;
+            cliente.Timeout = ResolverTimeout(opciones.TimeoutSegundos);
+        });
+
+        services.AddHttpClient<IConvocatoriaEvaluacionClient, ConvocatoriaEvaluacionClient>((proveedor, cliente) =>
         {
             var opciones = proveedor.GetRequiredService<IOptions<ServiciosExternosOptions>>().Value;
             cliente.Timeout = ResolverTimeout(opciones.TimeoutSegundos);
