@@ -18,4 +18,9 @@ public sealed record class ResultadoConsolidadoDto(
     DateTimeOffset? FechaRevisionDiscrepancia,
     string EstadoConfirmacionRanking,
     DateTimeOffset FechaConsolidacion,
-    int Version);
+    int Version,
+    int? PosicionRanking = null,
+    decimal? MontoEstimadoBeca = null,
+    string? Clasificacion = null,
+    DateTimeOffset? FechaConfirmacionRanking = null,
+    Guid? ConfirmadoPorUsuarioId = null);

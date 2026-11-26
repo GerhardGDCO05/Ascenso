@@ -1,0 +1,3 @@
+namespace Ascenso.Postulaciones.Application.Consolidacion.Consultas.ConsultarAdjudicabilidadPostulacion;
+
+public sealed record class ConsultarAdjudicabilidadPostulacionQuery(Guid PostulacionId);

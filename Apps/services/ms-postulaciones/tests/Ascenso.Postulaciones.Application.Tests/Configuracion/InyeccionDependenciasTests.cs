@@ -9,9 +9,12 @@ using Ascenso.Postulaciones.Application.Comites.Comandos.CrearComiteEvaluador;
 using Ascenso.Postulaciones.Application.Comites.Comandos.DesvincularMiembroComite;
 using Ascenso.Postulaciones.Application.Comites.Consultas.ObtenerComiteEvaluador;
 using Ascenso.Postulaciones.Application.Comites.Consultas.ObtenerComitePorPrograma;
+using Ascenso.Postulaciones.Application.Consolidacion.Comandos.ConfirmarRankingConvocatoria;
 using Ascenso.Postulaciones.Application.Consolidacion.Comandos.ConsolidarPostulacion;
 using Ascenso.Postulaciones.Application.Consolidacion.Comandos.RevisarDiscrepanciaConsolidacion;
+using Ascenso.Postulaciones.Application.Consolidacion.Consultas.ConsultarAdjudicabilidadPostulacion;
 using Ascenso.Postulaciones.Application.Consolidacion.Consultas.ListarResultadosConsolidadosConvocatoria;
+using Ascenso.Postulaciones.Application.Consolidacion.Consultas.ObtenerRankingConvocatoria;
 using Ascenso.Postulaciones.Application.Consolidacion.Consultas.ObtenerResultadoConsolidadoPostulacion;
 using Ascenso.Postulaciones.Application.Consolidacion.Interfaces;
 using Ascenso.Postulaciones.Application.Consolidacion.Servicios;
@@ -62,6 +65,10 @@ public sealed class InyeccionDependenciasTests
         servicios.AddSingleton(Substitute.For<IResultadoConsolidadoRepository>());
         servicios.AddSingleton(Substitute.For<IConsultaDatosConsolidacionRepository>());
         servicios.AddSingleton(Substitute.For<IProveedorParametrosConsolidacion>());
+        servicios.AddSingleton(Substitute.For<IRankingConvocatoriaRepository>());
+        servicios.AddSingleton(Substitute.For<IConsultaEstadoEvaluacionesConvocatoriaRepository>());
+        servicios.AddSingleton(Substitute.For<IDisponibilidadRankingClient>());
+        servicios.AddSingleton(Substitute.For<IProveedorMontoEstimadoBeca>());
         servicios.AddSingleton(Substitute.For<IPeriodoAcademicoClient>());
         servicios.AddSingleton(Substitute.For<ICatalogoAcademicoClient>());
         servicios.AddSingleton(Substitute.For<IConvocatoriaEvaluacionClient>());
@@ -138,6 +145,12 @@ public sealed class InyeccionDependenciasTests
         alcance.ServiceProvider.GetRequiredService<ObtenerResultadoConsolidadoPostulacionQueryHandler>()
             .Should().NotBeNull();
         alcance.ServiceProvider.GetRequiredService<ListarResultadosConsolidadosConvocatoriaQueryHandler>()
+            .Should().NotBeNull();
+        alcance.ServiceProvider.GetRequiredService<ObtenerRankingConvocatoriaQueryHandler>()
+            .Should().NotBeNull();
+        alcance.ServiceProvider.GetRequiredService<ConfirmarRankingConvocatoriaCommandHandler>()
+            .Should().NotBeNull();
+        alcance.ServiceProvider.GetRequiredService<ConsultarAdjudicabilidadPostulacionQueryHandler>()
             .Should().NotBeNull();
 
         var validadoresRegistro = alcance.ServiceProvider
@@ -289,5 +302,23 @@ public sealed class InyeccionDependenciasTests
 
         validadoresListarConsolidados.Should().ContainSingle(
             validador => validador is ListarResultadosConsolidadosConvocatoriaQueryValidator);
+
+        var validadoresObtenerRanking = alcance.ServiceProvider
+            .GetServices<IValidator<ObtenerRankingConvocatoriaQuery>>();
+
+        validadoresObtenerRanking.Should().ContainSingle(
+            validador => validador is ObtenerRankingConvocatoriaQueryValidator);
+
+        var validadoresConfirmarRanking = alcance.ServiceProvider
+            .GetServices<IValidator<ConfirmarRankingConvocatoriaCommand>>();
+
+        validadoresConfirmarRanking.Should().ContainSingle(
+            validador => validador is ConfirmarRankingConvocatoriaCommandValidator);
+
+        var validadoresConsultarAdjudicabilidad = alcance.ServiceProvider
+            .GetServices<IValidator<ConsultarAdjudicabilidadPostulacionQuery>>();
+
+        validadoresConsultarAdjudicabilidad.Should().ContainSingle(
+            validador => validador is ConsultarAdjudicabilidadPostulacionQueryValidator);
     }
 }

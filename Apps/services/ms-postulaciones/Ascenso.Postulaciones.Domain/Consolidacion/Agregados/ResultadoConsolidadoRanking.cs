@@ -69,6 +69,20 @@ public sealed class ResultadoConsolidadoRanking : AggregateRoot
 
     public DateTimeOffset FechaConsolidacion { get; private set; }
 
+    public int? PosicionRanking { get; private set; }
+
+    public decimal? MontoEstimadoBeca { get; private set; }
+
+    public ClasificacionRanking? Clasificacion { get; private set; }
+
+    public DateTimeOffset? FechaConfirmacionRanking { get; private set; }
+
+    public Guid? ConfirmadoPorUsuarioId { get; private set; }
+
+    public bool EsAdjudicable
+        => EstadoConfirmacionRanking == EstadoRanking.Confirmado
+            && Clasificacion == ClasificacionRanking.DentroDeCupo;
+
     public static ResultadoConsolidadoRanking Crear(
         ResultadoCalculoConsolidacion calculo,
         DateTimeOffset fechaConsolidacion,
@@ -174,6 +188,46 @@ public sealed class ResultadoConsolidadoRanking : AggregateRoot
         RevisadoPorUsuarioId = usuarioRevisorId;
         FechaRevisionDiscrepancia = fechaUtc;
         ActualizarAuditoria(usuarioRevisorId, fechaUtc);
+    }
+
+    public void ConfirmarRanking(
+        int posicionRanking,
+        decimal montoEstimadoBeca,
+        ClasificacionRanking clasificacion,
+        DateTimeOffset fechaConfirmacion,
+        Guid usuarioConfirmadorId)
+    {
+        ValidarArgumentosTemporalesYUsuario(fechaConfirmacion, usuarioConfirmadorId);
+
+        if (EstadoConfirmacionRanking == EstadoRanking.Confirmado)
+        {
+            throw new RankingYaConfirmadoException();
+        }
+
+        if (posicionRanking < 1)
+        {
+            throw new RankingInvalidoException("La posición de ranking debe ser mayor o igual a 1.");
+        }
+
+        if (montoEstimadoBeca <= 0.00m || decimal.Round(montoEstimadoBeca, 2) != montoEstimadoBeca)
+        {
+            throw new RankingInvalidoException(
+                "El monto estimado de beca debe ser mayor a 0.00 con máximo dos decimales.");
+        }
+
+        if (!Enum.IsDefined(clasificacion))
+        {
+            throw new RankingInvalidoException("La clasificación de ranking indicada no es válida.");
+        }
+
+        var fechaUtc = fechaConfirmacion.ToUniversalTime();
+        PosicionRanking = posicionRanking;
+        MontoEstimadoBeca = montoEstimadoBeca;
+        Clasificacion = clasificacion;
+        FechaConfirmacionRanking = fechaUtc;
+        ConfirmadoPorUsuarioId = usuarioConfirmadorId;
+        EstadoConfirmacionRanking = EstadoRanking.Confirmado;
+        ActualizarAuditoria(usuarioConfirmadorId, fechaUtc);
     }
 
     private void AplicarCalculo(ResultadoCalculoConsolidacion calculo, DateTimeOffset fechaConsolidacionUtc)

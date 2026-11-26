@@ -114,6 +114,21 @@ builder.Services.AddAuthorization(options =>
     options.AddPolicy(
         PoliticasAutorizacionConsolidacion.GestionConsolidacion,
         policy => policy.RequireRole(PoliticasAutorizacionConsolidacion.RolCoordinadorPrograma));
+
+    options.AddPolicy(
+        PoliticasAutorizacionConsolidacion.ConsultaAdjudicabilidadInterna,
+        policy => policy.RequireAssertion(context =>
+            context.User.IsInRole(PoliticasAutorizacionConsolidacion.RolCoordinadorPrograma)
+            || context.User.IsInRole(PoliticasAutorizacionConsolidacion.RolDireccion)
+            || context.User.Claims.Any(claim =>
+                (string.Equals(claim.Type, "scope", StringComparison.OrdinalIgnoreCase)
+                    || string.Equals(claim.Type, "scp", StringComparison.OrdinalIgnoreCase))
+                && claim.Value
+                    .Split(' ', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries)
+                    .Contains(PoliticasAutorizacionConsolidacion.ScopeLecturaInterna, StringComparer.Ordinal))
+            || context.User.Claims.Any(claim =>
+                string.Equals(claim.Type, "permissions", StringComparison.OrdinalIgnoreCase)
+                && string.Equals(claim.Value, PoliticasAutorizacionConsolidacion.PermisoLecturaInterna, StringComparison.Ordinal))));
 });
 builder.Services.AddSingleton<IAuthorizationMiddlewareResultHandler, ManejadorResultadoAutorizacionRubricas>();
 
