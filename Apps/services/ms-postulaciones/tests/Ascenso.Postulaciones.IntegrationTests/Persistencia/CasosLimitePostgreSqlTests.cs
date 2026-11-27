@@ -2,6 +2,7 @@ using Ascenso.Postulaciones.Application.Consolidacion.Comandos.ConfirmarRankingC
 using Ascenso.Postulaciones.Application.Consolidacion.Comandos.ResolverCasoLimiteRanking;
 using Ascenso.Postulaciones.Application.Consolidacion.Consultas.ObtenerRankingConvocatoria;
 using Ascenso.Postulaciones.Application.Interfaces;
+using Ascenso.Postulaciones.Application.ListaEspera.Interfaces;
 using Ascenso.Postulaciones.Domain.Comites.Agregados;
 using Ascenso.Postulaciones.Domain.Consolidacion.Agregados;
 using Ascenso.Postulaciones.Domain.Consolidacion.ObjetosValor;
@@ -734,6 +735,7 @@ public sealed class CasosLimitePostgreSqlTests
             new ConvocatoriaEvaluacionCerradaFija(timeProvider),
             disponibilidadClient,
             proveedorMonto,
+            Substitute.For<IGeneradorListaEsperaRanking>(),
             contexto,
             new ConfirmarRankingConvocatoriaCommandValidator(),
             timeProvider);

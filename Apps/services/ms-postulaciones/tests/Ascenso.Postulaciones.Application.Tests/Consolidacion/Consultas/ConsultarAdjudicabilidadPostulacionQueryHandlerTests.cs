@@ -20,10 +20,11 @@ public sealed class ConsultarAdjudicabilidadPostulacionQueryHandlerTests
     private static readonly DateTimeOffset _fechaBase = new(2026, 11, 26, 10, 0, 0, TimeSpan.Zero);
 
     private readonly IResultadoConsolidadoRepository _resultadoRepository = Substitute.For<IResultadoConsolidadoRepository>();
+    private readonly IEntradaListaEsperaRepository _entradaListaEsperaRepository = Substitute.For<IEntradaListaEsperaRepository>();
     private readonly ConsultarAdjudicabilidadPostulacionQueryValidator _validator = new();
 
     private ConsultarAdjudicabilidadPostulacionQueryHandler CrearHandler()
-        => new(_resultadoRepository, _validator);
+        => new(_resultadoRepository, _entradaListaEsperaRepository, _validator);
 
     [Fact]
     public async Task Debe_RechazarConValidationException_Cuando_PostulacionIdEsVacio()

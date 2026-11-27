@@ -3,6 +3,7 @@ using Ascenso.Postulaciones.Application.Consolidacion.Comandos.RevisarDiscrepanc
 using Ascenso.Postulaciones.Application.Consolidacion.Consultas.ConsultarAdjudicabilidadPostulacion;
 using Ascenso.Postulaciones.Application.Consolidacion.Consultas.ObtenerRankingConvocatoria;
 using Ascenso.Postulaciones.Application.Interfaces;
+using Ascenso.Postulaciones.Application.ListaEspera.Interfaces;
 using Ascenso.Postulaciones.Domain.Asignaciones.Agregados;
 using Ascenso.Postulaciones.Domain.Comites.Agregados;
 using Ascenso.Postulaciones.Domain.Consolidacion.Agregados;
@@ -375,6 +376,7 @@ public sealed class RankingPostgreSqlTests
         {
             var adjudicabilidadHandler = new ConsultarAdjudicabilidadPostulacionQueryHandler(
                 new ResultadoConsolidadoRepository(contextoAdjudicablePrevio),
+                Substitute.For<IEntradaListaEsperaRepository>(),
                 new ConsultarAdjudicabilidadPostulacionQueryValidator());
 
             var adjPrevia = await adjudicabilidadHandler.HandleAsync(
@@ -477,6 +479,7 @@ public sealed class RankingPostgreSqlTests
         {
             var adjudicabilidadHandler = new ConsultarAdjudicabilidadPostulacionQueryHandler(
                 new ResultadoConsolidadoRepository(contextoAdjudicabilidad),
+                Substitute.For<IEntradaListaEsperaRepository>(),
                 new ConsultarAdjudicabilidadPostulacionQueryValidator());
 
             var adjDentro = await adjudicabilidadHandler.HandleAsync(
@@ -768,6 +771,7 @@ public sealed class RankingPostgreSqlTests
             new ConvocatoriaEvaluacionCerradaFija(timeProvider),
             disponibilidadClient,
             proveedorMonto,
+            Substitute.For<IGeneradorListaEsperaRanking>(),
             contexto,
             new ConfirmarRankingConvocatoriaCommandValidator(),
             timeProvider);
