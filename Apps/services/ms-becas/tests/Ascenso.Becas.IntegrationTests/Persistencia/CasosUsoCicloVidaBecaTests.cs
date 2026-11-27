@@ -29,7 +29,8 @@ public sealed class CasosUsoCicloVidaBecaTests
         await using var db = _fixture.CrearContexto();
         var (becaId, calendarioId) = await CrearBecaYCalendarioAsync(db);
         var outbox = new OutboxPrueba();
-        var casos = CrearCasos(db, outbox: outbox);
+        var movimientos = new MovimientosPrueba();
+        var casos = CrearCasos(db, outbox: outbox, movimientos: movimientos);
         var inicio = new DateOnly(2026, 9, 1);
 
         var suspensionId = await casos.HandleAsync(new SuspenderBecaCommand(
@@ -57,6 +58,66 @@ public sealed class CasosUsoCicloVidaBecaTests
         Assert.All(await db.Desembolsos.Where(item => item.CalendarioDesembolsoId == calendarioId)
             .ToArrayAsync(), cuota => Assert.Equal(EstadoDesembolso.Programado, cuota.Estado));
         Assert.Single(outbox.Eventos.OfType<DesembolsosBecaReanudadosEvento>());
+        Assert.Equal([TipoMovimientoPresupuestoPrograma.Suspension,
+                TipoMovimientoPresupuestoPrograma.Reanudacion],
+            movimientos.Registrados.Select(item => item.Tipo));
+        Assert.All(movimientos.Registrados, item =>
+        {
+            Assert.Equal(1500m, item.Monto);
+            Assert.False(string.IsNullOrWhiteSpace(item.ClaveIdempotencia));
+        });
+    }
+
+    [Fact]
+    public async Task SinMovimientoContableNoSuspendeNiConsumeOtpDeRevocacion()
+    {
+        await using var db = _fixture.CrearContexto();
+        var (becaId, calendarioId) = await CrearBecaYCalendarioAsync(db);
+        var movimientos = new MovimientosPrueba { Disponible = false };
+        var otp = new OtpPrueba();
+        var casos = CrearCasos(db, otp, movimientos: movimientos);
+
+        await Assert.ThrowsAsync<DependenciaNoDisponibleException>(() =>
+            casos.HandleAsync(new SuspenderBecaCommand(becaId,
+                TipoSuspensionBeca.Manual, "Suspensión documentada",
+                "Entregar constancia", new DateOnly(2026, 9, 1), null, true,
+                "Suspensión autorizada por coordinación")));
+        await Assert.ThrowsAsync<DependenciaNoDisponibleException>(() =>
+            casos.HandleAsync(new RevocarBecaDefinitivamenteCommand(becaId,
+                "Revocación documentada por coordinación", "123456")));
+
+        db.ChangeTracker.Clear();
+        Assert.Equal(EstadoBeca.Activa,
+            (await db.Becas.SingleAsync(item => item.Id == becaId)).Estado);
+        Assert.All(await db.Desembolsos.Where(item => item.CalendarioDesembolsoId == calendarioId)
+            .ToArrayAsync(), cuota => Assert.Equal(EstadoDesembolso.Programado, cuota.Estado));
+        Assert.Null(otp.UltimaOperacion);
+        Assert.Empty(movimientos.Registrados);
+    }
+
+    [Fact]
+    public async Task SinMovimientoContableNoReanudaLaBecaSuspendida()
+    {
+        await using var db = _fixture.CrearContexto();
+        var (becaId, calendarioId) = await CrearBecaYCalendarioAsync(db);
+        var movimientos = new MovimientosPrueba();
+        var casos = CrearCasos(db, movimientos: movimientos);
+        await casos.HandleAsync(new SuspenderBecaCommand(becaId,
+            TipoSuspensionBeca.Manual, "Suspensión documentada",
+            "Entregar constancia", new DateOnly(2026, 9, 1), null, true,
+            "Suspensión autorizada por coordinación"));
+        movimientos.Disponible = false;
+        db.ChangeTracker.Clear();
+
+        await Assert.ThrowsAsync<DependenciaNoDisponibleException>(() =>
+            casos.HandleAsync(new ReanudarBecaCommand(becaId,
+                "Reactivación autorizada por coordinación")));
+
+        db.ChangeTracker.Clear();
+        Assert.Equal(EstadoBeca.Suspendida,
+            (await db.Becas.SingleAsync(item => item.Id == becaId)).Estado);
+        Assert.All(await db.Desembolsos.Where(item => item.CalendarioDesembolsoId == calendarioId)
+            .ToArrayAsync(), cuota => Assert.Equal(EstadoDesembolso.Suspendido, cuota.Estado));
     }
 
     [Fact]
@@ -141,6 +202,41 @@ public sealed class CasosUsoCicloVidaBecaTests
     }
 
     [Fact]
+    public async Task RevocacionOtorgadaNoConsumeOtpConAceptacionPendiente()
+    {
+        await using var db = _fixture.CrearContexto();
+        var datos = DatosPrueba.CrearDatosBeca();
+        var contexto = DatosPrueba.CrearContextoOperacion();
+        var beca = Ascenso.Becas.Domain.Otorgamiento.Agregados.Beca.CrearOtorgada(
+            datos, contexto);
+        var oferta = beca.EmitirOferta(DatosPrueba.CrearDatosOferta(datos), contexto);
+        db.Becas.Add(beca);
+        await db.SaveChangesAsync();
+        db.ChangeTracker.Clear();
+
+        var fecha = DateOnly.FromDateTime(contexto.Fecha.UtcDateTime);
+        var plan = new PlanDesembolsoPrograma(datos.ProgramaBecaId,
+            datos.PeriodoOtorgamientoId, FrecuenciaDesembolso.Mensual,
+            DestinatarioPago.Becario, fecha, fecha,
+            [new CuotaProgramada(1, fecha, 100m)]);
+        await new IntencionAceptacionOfertaStore(db).GuardarAsync(
+            new IntencionAceptacionOferta(oferta.Id, beca.Id,
+                beca.ProgramaBecaId, oferta.ReservaPresupuestoId, plan, contexto));
+
+        var otp = new OtpPrueba();
+        var movimientos = new MovimientosPrueba();
+        var casos = CrearCasos(db, otp, movimientos: movimientos);
+        await Assert.ThrowsAsync<ConflictoOperacionException>(() =>
+            casos.HandleAsync(new RevocarBecaDefinitivamenteCommand(beca.Id,
+                "Revocación documentada por coordinación", "123456")));
+        Assert.Null(otp.UltimaOperacion);
+        Assert.Empty(movimientos.Registrados);
+        db.ChangeTracker.Clear();
+        Assert.Equal(EstadoBeca.Otorgada,
+            (await db.Becas.SingleAsync(item => item.Id == beca.Id)).Estado);
+    }
+
+    [Fact]
     public async Task RevocarOtorgadaCierraOfertaYCancelaJobTrasConfirmar()
     {
         await using var db = _fixture.CrearContexto();
@@ -190,11 +286,31 @@ public sealed class CasosUsoCicloVidaBecaTests
         Infrastructure.Persistence.BecasDbContext db,
         OtpPrueba? otp = null,
         OutboxPrueba? outbox = null,
-        ProgramadorPrueba? programador = null)
+        ProgramadorPrueba? programador = null,
+        IMovimientoPresupuestoPrograma? movimientos = null)
         => new(new BecaRepository(db), new CalendarioDesembolsoRepository(db),
             new UnidadDeTrabajo(db), new ContextoPrueba(), new RelojPrueba(),
             otp ?? new OtpPrueba(), outbox ?? new OutboxPrueba(),
-            programador ?? new ProgramadorPrueba(), NullLogger<CasosUsoCicloVidaBeca>.Instance);
+            programador ?? new ProgramadorPrueba(), NullLogger<CasosUsoCicloVidaBeca>.Instance,
+            movimientos ?? new MovimientosPrueba(),
+            new IntencionAceptacionOfertaStore(db));
+
+    private sealed class MovimientosPrueba : IMovimientoPresupuestoPrograma
+    {
+        public bool Disponible { get; set; } = true;
+        public List<MovimientoPresupuestoPrograma> Registrados { get; } = [];
+
+        public Task AsegurarDisponibleAsync(CancellationToken cancellationToken = default)
+            => Disponible ? Task.CompletedTask
+                : throw new DependenciaNoDisponibleException("MS-PRG: movimientos-presupuesto");
+
+        public Task RegistrarAsync(MovimientoPresupuestoPrograma movimiento,
+            CancellationToken cancellationToken = default)
+        {
+            Registrados.Add(movimiento);
+            return Task.CompletedTask;
+        }
+    }
 
     private sealed class ContextoPrueba : IContextoOperacionActual
     {

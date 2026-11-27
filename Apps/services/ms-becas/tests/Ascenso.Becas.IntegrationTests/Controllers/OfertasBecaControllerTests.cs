@@ -86,7 +86,8 @@ public sealed class OfertasBecaControllerTests : IClassFixture<OfertasBecaApiFac
             "401",
             "403",
             "404",
-            "409");
+            "409",
+            "422");
 
         VerificarOperacion(
             rutas,

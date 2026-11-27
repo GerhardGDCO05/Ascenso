@@ -13,6 +13,9 @@ namespace Ascenso.Becas.Infrastructure.Trabajos;
 public sealed class ProgramadorTrabajosHangfireRecurrentes : IHostedService
 {
     public const string ReconciliacionId = "reconciliar-ofertas-pendientes";
+    public const string ReconciliarEmisionesOfertaId = "reconciliar-emisiones-oferta";
+    public const string ReconciliarAceptacionesOfertaId = "reconciliar-aceptaciones-oferta";
+    public const string ReconciliarCalendariosInicialesId = "reconciliar-calendarios-iniciales";
     public const string LimpiezaIdempotenciaId = "limpiar-idempotencia";
     public const string LimpiezaOutboxId = "limpiar-outbox";
     public const string RevisionSuspensionesId = "revisar-suspensiones";
@@ -35,6 +38,36 @@ public sealed class ProgramadorTrabajosHangfireRecurrentes : IHostedService
 
         _gestor.AddOrUpdate<ReconciliarOfertasPendientesJob>(
             ReconciliacionId,
+            RegistroHangfire.ColaCritica,
+            job => job.Ejecutar(CancellationToken.None),
+            $"*/{minutos} * * * *",
+            new RecurringJobOptions
+            {
+                TimeZone = TimeZoneInfo.Utc
+            });
+
+        _gestor.AddOrUpdate<ReconciliarEmisionesOfertaJob>(
+            ReconciliarEmisionesOfertaId,
+            RegistroHangfire.ColaCritica,
+            job => job.Ejecutar(CancellationToken.None),
+            $"*/{minutos} * * * *",
+            new RecurringJobOptions
+            {
+                TimeZone = TimeZoneInfo.Utc
+            });
+
+        _gestor.AddOrUpdate<ReconciliarAceptacionesOfertaJob>(
+            ReconciliarAceptacionesOfertaId,
+            RegistroHangfire.ColaCritica,
+            job => job.Ejecutar(CancellationToken.None),
+            $"*/{minutos} * * * *",
+            new RecurringJobOptions
+            {
+                TimeZone = TimeZoneInfo.Utc
+            });
+
+        _gestor.AddOrUpdate<ReconciliarCalendariosInicialesJob>(
+            ReconciliarCalendariosInicialesId,
             RegistroHangfire.ColaCritica,
             job => job.Ejecutar(CancellationToken.None),
             $"*/{minutos} * * * *",

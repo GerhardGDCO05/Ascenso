@@ -91,6 +91,12 @@ public sealed class OtorgamientoExtremoAExtremoTests
             beca.Estado.Should().Be(EstadoBeca.Activa);
             beca.Oferta!.Estado.Should().Be(EstadoOferta.Aceptada);
             beca.FechaActivacion.Should().NotBeNull();
+            var calendario = await contexto.CalendariosDesembolso
+                .SingleAsync(item => item.BecaId == beca.Id
+                    && item.PeriodoAcademicoId == beca.PeriodoVigenteActualId);
+            calendario.MontoMaximoAprobadoPeriodo.Should().Be(
+                beca.Oferta.MontoOfertaPorPeriodo);
+            calendario.NumeroCuotas.Should().Be(1);
         }
 
         fabrica.Outbox.Eventos.OfType<BecaActivadaEvento>()
@@ -505,6 +511,27 @@ public sealed class OtorgamientoExtremoAExtremoTests
                     cupos = 1,
                     expiraEn = DateTimeOffset.UtcNow.AddMinutes(30)
                 })));
+
+        _fixture.WireMock
+            .Given(Request.Create()
+                .WithPath(
+                    $"/internal/v1/programas/{escenario.ProgramaId}/reservas/*/confirmar")
+                .UsingPost())
+            .RespondWith(Response.Create().WithStatusCode(204));
+
+        _fixture.WireMock
+            .Given(Request.Create()
+                .WithPath(
+                    $"/internal/v1/programas/{escenario.ProgramaId}/reservas/*/activar")
+                .UsingPost())
+            .RespondWith(Response.Create().WithStatusCode(204));
+
+        _fixture.WireMock
+            .Given(Request.Create()
+                .WithPath(
+                    $"/internal/v1/programas/{escenario.ProgramaId}/reservas/*/liberar")
+                .UsingPost())
+            .RespondWith(Response.Create().WithStatusCode(204));
     }
 
     private static HttpClient CrearCoordinador(

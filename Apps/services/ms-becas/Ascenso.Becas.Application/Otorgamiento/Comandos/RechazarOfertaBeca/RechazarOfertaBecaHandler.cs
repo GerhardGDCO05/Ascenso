@@ -3,6 +3,7 @@ using Ascenso.Becas.Application.Despacho;
 using Ascenso.Becas.Application.Excepciones;
 using Ascenso.Becas.Application.Otorgamiento.Puertos;
 using Ascenso.Becas.Application.Otorgamiento.Servicios;
+using Ascenso.Becas.Domain.Enums;
 using Ascenso.Becas.Domain.Otorgamiento.Agregados;
 using Ascenso.Becas.Domain.Ports;
 using Microsoft.Extensions.Logging;
@@ -20,6 +21,8 @@ public sealed class RechazarOfertaBecaHandler : ICommandHandler<RechazarOfertaBe
     private readonly IBecaRepository _repositorio;
     private readonly IUnitOfWork _unidadDeTrabajo;
     private readonly IOutboxBeca _outbox;
+    private readonly IProgramasClient _programas;
+    private readonly IIntencionAceptacionOfertaStore _intenciones;
     private readonly IProgramadorExpiracionOfertas _programador;
     private readonly ILogger<RechazarOfertaBecaHandler> _logger;
 
@@ -30,6 +33,8 @@ public sealed class RechazarOfertaBecaHandler : ICommandHandler<RechazarOfertaBe
         IBecaRepository repositorio,
         IUnitOfWork unidadDeTrabajo,
         IOutboxBeca outbox,
+        IProgramasClient programas,
+        IIntencionAceptacionOfertaStore intenciones,
         IProgramadorExpiracionOfertas programador,
         ILogger<RechazarOfertaBecaHandler> logger)
     {
@@ -39,6 +44,8 @@ public sealed class RechazarOfertaBecaHandler : ICommandHandler<RechazarOfertaBe
         _repositorio = repositorio ?? throw new ArgumentNullException(nameof(repositorio));
         _unidadDeTrabajo = unidadDeTrabajo ?? throw new ArgumentNullException(nameof(unidadDeTrabajo));
         _outbox = outbox ?? throw new ArgumentNullException(nameof(outbox));
+        _programas = programas ?? throw new ArgumentNullException(nameof(programas));
+        _intenciones = intenciones ?? throw new ArgumentNullException(nameof(intenciones));
         _programador = programador ?? throw new ArgumentNullException(nameof(programador));
         _logger = logger ?? throw new ArgumentNullException(nameof(logger));
     }
@@ -58,10 +65,18 @@ public sealed class RechazarOfertaBecaHandler : ICommandHandler<RechazarOfertaBe
                 var beca = await _repositorio.ObtenerBecaParaActualizarAsync(referencia.Id, token)
                     ?? throw new RecursoNoEncontradoException("beca", referencia.Id);
 
+                if (await _intenciones.ObtenerAsync(command.OfertaId, token) is not null)
+                    throw new ConflictoOperacionException(
+                        "La oferta tiene una aceptación pendiente de coordinación.");
+
                 var contexto = ContextoAplicacion.Crear(
                     _contextoActual,
                     _reloj,
                     command.Motivo);
+
+                await LiberacionReservaOferta.ConfirmarAsync(beca,
+                    command.OfertaId, EstadoOferta.RechazadaPorPostulante,
+                    _programas, token);
 
                 try
                 {
