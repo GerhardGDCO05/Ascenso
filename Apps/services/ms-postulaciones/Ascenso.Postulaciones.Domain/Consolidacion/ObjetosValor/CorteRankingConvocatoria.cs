@@ -12,7 +12,9 @@ public sealed record class CorteRankingConvocatoria : ValueObject
     public CorteRankingConvocatoria(
         Guid convocatoriaId,
         DisponibilidadProgramaRanking disponibilidad,
-        IReadOnlyList<ElementoRankingEvaluado> elementos)
+        IReadOnlyList<ElementoRankingEvaluado> elementos,
+        CasoLimiteRankingDetectado? casoLimiteActivo = null,
+        bool tieneDecisionCasoLimiteInvalidaPorDisponibilidad = false)
     {
         ArgumentNullException.ThrowIfNull(disponibilidad);
         ArgumentNullException.ThrowIfNull(elementos);
@@ -37,6 +39,7 @@ public sealed record class CorteRankingConvocatoria : ValueObject
         var totalListaDeEspera = 0;
         var montoTotalDentroDeCupo = 0.00m;
         decimal? puntajeEmpate = null;
+        var tieneCasoLimiteResuelto = false;
 
         for (var i = 0; i < elementos.Count; i++)
         {
@@ -83,6 +86,39 @@ public sealed record class CorteRankingConvocatoria : ValueObject
             {
                 conDiscrepanciaEnCorte.Add(elemento.PostulacionId);
             }
+
+            if (elemento.CasoLimiteResuelto)
+            {
+                tieneCasoLimiteResuelto = true;
+            }
+        }
+
+        if (casoLimiteActivo is not null)
+        {
+            for (var i = 0; i < casoLimiteActivo.PostulacionesAfectadas.Count; i++)
+            {
+                if (!postulacionesVistas.Contains(casoLimiteActivo.PostulacionesAfectadas[i]))
+                {
+                    throw new RankingInvalidoException(
+                        "Todas las postulaciones del caso límite activo deben pertenecer a los elementos del corte.");
+                }
+            }
+
+            if (casoLimiteActivo.Tipo is TipoCasoLimite.EmpatePorCupo or TipoCasoLimite.EmpatePorPresupuesto)
+            {
+                if (empatadas.Count == 0
+                    || puntajeEmpate != casoLimiteActivo.PuntajeAfectado
+                    || !empatadas.SequenceEqual(casoLimiteActivo.PostulacionesAfectadas))
+                {
+                    throw new RankingInvalidoException(
+                        "El caso límite activo por empate debe coincidir con las postulaciones empatadas en la línea de corte.");
+                }
+            }
+            else if (empatadas.Count > 0)
+            {
+                throw new RankingInvalidoException(
+                    "No puede existir un caso límite presupuestario sin empate cuando hay postulaciones empatadas en la línea de corte.");
+            }
         }
 
         ConvocatoriaId = convocatoriaId;
@@ -98,6 +134,10 @@ public sealed record class CorteRankingConvocatoria : ValueObject
         TieneAdvertenciaDiscrepanciasEnCorte = conDiscrepanciaEnCorte.Count > 0;
         CantidadDiscrepanciasSinRevisarEnCorte = conDiscrepanciaEnCorte.Count;
         PostulacionesConDiscrepanciaSinRevisarEnCorte = Array.AsReadOnly(conDiscrepanciaEnCorte.ToArray());
+        CasoLimiteActivo = casoLimiteActivo;
+        TieneCasoLimiteActivo = casoLimiteActivo is not null;
+        TieneCasoLimiteResuelto = tieneCasoLimiteResuelto;
+        TieneDecisionCasoLimiteInvalidaPorDisponibilidad = tieneDecisionCasoLimiteInvalidaPorDisponibilidad;
     }
 
     public Guid ConvocatoriaId { get; }
@@ -126,6 +166,14 @@ public sealed record class CorteRankingConvocatoria : ValueObject
 
     public IReadOnlyList<Guid> PostulacionesConDiscrepanciaSinRevisarEnCorte { get; }
 
+    public CasoLimiteRankingDetectado? CasoLimiteActivo { get; }
+
+    public bool TieneCasoLimiteActivo { get; }
+
+    public bool TieneCasoLimiteResuelto { get; }
+
+    public bool TieneDecisionCasoLimiteInvalidaPorDisponibilidad { get; }
+
     public bool Equals(CorteRankingConvocatoria? other)
     {
         if (ReferenceEquals(this, other))
@@ -140,7 +188,9 @@ public sealed record class CorteRankingConvocatoria : ValueObject
 
         return ConvocatoriaId == other.ConvocatoriaId
             && Disponibilidad.Equals(other.Disponibilidad)
-            && Elementos.SequenceEqual(other.Elementos);
+            && Elementos.SequenceEqual(other.Elementos)
+            && EqualityComparer<CasoLimiteRankingDetectado?>.Default.Equals(CasoLimiteActivo, other.CasoLimiteActivo)
+            && TieneDecisionCasoLimiteInvalidaPorDisponibilidad == other.TieneDecisionCasoLimiteInvalidaPorDisponibilidad;
     }
 
     public override int GetHashCode()
@@ -152,6 +202,9 @@ public sealed record class CorteRankingConvocatoria : ValueObject
         {
             hash.Add(Elementos[i]);
         }
+
+        hash.Add(CasoLimiteActivo);
+        hash.Add(TieneDecisionCasoLimiteInvalidaPorDisponibilidad);
 
         return hash.ToHashCode();
     }

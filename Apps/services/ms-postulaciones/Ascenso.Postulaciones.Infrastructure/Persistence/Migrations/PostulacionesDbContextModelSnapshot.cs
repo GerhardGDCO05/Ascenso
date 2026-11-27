@@ -339,6 +339,10 @@ namespace Ascenso.Postulaciones.Infrastructure.Persistence.Migrations
                         .HasColumnType("uuid")
                         .HasColumnName("convocatoria_id");
 
+                    b.Property<Guid?>("DecididoPorUsuarioId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("decidido_por_usuario_id");
+
                     b.Property<decimal>("DiferenciaEntreEvaluadores")
                         .HasPrecision(5, 2)
                         .HasColumnType("numeric(5,2)")
@@ -370,6 +374,10 @@ namespace Ascenso.Postulaciones.Infrastructure.Persistence.Migrations
                         .HasColumnType("timestamptz")
                         .HasColumnName("fecha_creacion");
 
+                    b.Property<DateTimeOffset?>("FechaDecisionCasoLimite")
+                        .HasColumnType("timestamptz")
+                        .HasColumnName("fecha_decision_caso_limite");
+
                     b.Property<DateTimeOffset?>("FechaRevisionDiscrepancia")
                         .HasColumnType("timestamptz")
                         .HasColumnName("fecha_revision_discrepancia");
@@ -377,6 +385,11 @@ namespace Ascenso.Postulaciones.Infrastructure.Persistence.Migrations
                     b.Property<DateTimeOffset>("FechaUltimaModificacion")
                         .HasColumnType("timestamptz")
                         .HasColumnName("fecha_ultima_modificacion");
+
+                    b.Property<string>("JustificacionDesempateCasoLimite")
+                        .HasMaxLength(1000)
+                        .HasColumnType("character varying(1000)")
+                        .HasColumnName("justificacion_desempate_caso_limite");
 
                     b.Property<string>("JustificacionEvaluadorUnico")
                         .HasMaxLength(1000)
@@ -404,6 +417,15 @@ namespace Ascenso.Postulaciones.Infrastructure.Persistence.Migrations
                     b.Property<Guid?>("RevisadoPorUsuarioId")
                         .HasColumnType("uuid")
                         .HasColumnName("revisado_por_usuario_id");
+
+                    b.Property<bool?>("SeleccionadoEnCasoLimite")
+                        .HasColumnType("boolean")
+                        .HasColumnName("seleccionado_en_caso_limite");
+
+                    b.Property<string>("TipoCasoLimite")
+                        .HasMaxLength(40)
+                        .HasColumnType("varchar")
+                        .HasColumnName("tipo_caso_limite");
 
                     b.Property<decimal>("UmbralDiscrepanciaAplicado")
                         .HasPrecision(5, 2)
@@ -445,6 +467,8 @@ namespace Ascenso.Postulaciones.Infrastructure.Persistence.Migrations
                         {
                             t.HasCheckConstraint("ck_resultados_consolidados_alerta_coherente", "(excepcion_evaluador_unico = true AND alerta_discrepancia = false) OR (excepcion_evaluador_unico = false AND alerta_discrepancia = (diferencia_entre_evaluadores > umbral_discrepancia_aplicado))");
 
+                            t.HasCheckConstraint("ck_resultados_consolidados_caso_limite_coherente", "(tipo_caso_limite IS NULL AND seleccionado_en_caso_limite IS NULL AND justificacion_desempate_caso_limite IS NULL AND decidido_por_usuario_id IS NULL AND fecha_decision_caso_limite IS NULL) OR (tipo_caso_limite IS NOT NULL AND seleccionado_en_caso_limite IS NOT NULL AND justificacion_desempate_caso_limite IS NOT NULL AND length(btrim(justificacion_desempate_caso_limite)) >= 10 AND decidido_por_usuario_id IS NOT NULL AND fecha_decision_caso_limite IS NOT NULL) OR (tipo_caso_limite IS NOT NULL AND tipo_caso_limite NOT IN ('EMPATE_POR_CUPO', 'EMPATE_POR_PRESUPUESTO', 'CASO_LIMITE_PRESUPUESTARIO'))");
+
                             t.HasCheckConstraint("ck_resultados_consolidados_clasificacion_valida", "clasificacion IS NULL OR clasificacion IN ('DENTRO_DE_CUPO', 'LISTA_DE_ESPERA')");
 
                             t.HasCheckConstraint("ck_resultados_consolidados_confirmacion_coherente", "(estado_confirmacion_ranking = 'PROVISIONAL' AND posicion_ranking IS NULL AND monto_estimado_beca IS NULL AND clasificacion IS NULL AND fecha_confirmacion_ranking IS NULL AND confirmado_por_usuario_id IS NULL) OR (estado_confirmacion_ranking = 'CONFIRMADO' AND posicion_ranking IS NOT NULL AND monto_estimado_beca IS NOT NULL AND clasificacion IS NOT NULL AND fecha_confirmacion_ranking IS NOT NULL AND confirmado_por_usuario_id IS NOT NULL) OR estado_confirmacion_ranking NOT IN ('PROVISIONAL', 'CONFIRMADO')");
@@ -460,6 +484,8 @@ namespace Ascenso.Postulaciones.Infrastructure.Persistence.Migrations
                             t.HasCheckConstraint("ck_resultados_consolidados_ranking_campos_rango", "(posicion_ranking IS NULL OR posicion_ranking >= 1) AND (monto_estimado_beca IS NULL OR monto_estimado_beca > 0)");
 
                             t.HasCheckConstraint("ck_resultados_consolidados_revision_coherente", "(discrepancia_revisada = false AND comentario_revision_discrepancia IS NULL AND revisado_por_usuario_id IS NULL AND fecha_revision_discrepancia IS NULL) OR (discrepancia_revisada = true AND alerta_discrepancia = true AND comentario_revision_discrepancia IS NOT NULL AND length(btrim(comentario_revision_discrepancia)) > 0 AND revisado_por_usuario_id IS NOT NULL AND fecha_revision_discrepancia IS NOT NULL)");
+
+                            t.HasCheckConstraint("ck_resultados_consolidados_tipo_caso_limite_valido", "tipo_caso_limite IS NULL OR tipo_caso_limite IN ('EMPATE_POR_CUPO', 'EMPATE_POR_PRESUPUESTO', 'CASO_LIMITE_PRESUPUESTARIO')");
 
                             t.HasCheckConstraint("ck_resultados_consolidados_umbral_rango", "umbral_discrepancia_aplicado > 0 AND umbral_discrepancia_aplicado <= 100");
                         });

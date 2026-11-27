@@ -33,7 +33,12 @@ public static class ConsolidacionMapeador
             resultado.MontoEstimadoBeca,
             resultado.Clasificacion?.ACodigo(),
             resultado.FechaConfirmacionRanking,
-            resultado.ConfirmadoPorUsuarioId);
+            resultado.ConfirmadoPorUsuarioId,
+            resultado.TipoCasoLimite?.ACodigo(),
+            resultado.SeleccionadoEnCasoLimite,
+            resultado.JustificacionDesempateCasoLimite,
+            resultado.DecididoPorUsuarioId,
+            resultado.FechaDecisionCasoLimite);
     }
 
     public static NotaEvaluacionIndividualDto ANotaIndividualDto(this Evaluacion evaluacion)
@@ -98,6 +103,11 @@ public static class ConsolidacionMapeador
             resultado.MontoEstimadoBeca,
             resultado.Clasificacion?.ACodigo(),
             resultado.FechaConfirmacionRanking,
-            resultado.ConfirmadoPorUsuarioId);
+            resultado.ConfirmadoPorUsuarioId,
+            resultado.TipoCasoLimite?.ACodigo(),
+            resultado.SeleccionadoEnCasoLimite,
+            resultado.JustificacionDesempateCasoLimite,
+            resultado.DecididoPorUsuarioId,
+            resultado.FechaDecisionCasoLimite);
     }
 }

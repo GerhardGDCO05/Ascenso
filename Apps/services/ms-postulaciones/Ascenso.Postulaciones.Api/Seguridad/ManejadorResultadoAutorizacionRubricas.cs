@@ -70,6 +70,7 @@ public sealed class ManejadorResultadoAutorizacionRubricas : IAuthorizationMiddl
             || string.Equals(dato.Policy, PoliticasAutorizacionEvaluaciones.SupervisionEvaluaciones, StringComparison.Ordinal)
             || string.Equals(dato.Policy, PoliticasAutorizacionConsolidacion.ConsultaConsolidacion, StringComparison.Ordinal)
             || string.Equals(dato.Policy, PoliticasAutorizacionConsolidacion.GestionConsolidacion, StringComparison.Ordinal)
+            || string.Equals(dato.Policy, PoliticasAutorizacionConsolidacion.ResolucionCasosLimiteRanking, StringComparison.Ordinal)
             || string.Equals(dato.Policy, PoliticasAutorizacionConsolidacion.ConsultaAdjudicabilidadInterna, StringComparison.Ordinal));
     }
 
@@ -122,6 +123,7 @@ public sealed class ManejadorResultadoAutorizacionRubricas : IAuthorizationMiddl
         return metadatosAutorizacion.Any(dato =>
             string.Equals(dato.Policy, PoliticasAutorizacionConsolidacion.ConsultaConsolidacion, StringComparison.Ordinal)
             || string.Equals(dato.Policy, PoliticasAutorizacionConsolidacion.GestionConsolidacion, StringComparison.Ordinal)
+            || string.Equals(dato.Policy, PoliticasAutorizacionConsolidacion.ResolucionCasosLimiteRanking, StringComparison.Ordinal)
             || string.Equals(dato.Policy, PoliticasAutorizacionConsolidacion.ConsultaAdjudicabilidadInterna, StringComparison.Ordinal));
     }
 }

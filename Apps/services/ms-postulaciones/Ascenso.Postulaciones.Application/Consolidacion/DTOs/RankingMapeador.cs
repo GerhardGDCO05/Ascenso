@@ -42,7 +42,13 @@ public static class RankingMapeador
             elemento.DiscrepanciaRevisada,
             elemento.AfectaAdvertenciaDiscrepanciaEnCorte,
             elemento.ExcepcionEvaluadorUnico,
-            elemento.FechaConsolidacion);
+            elemento.FechaConsolidacion,
+            elemento.TipoCasoLimite?.ACodigo(),
+            elemento.SeleccionadoEnCasoLimite,
+            elemento.JustificacionDesempateCasoLimite,
+            elemento.DecididoPorUsuarioId,
+            elemento.FechaDecisionCasoLimite,
+            elemento.CasoLimiteResuelto);
     }
 
     public static RankingConvocatoriaDto ARankingProvisionalDto(
@@ -79,7 +85,14 @@ public static class RankingMapeador
             corte.TieneAdvertenciaDiscrepanciasEnCorte,
             corte.CantidadDiscrepanciasSinRevisarEnCorte,
             corte.PostulacionesConDiscrepanciaSinRevisarEnCorte,
-            new PaginaDto<ElementoRankingDto>(itemsPagina, pagina, tamano, filtrados.Count));
+            new PaginaDto<ElementoRankingDto>(itemsPagina, pagina, tamano, filtrados.Count),
+            TieneCasoLimiteActivo: corte.TieneCasoLimiteActivo,
+            TipoCasoLimiteActivo: corte.CasoLimiteActivo?.Tipo.ACodigo(),
+            PostulacionesEnCasoLimiteActivo: corte.CasoLimiteActivo?.PostulacionesAfectadas ?? [],
+            CuposDisponiblesEnCasoLimite: corte.CasoLimiteActivo?.CuposDisponibles,
+            PresupuestoDisponibleEnCasoLimite: corte.CasoLimiteActivo?.PresupuestoDisponible,
+            TieneCasoLimiteResuelto: corte.TieneCasoLimiteResuelto,
+            TieneDecisionCasoLimiteInvalidaPorDisponibilidad: corte.TieneDecisionCasoLimiteInvalidaPorDisponibilidad);
     }
 
     public static RankingConvocatoriaDto ARankingConfirmadoDto(
@@ -159,7 +172,13 @@ public static class RankingMapeador
                 resultado.DiscrepanciaRevisada,
                 AfectaAdvertenciaDiscrepanciaEnCorte: afectaAdvertencia,
                 resultado.ExcepcionEvaluadorUnico,
-                resultado.FechaConsolidacion);
+                resultado.FechaConsolidacion,
+                resultado.TipoCasoLimite?.ACodigo(),
+                resultado.SeleccionadoEnCasoLimite,
+                resultado.JustificacionDesempateCasoLimite,
+                resultado.DecididoPorUsuarioId,
+                resultado.FechaDecisionCasoLimite,
+                CasoLimiteResuelto: resultado.TieneDecisionCasoLimite);
 
             elementosConfirmados.Add((dto, clasificacion));
         }
@@ -176,6 +195,7 @@ public static class RankingMapeador
 
         var fechaConfirmacion = ordenados.Length > 0 ? ordenados[0].FechaConfirmacionRanking : null;
         var confirmadoPor = ordenados.Length > 0 ? ordenados[0].ConfirmadoPorUsuarioId : null;
+        var tieneCasoLimiteResuelto = ordenados.Any(r => r.TieneDecisionCasoLimite);
 
         return new RankingConvocatoriaDto(
             convocatoriaId,
@@ -193,7 +213,14 @@ public static class RankingMapeador
             TieneAdvertenciaDiscrepanciasEnCorte: postulacionesConDiscrepanciaEnCorte.Count > 0,
             CantidadDiscrepanciasSinRevisarEnCorte: postulacionesConDiscrepanciaEnCorte.Count,
             PostulacionesConDiscrepanciaSinRevisarEnCorte: postulacionesConDiscrepanciaEnCorte.ToArray(),
-            new PaginaDto<ElementoRankingDto>(itemsPagina, pagina, tamano, filtrados.Length));
+            new PaginaDto<ElementoRankingDto>(itemsPagina, pagina, tamano, filtrados.Length),
+            TieneCasoLimiteActivo: false,
+            TipoCasoLimiteActivo: null,
+            PostulacionesEnCasoLimiteActivo: [],
+            CuposDisponiblesEnCasoLimite: null,
+            PresupuestoDisponibleEnCasoLimite: null,
+            TieneCasoLimiteResuelto: tieneCasoLimiteResuelto,
+            TieneDecisionCasoLimiteInvalidaPorDisponibilidad: false);
     }
 
     public static AdjudicabilidadPostulacionDto AAdjudicabilidadDto(this ResultadoConsolidadoRanking resultado)

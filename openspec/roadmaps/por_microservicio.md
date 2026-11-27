@@ -35,6 +35,7 @@
   - [x] HU 9.1: Consolidación automática de puntuaciones definitivas, alertas de discrepancia y excepción de evaluador único (2026-11-26)
   - [x] HU 9.2: Ranking de postulantes, línea de corte por cupo/presupuesto y confirmación final (2026-11-26)
 - [ ] **RF-10**: Resolución de empates y casos límite / Lista de espera
+  - [x] HU 10.1: Resolución de empates y casos límite con justificación obligatoria (2026-11-26)
 - [ ] **RF-39**: Registro de conflictos de interés
 
 ## 💼 MS-PRG (Programas y Presupuesto)

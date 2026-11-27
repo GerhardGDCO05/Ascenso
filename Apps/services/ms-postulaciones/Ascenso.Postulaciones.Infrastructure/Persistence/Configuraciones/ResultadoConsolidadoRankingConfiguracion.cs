@@ -46,6 +46,12 @@ internal sealed class ResultadoConsolidadoRankingConfiguracion : IEntityTypeConf
             tabla.HasCheckConstraint(
                 "ck_resultados_consolidados_confirmacion_coherente",
                 "(estado_confirmacion_ranking = 'PROVISIONAL' AND posicion_ranking IS NULL AND monto_estimado_beca IS NULL AND clasificacion IS NULL AND fecha_confirmacion_ranking IS NULL AND confirmado_por_usuario_id IS NULL) OR (estado_confirmacion_ranking = 'CONFIRMADO' AND posicion_ranking IS NOT NULL AND monto_estimado_beca IS NOT NULL AND clasificacion IS NOT NULL AND fecha_confirmacion_ranking IS NOT NULL AND confirmado_por_usuario_id IS NOT NULL) OR estado_confirmacion_ranking NOT IN ('PROVISIONAL', 'CONFIRMADO')");
+            tabla.HasCheckConstraint(
+                "ck_resultados_consolidados_tipo_caso_limite_valido",
+                $"tipo_caso_limite IS NULL OR tipo_caso_limite IN ({ConfiguracionPersistencia.ValoresSql<TipoCasoLimite>()})");
+            tabla.HasCheckConstraint(
+                "ck_resultados_consolidados_caso_limite_coherente",
+                $"(tipo_caso_limite IS NULL AND seleccionado_en_caso_limite IS NULL AND justificacion_desempate_caso_limite IS NULL AND decidido_por_usuario_id IS NULL AND fecha_decision_caso_limite IS NULL) OR (tipo_caso_limite IS NOT NULL AND seleccionado_en_caso_limite IS NOT NULL AND justificacion_desempate_caso_limite IS NOT NULL AND length(btrim(justificacion_desempate_caso_limite)) >= {ResultadoConsolidadoRanking.LongitudMinimaJustificacionCasoLimite} AND decidido_por_usuario_id IS NOT NULL AND fecha_decision_caso_limite IS NOT NULL) OR (tipo_caso_limite IS NOT NULL AND tipo_caso_limite NOT IN ({ConfiguracionPersistencia.ValoresSql<TipoCasoLimite>()}))");
         });
 
         builder.HasKey(resultado => resultado.Id)
@@ -53,6 +59,7 @@ internal sealed class ResultadoConsolidadoRankingConfiguracion : IEntityTypeConf
 
         builder.Ignore(resultado => resultado.EventosDominio);
         builder.Ignore(resultado => resultado.EsAdjudicable);
+        builder.Ignore(resultado => resultado.TieneDecisionCasoLimite);
 
         ConfiguracionPersistencia.ConfigurarEntidadAuditable(builder);
 
@@ -152,6 +159,27 @@ internal sealed class ResultadoConsolidadoRankingConfiguracion : IEntityTypeConf
         builder.Property(resultado => resultado.ConfirmadoPorUsuarioId)
             .HasColumnName("confirmado_por_usuario_id")
             .HasColumnType("uuid");
+
+        builder.Property(resultado => resultado.TipoCasoLimite)
+            .HasColumnName("tipo_caso_limite")
+            .ComoCodigoEnumOpcional()
+            .HasMaxLength(40);
+
+        builder.Property(resultado => resultado.SeleccionadoEnCasoLimite)
+            .HasColumnName("seleccionado_en_caso_limite")
+            .HasColumnType("boolean");
+
+        builder.Property(resultado => resultado.JustificacionDesempateCasoLimite)
+            .HasColumnName("justificacion_desempate_caso_limite")
+            .HasMaxLength(ResultadoConsolidadoRanking.LongitudMaximaJustificacionCasoLimite);
+
+        builder.Property(resultado => resultado.DecididoPorUsuarioId)
+            .HasColumnName("decidido_por_usuario_id")
+            .HasColumnType("uuid");
+
+        builder.Property(resultado => resultado.FechaDecisionCasoLimite)
+            .HasColumnName("fecha_decision_caso_limite")
+            .HasColumnType("timestamptz");
 
         builder.HasIndex(resultado => resultado.PostulacionId)
             .IsUnique()

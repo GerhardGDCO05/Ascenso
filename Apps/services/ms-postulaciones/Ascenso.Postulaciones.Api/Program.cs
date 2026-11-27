@@ -41,6 +41,7 @@ builder.Services.AddProblemDetails();
 builder.Services.AddExceptionHandler<ManejadorExcepcionesDominio>();
 builder.Services.AddHttpContextAccessor();
 builder.Services.AddScoped<IUsuarioActual, UsuarioActualJwt>();
+builder.Services.AddScoped<IRolesUsuarioActual, RolesUsuarioActualJwt>();
 
 var keycloakAuthority = builder.Configuration["Keycloak:Authority"];
 var keycloakAudience = builder.Configuration["Keycloak:Audience"];
@@ -114,6 +115,12 @@ builder.Services.AddAuthorization(options =>
     options.AddPolicy(
         PoliticasAutorizacionConsolidacion.GestionConsolidacion,
         policy => policy.RequireRole(PoliticasAutorizacionConsolidacion.RolCoordinadorPrograma));
+
+    options.AddPolicy(
+        PoliticasAutorizacionConsolidacion.ResolucionCasosLimiteRanking,
+        policy => policy.RequireRole(
+            PoliticasAutorizacionConsolidacion.RolCoordinadorPrograma,
+            PoliticasAutorizacionConsolidacion.RolMiembroComite));
 
     options.AddPolicy(
         PoliticasAutorizacionConsolidacion.ConsultaAdjudicabilidadInterna,

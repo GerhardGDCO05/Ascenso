@@ -49,6 +49,8 @@ public static class DependencyInjection
         services.AddScoped<IProveedorParametrosConsolidacion, ProveedorParametrosConsolidacionConfigurado>();
         services.AddScoped<IRankingConvocatoriaRepository, RankingConvocatoriaRepository>();
         services.AddScoped<IConsultaEstadoEvaluacionesConvocatoriaRepository, ConsultaEstadoEvaluacionesConvocatoriaRepository>();
+        services.AddScoped<IConsultaJefaturaComiteRepository, ConsultaJefaturaComiteRepository>();
+        services.AddScoped<IVerificadorConflictoInteresDecisor, VerificadorConflictoInteresDecisorSinOperacion>();
 
         if (configuration is not null)
         {

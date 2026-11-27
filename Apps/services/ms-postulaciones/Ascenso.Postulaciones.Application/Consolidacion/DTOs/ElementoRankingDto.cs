@@ -12,4 +12,10 @@ public sealed record class ElementoRankingDto(
     bool DiscrepanciaRevisada,
     bool AfectaAdvertenciaDiscrepanciaEnCorte,
     bool ExcepcionEvaluadorUnico,
-    DateTimeOffset FechaConsolidacion);
+    DateTimeOffset FechaConsolidacion,
+    string? TipoCasoLimite = null,
+    bool? SeleccionadoEnCasoLimite = null,
+    string? JustificacionDesempateCasoLimite = null,
+    Guid? DecididoPorUsuarioId = null,
+    DateTimeOffset? FechaDecisionCasoLimite = null,
+    bool CasoLimiteResuelto = false);

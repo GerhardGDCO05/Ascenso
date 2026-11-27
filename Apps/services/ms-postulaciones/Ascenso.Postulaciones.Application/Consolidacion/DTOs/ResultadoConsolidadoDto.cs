@@ -23,4 +23,9 @@ public sealed record class ResultadoConsolidadoDto(
     decimal? MontoEstimadoBeca = null,
     string? Clasificacion = null,
     DateTimeOffset? FechaConfirmacionRanking = null,
-    Guid? ConfirmadoPorUsuarioId = null);
+    Guid? ConfirmadoPorUsuarioId = null,
+    string? TipoCasoLimite = null,
+    bool? SeleccionadoEnCasoLimite = null,
+    string? JustificacionDesempateCasoLimite = null,
+    Guid? DecididoPorUsuarioId = null,
+    DateTimeOffset? FechaDecisionCasoLimite = null);

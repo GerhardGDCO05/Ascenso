@@ -43,6 +43,8 @@ public sealed class SwaggerApiTests : IClassFixture<WebApplicationFactory<Progra
                 servicios.AddSingleton(Substitute.For<IProveedorParametrosConsolidacion>());
                 servicios.AddSingleton(Substitute.For<IRankingConvocatoriaRepository>());
                 servicios.AddSingleton(Substitute.For<IConsultaEstadoEvaluacionesConvocatoriaRepository>());
+                servicios.AddSingleton(Substitute.For<IConsultaJefaturaComiteRepository>());
+                servicios.AddSingleton(Substitute.For<IVerificadorConflictoInteresDecisor>());
                 servicios.AddSingleton(Substitute.For<IDisponibilidadRankingClient>());
                 servicios.AddSingleton(Substitute.For<IProveedorMontoEstimadoBeca>());
                 servicios.AddSingleton(Substitute.For<IPeriodoAcademicoClient>());
@@ -116,6 +118,8 @@ public sealed class SwaggerApiTests : IClassFixture<WebApplicationFactory<Progra
                 servicios.AddSingleton(Substitute.For<IProveedorParametrosConsolidacion>());
                 servicios.AddSingleton(Substitute.For<IRankingConvocatoriaRepository>());
                 servicios.AddSingleton(Substitute.For<IConsultaEstadoEvaluacionesConvocatoriaRepository>());
+                servicios.AddSingleton(Substitute.For<IConsultaJefaturaComiteRepository>());
+                servicios.AddSingleton(Substitute.For<IVerificadorConflictoInteresDecisor>());
                 servicios.AddSingleton(Substitute.For<IDisponibilidadRankingClient>());
                 servicios.AddSingleton(Substitute.For<IProveedorMontoEstimadoBeca>());
                 servicios.AddSingleton(Substitute.For<IPeriodoAcademicoClient>());
@@ -181,6 +185,8 @@ public sealed class SwaggerApiTests : IClassFixture<WebApplicationFactory<Progra
                 servicios.AddSingleton(Substitute.For<IProveedorParametrosConsolidacion>());
                 servicios.AddSingleton(Substitute.For<IRankingConvocatoriaRepository>());
                 servicios.AddSingleton(Substitute.For<IConsultaEstadoEvaluacionesConvocatoriaRepository>());
+                servicios.AddSingleton(Substitute.For<IConsultaJefaturaComiteRepository>());
+                servicios.AddSingleton(Substitute.For<IVerificadorConflictoInteresDecisor>());
                 servicios.AddSingleton(Substitute.For<IDisponibilidadRankingClient>());
                 servicios.AddSingleton(Substitute.For<IProveedorMontoEstimadoBeca>());
                 servicios.AddSingleton(Substitute.For<IPeriodoAcademicoClient>());
@@ -256,6 +262,8 @@ public sealed class SwaggerApiTests : IClassFixture<WebApplicationFactory<Progra
                 servicios.AddSingleton(Substitute.For<IProveedorParametrosConsolidacion>());
                 servicios.AddSingleton(Substitute.For<IRankingConvocatoriaRepository>());
                 servicios.AddSingleton(Substitute.For<IConsultaEstadoEvaluacionesConvocatoriaRepository>());
+                servicios.AddSingleton(Substitute.For<IConsultaJefaturaComiteRepository>());
+                servicios.AddSingleton(Substitute.For<IVerificadorConflictoInteresDecisor>());
                 servicios.AddSingleton(Substitute.For<IDisponibilidadRankingClient>());
                 servicios.AddSingleton(Substitute.For<IProveedorMontoEstimadoBeca>());
                 servicios.AddSingleton(Substitute.For<IPeriodoAcademicoClient>());
@@ -347,6 +355,8 @@ public sealed class SwaggerApiTests : IClassFixture<WebApplicationFactory<Progra
                 servicios.AddSingleton(Substitute.For<IProveedorParametrosConsolidacion>());
                 servicios.AddSingleton(Substitute.For<IRankingConvocatoriaRepository>());
                 servicios.AddSingleton(Substitute.For<IConsultaEstadoEvaluacionesConvocatoriaRepository>());
+                servicios.AddSingleton(Substitute.For<IConsultaJefaturaComiteRepository>());
+                servicios.AddSingleton(Substitute.For<IVerificadorConflictoInteresDecisor>());
                 servicios.AddSingleton(Substitute.For<IDisponibilidadRankingClient>());
                 servicios.AddSingleton(Substitute.For<IProveedorMontoEstimadoBeca>());
                 servicios.AddSingleton(Substitute.For<IPeriodoAcademicoClient>());
@@ -432,6 +442,8 @@ public sealed class SwaggerApiTests : IClassFixture<WebApplicationFactory<Progra
                 servicios.AddSingleton(Substitute.For<IProveedorParametrosConsolidacion>());
                 servicios.AddSingleton(Substitute.For<IRankingConvocatoriaRepository>());
                 servicios.AddSingleton(Substitute.For<IConsultaEstadoEvaluacionesConvocatoriaRepository>());
+                servicios.AddSingleton(Substitute.For<IConsultaJefaturaComiteRepository>());
+                servicios.AddSingleton(Substitute.For<IVerificadorConflictoInteresDecisor>());
                 servicios.AddSingleton(Substitute.For<IDisponibilidadRankingClient>());
                 servicios.AddSingleton(Substitute.For<IProveedorMontoEstimadoBeca>());
                 servicios.AddSingleton(Substitute.For<IPeriodoAcademicoClient>());
@@ -505,6 +517,8 @@ public sealed class SwaggerApiTests : IClassFixture<WebApplicationFactory<Progra
                 servicios.AddSingleton(Substitute.For<IProveedorParametrosConsolidacion>());
                 servicios.AddSingleton(Substitute.For<IRankingConvocatoriaRepository>());
                 servicios.AddSingleton(Substitute.For<IConsultaEstadoEvaluacionesConvocatoriaRepository>());
+                servicios.AddSingleton(Substitute.For<IConsultaJefaturaComiteRepository>());
+                servicios.AddSingleton(Substitute.For<IVerificadorConflictoInteresDecisor>());
                 servicios.AddSingleton(Substitute.For<IDisponibilidadRankingClient>());
                 servicios.AddSingleton(Substitute.For<IProveedorMontoEstimadoBeca>());
                 servicios.AddSingleton(Substitute.For<IPeriodoAcademicoClient>());
@@ -537,6 +551,12 @@ public sealed class SwaggerApiTests : IClassFixture<WebApplicationFactory<Progra
             "RankingConvocatoriaDto");
 
         VerificarRespuestasConEsquema(
+            rutas.GetProperty("/api/v1/rankings/convocatorias/{convocatoriaId}/casos-limite/resolver").GetProperty("post"),
+            "200",
+            ["200", "400", "401", "403", "404", "409", "422", "503"],
+            "RankingConvocatoriaDto");
+
+        VerificarRespuestasConEsquema(
             rutas.GetProperty("/internal/v1/postulaciones/{postulacionId}/adjudicable").GetProperty("get"),
             "200",
             ["200", "400", "401", "403", "404"],
@@ -544,6 +564,7 @@ public sealed class SwaggerApiTests : IClassFixture<WebApplicationFactory<Progra
 
         var esquemas = raiz.GetProperty("components").GetProperty("schemas");
         esquemas.TryGetProperty("ConfirmarRankingConvocatoriaRequest", out _).Should().BeTrue();
+        esquemas.TryGetProperty("ResolverCasoLimiteRankingRequest", out _).Should().BeTrue();
         esquemas.TryGetProperty("RankingConvocatoriaDto", out _).Should().BeTrue();
         esquemas.TryGetProperty("ElementoRankingDto", out _).Should().BeTrue();
         esquemas.TryGetProperty("DisponibilidadRankingDto", out _).Should().BeTrue();
