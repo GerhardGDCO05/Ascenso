@@ -51,6 +51,8 @@ Los exchanges se nombran `Ascenso.Becas:<nombre-del-payload>`.
 | `DesembolsosBecaReanudados` | `becaId`, `suspensionId`, `programaBecaId`, `periodoAcademicoId`, `saldoPendiente`; se encola al reanudar la beca |
 | `BecaRevocadaDefinitivamente` | `becaId`, `programaBecaId`, `periodoAcademicoId`, `estadoBeca`, `tipoCierre`; se encola al revocar definitivamente |
 | `RenovacionBecaSolicitada` | `solicitudRenovacionId`, `becaId`, `periodoOrigenId`, `periodoSolicitadoId`; se encola al solicitar y persistir |
+| `RenovacionBecaAprobada` | `solicitudRenovacionId`, `becaAnteriorId`, `becaSucesoraId`, `cadenaBecaId`, `periodoOrigenId`, `periodoNuevoId`; se encola con la aprobación local |
+| `BecaActivadaNuevoPeriodo` | `becaId`, `becaAnteriorId`, `cadenaBecaId`, `periodoNuevoId`; se encola al crear la sucesora |
 | `BecaConcluidaPorVencimientoRenovacion` | `becaId`, `cadenaBecaId`, `programaBecaId`, `periodoOrigenId`, `periodoSolicitadoId`; se encola después de confirmar la liberación del cupo ocupado |
 
 El payload representa el estado resultante; las transiciones de oferta y beca
@@ -60,8 +62,9 @@ se publican mediante Outbox.
 de saldo y cupo en MS-PRG requieren la llamada REST idempotente de 17.6; estos
 eventos no ejecutan movimientos presupuestarios.
 Los contratos `RenovacionBecaAprobada` y `BecaActivadaNuevoPeriodo` se
-publicarán únicamente cuando la aprobación cree y confirme la beca sucesora
-con la reserva de MS-PRG. No se emiten desde solicitudes pendientes.
+encolan únicamente cuando la aprobación confirma la reserva por su puerto y
+crea la beca sucesora. No se emiten desde solicitudes pendientes. La
+integración real con MS-PRG continúa pendiente.
 
 ## Consumidos desde MS-PRG
 

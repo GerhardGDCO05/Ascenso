@@ -6,4 +6,5 @@ public sealed record class DatosSolicitudRenovacion(
     Guid PeriodoSolicitadoId,
     DateOnly FechaLimiteVentanaRenovacion,
     bool CumpleRendimientoAcademico,
-    bool TienePresupuestoDisponible);
+    bool TienePresupuestoDisponible,
+    decimal MontoSolicitado);

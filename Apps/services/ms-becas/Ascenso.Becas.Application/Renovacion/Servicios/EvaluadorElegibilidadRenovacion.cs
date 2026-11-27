@@ -13,17 +13,20 @@ public sealed class EvaluadorElegibilidadRenovacion
     private readonly IReporteAcademicoRepository _reportes;
     private readonly IVentanaRenovacionPrograma _ventanas;
     private readonly IPresupuestoRenovacionPrograma _presupuestos;
+    private readonly IPeriodosAcademicosClient _periodos;
     private readonly IClock _reloj;
 
     public EvaluadorElegibilidadRenovacion(
         IBecaRepository becas, IReporteAcademicoRepository reportes,
         IVentanaRenovacionPrograma ventanas,
-        IPresupuestoRenovacionPrograma presupuestos, IClock reloj)
+        IPresupuestoRenovacionPrograma presupuestos,
+        IPeriodosAcademicosClient periodos, IClock reloj)
     {
         _becas = becas ?? throw new ArgumentNullException(nameof(becas));
         _reportes = reportes ?? throw new ArgumentNullException(nameof(reportes));
         _ventanas = ventanas ?? throw new ArgumentNullException(nameof(ventanas));
         _presupuestos = presupuestos ?? throw new ArgumentNullException(nameof(presupuestos));
+        _periodos = periodos ?? throw new ArgumentNullException(nameof(periodos));
         _reloj = reloj ?? throw new ArgumentNullException(nameof(reloj));
     }
 
@@ -56,6 +59,27 @@ public sealed class EvaluadorElegibilidadRenovacion
             throw new ConflictoOperacionException(
                 "La solicitud está fuera de la ventana de renovación.");
 
+        ResultadoPeriodoAcademico? periodoActual;
+        try
+        {
+            periodoActual = await _periodos.ObtenerActualAsync(cancellationToken);
+        }
+        catch (Exception excepcion) when (
+            !cancellationToken.IsCancellationRequested
+            && excepcion is HttpRequestException or TimeoutException or TaskCanceledException)
+        {
+            throw new DependenciaNoDisponibleException("MS-PLT", excepcion);
+        }
+        if (periodoActual is null || periodoActual.PeriodoAcademicoId == Guid.Empty
+            || !periodoActual.EsActual
+            || !string.Equals(periodoActual.Estado, "ACTIVO",
+                StringComparison.OrdinalIgnoreCase)
+            || periodoActual.PeriodoAcademicoId != beca.PeriodoVigenteActualId
+            || periodoActual.PeriodoAcademicoId == periodoSolicitadoId)
+            throw new DependenciaNoDisponibleException("MS-PLT",
+                new InvalidOperationException(
+                    "El periodo académico actual no coincide con el origen de la beca."));
+
         var reporte = await _reportes.ObtenerPorBecaYPeriodoParaConsultaAsync(
             becaId, beca.PeriodoVigenteActualId, cancellationToken);
         if (reporte?.Estado != EstadoReporteAcademico.Aprobado
@@ -76,6 +100,6 @@ public sealed class EvaluadorElegibilidadRenovacion
 
         return new DatosSolicitudRenovacion(becaId,
             beca.PeriodoVigenteActualId, periodoSolicitadoId,
-            ventana.Fin, true, true);
+            ventana.Fin, true, true, montoSolicitado);
     }
 }

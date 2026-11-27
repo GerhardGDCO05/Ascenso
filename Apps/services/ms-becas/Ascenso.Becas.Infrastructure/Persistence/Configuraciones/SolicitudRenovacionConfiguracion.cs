@@ -23,6 +23,8 @@ internal sealed class SolicitudRenovacionConfiguracion
                 "fecha_limite_ventana_renovacion >= (fecha_solicitud AT TIME ZONE 'UTC')::date");
             tabla.HasCheckConstraint("ck_solicitud_renovacion_elegibilidad",
                 "cumple_rendimiento_academico AND tiene_presupuesto_disponible");
+            tabla.HasCheckConstraint("ck_solicitud_renovacion_monto_solicitado",
+                "monto_solicitado >= 0");
         });
 
         builder.HasKey(solicitud => solicitud.Id)
@@ -44,6 +46,8 @@ internal sealed class SolicitudRenovacionConfiguracion
             .HasColumnName("cumple_rendimiento_academico");
         builder.Property(solicitud => solicitud.TienePresupuestoDisponible)
             .HasColumnName("tiene_presupuesto_disponible");
+        builder.Property(solicitud => solicitud.MontoSolicitado)
+            .ConfigurarMonto("monto_solicitado");
         builder.Property(solicitud => solicitud.MontoReservadoRenovacion)
             .ConfigurarMonto("monto_reservado_renovacion");
         builder.Property(solicitud => solicitud.ReservaPresupuestoId)
@@ -66,5 +70,8 @@ internal sealed class SolicitudRenovacionConfiguracion
         builder.HasIndex(solicitud => new { solicitud.BecaId, solicitud.PeriodoSolicitadoId })
             .IsUnique()
             .HasDatabaseName("ux_solicitud_renovacion_beca_periodo");
+        builder.HasIndex(solicitud => new
+        { solicitud.Estado, solicitud.FechaLimiteVentanaRenovacion })
+            .HasDatabaseName("ix_solicitud_renovacion_estado_fecha_limite");
     }
 }

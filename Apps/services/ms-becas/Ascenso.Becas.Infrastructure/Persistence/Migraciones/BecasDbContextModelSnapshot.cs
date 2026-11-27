@@ -1109,6 +1109,11 @@ namespace Ascenso.Becas.Infrastructure.Persistence.Migraciones
                         .HasColumnType("numeric(18,2)")
                         .HasColumnName("monto_reservado_renovacion");
 
+                    b.Property<decimal>("MontoSolicitado")
+                        .HasPrecision(18, 2)
+                        .HasColumnType("numeric(18,2)")
+                        .HasColumnName("monto_solicitado");
+
                     b.Property<string>("MotivoDecision")
                         .HasMaxLength(2000)
                         .HasColumnType("character varying(2000)")
@@ -1155,6 +1160,9 @@ namespace Ascenso.Becas.Infrastructure.Persistence.Migraciones
                         .IsUnique()
                         .HasDatabaseName("ux_solicitud_renovacion_beca_periodo");
 
+                    b.HasIndex("Estado", "FechaLimiteVentanaRenovacion")
+                        .HasDatabaseName("ix_solicitud_renovacion_estado_fecha_limite");
+
                     b.ToTable("solicitud_renovacion", "becas", t =>
                         {
                             t.HasCheckConstraint("ck_solicitud_renovacion_elegibilidad", "cumple_rendimiento_academico AND tiene_presupuesto_disponible");
@@ -1164,6 +1172,8 @@ namespace Ascenso.Becas.Infrastructure.Persistence.Migraciones
                             t.HasCheckConstraint("ck_solicitud_renovacion_fechas", "fecha_limite_ventana_renovacion >= (fecha_solicitud AT TIME ZONE 'UTC')::date");
 
                             t.HasCheckConstraint("ck_solicitud_renovacion_monto_reserva", "(reserva_presupuesto_id IS NULL AND monto_reservado_renovacion = 0) OR (reserva_presupuesto_id IS NOT NULL AND monto_reservado_renovacion > 0)");
+
+                            t.HasCheckConstraint("ck_solicitud_renovacion_monto_solicitado", "monto_solicitado >= 0");
 
                             t.HasCheckConstraint("ck_solicitud_renovacion_periodos", "periodo_origen_id <> periodo_solicitado_id");
                         });

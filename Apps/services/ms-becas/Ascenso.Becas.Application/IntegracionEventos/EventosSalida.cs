@@ -4,6 +4,13 @@ public sealed record RenovacionBecaSolicitada(
     Guid SolicitudRenovacionId, Guid BecaId, Guid PeriodoOrigenId,
     Guid PeriodoSolicitadoId);
 
+public sealed record RenovacionBecaAprobada(
+    Guid SolicitudRenovacionId, Guid BecaAnteriorId, Guid BecaSucesoraId,
+    Guid CadenaBecaId, Guid PeriodoOrigenId, Guid PeriodoNuevoId);
+
+public sealed record BecaActivadaNuevoPeriodo(
+    Guid BecaId, Guid BecaAnteriorId, Guid CadenaBecaId, Guid PeriodoNuevoId);
+
 public sealed record BecaConcluidaPorVencimientoRenovacion(
     Guid BecaId, Guid CadenaBecaId, Guid ProgramaBecaId,
     Guid PeriodoOrigenId, Guid PeriodoSolicitadoId);

@@ -56,6 +56,68 @@ public sealed class EvaluadorElegibilidadRenovacionTests
     }
 
     [Fact]
+    public async Task RechazaSolicitarElMismoPeriodoVigente()
+    {
+        var escenario = new Escenario();
+
+        await Assert.ThrowsAsync<ConflictoOperacionException>(() =>
+            escenario.Evaluador.EvaluarAsync(
+                escenario.Beca.Id, escenario.Beca.PeriodoVigenteActualId, 500m));
+
+        await escenario.Periodos.DidNotReceiveWithAnyArgs()
+            .ObtenerActualAsync(default);
+    }
+
+    [Fact]
+    public async Task FallaCerradoSiPeriodoActualNoCoincideConOrigen()
+    {
+        var escenario = new Escenario();
+        escenario.Periodos.ObtenerActualAsync(Arg.Any<CancellationToken>())
+            .Returns(new ResultadoPeriodoAcademico(Guid.CreateVersion7(),
+                "2026-2", "Periodo ajeno", 2, _inicio, _fin,
+                "ACTIVO", true));
+
+        var error = await Assert.ThrowsAsync<DependenciaNoDisponibleException>(() =>
+            escenario.Evaluador.EvaluarAsync(
+                escenario.Beca.Id, escenario.PeriodoSolicitadoId, 500m));
+
+        Assert.Equal("MS-PLT", error.Dependencia);
+        await escenario.Presupuestos.DidNotReceiveWithAnyArgs()
+            .TieneDisponibilidadAsync(default, default, default, default);
+    }
+
+    [Fact]
+    public async Task FallaCerradoSiNoHayPeriodoActual()
+    {
+        var escenario = new Escenario();
+        escenario.Periodos.ObtenerActualAsync(Arg.Any<CancellationToken>())
+            .Returns((ResultadoPeriodoAcademico)null!);
+
+        var error = await Assert.ThrowsAsync<DependenciaNoDisponibleException>(() =>
+            escenario.Evaluador.EvaluarAsync(
+                escenario.Beca.Id, escenario.PeriodoSolicitadoId, 500m));
+
+        Assert.Equal(503, error.EstadoHttp);
+    }
+
+    [Fact]
+    public async Task FallaCerradoSiPeriodoActualNoEstaDisponible()
+    {
+        var escenario = new Escenario();
+        escenario.Periodos.ObtenerActualAsync(Arg.Any<CancellationToken>())
+            .Returns(Task.FromException<ResultadoPeriodoAcademico>(
+                new HttpRequestException("MS-PLT no respondió")));
+
+        var error = await Assert.ThrowsAsync<DependenciaNoDisponibleException>(() =>
+            escenario.Evaluador.EvaluarAsync(
+                escenario.Beca.Id, escenario.PeriodoSolicitadoId, 500m));
+
+        Assert.Equal(503, error.EstadoHttp);
+        await escenario.Presupuestos.DidNotReceiveWithAnyArgs()
+            .TieneDisponibilidadAsync(default, default, default, default);
+    }
+
+    [Fact]
     public async Task RechazaSinEvaluacionAcademicaCumplida()
     {
         var escenario = new Escenario(promedio: 10m);
@@ -128,6 +190,7 @@ public sealed class EvaluadorElegibilidadRenovacionTests
             Reportes = Substitute.For<IReporteAcademicoRepository>();
             Ventanas = Substitute.For<IVentanaRenovacionPrograma>();
             Presupuestos = Substitute.For<IPresupuestoRenovacionPrograma>();
+            Periodos = Substitute.For<IPeriodosAcademicosClient>();
             var reloj = Substitute.For<IClock>();
             reloj.UtcNow.Returns(fecha ?? _fecha);
 
@@ -142,9 +205,13 @@ public sealed class EvaluadorElegibilidadRenovacionTests
             Presupuestos.TieneDisponibilidadAsync(Beca.ProgramaBecaId,
                 PeriodoSolicitadoId, 500m, Arg.Any<CancellationToken>())
                 .Returns(true);
+            Periodos.ObtenerActualAsync(Arg.Any<CancellationToken>())
+                .Returns(new ResultadoPeriodoAcademico(
+                    Beca.PeriodoVigenteActualId, "2026-1", "Periodo vigente", 1,
+                    _inicio, _fin, "ACTIVO", true));
 
             Evaluador = new EvaluadorElegibilidadRenovacion(Becas, Reportes,
-                Ventanas, Presupuestos, reloj);
+                Ventanas, Presupuestos, Periodos, reloj);
         }
 
         public Beca Beca { get; }
@@ -153,6 +220,7 @@ public sealed class EvaluadorElegibilidadRenovacionTests
         public IReporteAcademicoRepository Reportes { get; }
         public IVentanaRenovacionPrograma Ventanas { get; }
         public IPresupuestoRenovacionPrograma Presupuestos { get; }
+        public IPeriodosAcademicosClient Periodos { get; }
         public EvaluadorElegibilidadRenovacion Evaluador { get; }
 
         private static ReporteAcademico CrearReporte(Beca beca, decimal promedio)

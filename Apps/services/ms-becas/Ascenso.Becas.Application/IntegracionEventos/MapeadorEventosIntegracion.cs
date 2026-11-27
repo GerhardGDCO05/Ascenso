@@ -23,6 +23,15 @@ public static class MapeadorEventosIntegracion
 
         return evento switch
         {
+            RenovacionBecaAprobadaEvento item => Envolver(item,
+                item.SolicitudRenovacionId,
+                new RenovacionBecaAprobada(item.SolicitudRenovacionId,
+                    item.BecaAnteriorId, item.BecaSucesoraId,
+                    item.CadenaBecaId, item.PeriodoOrigenId,
+                    item.PeriodoNuevoId), aggregateVersion),
+            BecaActivadaNuevoPeriodoEvento item => Envolver(item, item.BecaId,
+                new BecaActivadaNuevoPeriodo(item.BecaId, item.BecaAnteriorId,
+                    item.CadenaBecaId, item.PeriodoNuevoId), aggregateVersion),
             RenovacionBecaSolicitadaEvento item => Envolver(item,
                 item.SolicitudRenovacionId,
                 new RenovacionBecaSolicitada(item.SolicitudRenovacionId,

@@ -29,6 +29,9 @@ public sealed class OpcionesTrabajosHangfire
     /// </summary>
     public int LimiteOfertasPorReconciliacion { get; set; } = 500;
 
+    /// <summary>Máximo de solicitudes de renovación vencidas por página.</summary>
+    public int LimiteRenovacionesPorReconciliacion { get; set; } = 500;
+
     /// <summary>
     /// Tamaño de cada página consultada al revisar suspensiones vigentes.
     /// </summary>

@@ -56,7 +56,7 @@ public sealed class ConcluirBecaPorVencimientoHandler
 
         var ventana = await _ventanas.ObtenerAsync(referencia.ProgramaBecaId,
             command.PeriodoSolicitadoId, cancellationToken);
-        if (ventana is null || ventana.Inicio == default || ventana.Fin == default
+        if (ventana is null || !ventana.Activo || ventana.Inicio == default || ventana.Fin == default
             || ventana.Fin < ventana.Inicio
             || ventana.PermiteRenovacionTardiaExcepcional is null)
             throw new ConfiguracionProgramaNoDisponibleException(

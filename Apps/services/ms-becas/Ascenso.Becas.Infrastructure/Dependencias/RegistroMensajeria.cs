@@ -92,6 +92,10 @@ public static class RegistroMensajeria
 
     private static void ConfigurarIntercambiosSalida(IRabbitMqBusFactoryConfigurator transporte)
     {
+        transporte.Message<EventoIntegracion<RenovacionBecaAprobada>>(
+            mensaje => mensaje.SetEntityName(NombresMensajeria.IntercambioSalida(nameof(RenovacionBecaAprobada))));
+        transporte.Message<EventoIntegracion<BecaActivadaNuevoPeriodo>>(
+            mensaje => mensaje.SetEntityName(NombresMensajeria.IntercambioSalida(nameof(BecaActivadaNuevoPeriodo))));
         transporte.Message<EventoIntegracion<RenovacionBecaSolicitada>>(
             mensaje => mensaje.SetEntityName(NombresMensajeria.IntercambioSalida(nameof(RenovacionBecaSolicitada))));
         transporte.Message<EventoIntegracion<BecaConcluidaPorVencimientoRenovacion>>(

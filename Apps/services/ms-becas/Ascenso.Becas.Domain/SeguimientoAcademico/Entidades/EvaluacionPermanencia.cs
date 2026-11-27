@@ -35,7 +35,7 @@ public sealed class EvaluacionPermanencia : EntidadAuditable
         _detalleCondiciones.Add(new(TipoCondicionPermanencia.HorasServicioPorPeriodo,
             Formato(condiciones.HorasServicioPorPeriodo),
             Formato(reporte.HorasServicioCumplidas ?? 0),
-            reporte.HorasServicioCumplidas >= condiciones.HorasServicioPorPeriodo));
+            (reporte.HorasServicioCumplidas ?? 0) >= condiciones.HorasServicioPorPeriodo));
         CumpleCondiciones = _detalleCondiciones.All(detalle => detalle.Cumple);
         ConsecuenciaRecomendada = CumpleCondiciones
             ? null : condiciones.ConsecuenciaIncumplimiento;

@@ -24,6 +24,7 @@ public sealed class SolicitudRenovacion : AggregateRoot
         FechaLimiteVentanaRenovacion = datos.FechaLimiteVentanaRenovacion;
         CumpleRendimientoAcademico = datos.CumpleRendimientoAcademico;
         TienePresupuestoDisponible = datos.TienePresupuestoDisponible;
+        MontoSolicitado = datos.MontoSolicitado;
         Estado = EstadoRenovacion.SolicitadaEnCurso;
     }
 
@@ -34,6 +35,7 @@ public sealed class SolicitudRenovacion : AggregateRoot
     public DateOnly FechaLimiteVentanaRenovacion { get; private set; }
     public bool CumpleRendimientoAcademico { get; private set; }
     public bool TienePresupuestoDisponible { get; private set; }
+    public decimal MontoSolicitado { get; private set; }
     public decimal MontoReservadoRenovacion { get; private set; }
     public Guid? ReservaPresupuestoId { get; private set; }
     public EstadoRenovacion Estado { get; private set; }
@@ -50,7 +52,9 @@ public sealed class SolicitudRenovacion : AggregateRoot
         if (datos.BecaId == Guid.Empty || datos.PeriodoOrigenId == Guid.Empty
             || datos.PeriodoSolicitadoId == Guid.Empty
             || datos.PeriodoOrigenId == datos.PeriodoSolicitadoId
-            || datos.FechaLimiteVentanaRenovacion == default)
+            || datos.FechaLimiteVentanaRenovacion == default
+            || datos.MontoSolicitado <= 0m
+            || decimal.Round(datos.MontoSolicitado, 2) != datos.MontoSolicitado)
             throw new ArgumentException("Los datos de la solicitud de renovación son inválidos.", nameof(datos));
         if (DateOnly.FromDateTime(contexto.Fecha.UtcDateTime)
             > datos.FechaLimiteVentanaRenovacion)
@@ -87,7 +91,8 @@ public sealed class SolicitudRenovacion : AggregateRoot
         ExigirEnCurso();
         if (!TienePresupuestoDisponible)
             throw new InvalidOperationException("No hay presupuesto disponible para la renovación.");
-        if (reservaPresupuestoId == Guid.Empty || montoReservado <= 0m)
+        if (reservaPresupuestoId == Guid.Empty || montoReservado <= 0m
+            || montoReservado != MontoSolicitado)
             throw new ArgumentException("La reserva y su monto deben ser válidos.");
         if (ReservaPresupuestoId is not null)
             throw new InvalidOperationException("La solicitud ya tiene una reserva confirmada.");

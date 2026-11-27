@@ -6,6 +6,7 @@ using Ascenso.Becas.Application.Renovacion.Puertos;
 using Ascenso.Becas.Application.Renovacion.Servicios;
 using Ascenso.Becas.Domain.Enums;
 using Ascenso.Becas.Domain.Otorgamiento.Agregados;
+using Ascenso.Becas.Domain.Ports;
 using Ascenso.Becas.Domain.Renovacion.Eventos;
 using Ascenso.Becas.Domain.SeguimientoAcademico.Agregados;
 using Ascenso.Becas.Domain.SeguimientoAcademico.Datos;
@@ -52,13 +53,19 @@ public sealed class SolicitarRenovacionPersistenciaTests
         presupuestos.TieneDisponibilidadAsync(beca.ProgramaBecaId,
             periodoSolicitadoId, 1500m, Arg.Any<CancellationToken>())
             .Returns(true);
+        var periodos = Substitute.For<IPeriodosAcademicosClient>();
+        periodos.ObtenerActualAsync(Arg.Any<CancellationToken>())
+            .Returns(new ResultadoPeriodoAcademico(
+                beca.PeriodoVigenteActualId, "2026-1", "Periodo vigente", 1,
+                new DateOnly(2026, 2, 1), new DateOnly(2026, 3, 31),
+                "ACTIVO", true));
         var contextoActual = Substitute.For<IContextoOperacionActual>();
         contextoActual.UsuarioId.Returns(Guid.CreateVersion7());
         contextoActual.CorrelationId.Returns(Guid.CreateVersion7().ToString());
         var reloj = Substitute.For<Ascenso.Becas.Domain.Ports.IClock>();
         reloj.UtcNow.Returns(DatosPrueba.FechaBase);
         var elegibilidad = new EvaluadorElegibilidadRenovacion(
-            becas, reportes, ventanas, presupuestos, reloj);
+            becas, reportes, ventanas, presupuestos, periodos, reloj);
         var outbox = Substitute.For<Ascenso.Becas.Application.Otorgamiento.Puertos.IOutboxBeca>();
         var solicitar = new SolicitarRenovacionHandler(elegibilidad,
             becas, solicitudes, unidad, contextoActual, reloj, outbox);
@@ -77,7 +84,11 @@ public sealed class SolicitarRenovacionPersistenciaTests
                 beca.Id, periodoSolicitadoId, 1500m)));
 
         var evaluar = new EvaluarRenovacionHandler(
-            solicitudes, becas, unidad, contextoActual, reloj);
+            solicitudes, becas, reportes,
+            new CalendarioDesembolsoRepository(contexto),
+            Substitute.For<IPlanNuevoPeriodoPrograma>(), ventanas,
+            Substitute.For<IProgramasClient>(), unidad, contextoActual,
+            reloj, outbox);
         await Assert.ThrowsAsync<ConflictoOperacionException>(() =>
             evaluar.HandleAsync(new EvaluarRenovacionCommand(resultado.Id,
                 true, "Aprobación pendiente de reserva y sucesora")));
@@ -89,6 +100,7 @@ public sealed class SolicitarRenovacionPersistenciaTests
         var becaPersistida = await lectura.Becas.SingleAsync(valor => valor.Id == beca.Id);
         var solicitudPersistida = await lectura.SolicitudesRenovacion
             .SingleAsync(valor => valor.Id == resultado.Id);
+        Assert.Equal(1500m, solicitudPersistida.MontoSolicitado);
         Assert.Equal(EstadoBeca.Activa, becaPersistida.Estado);
         Assert.False(becaPersistida.TieneRenovacionEnCurso);
         Assert.Equal(EstadoRenovacion.Rechazada, solicitudPersistida.Estado);

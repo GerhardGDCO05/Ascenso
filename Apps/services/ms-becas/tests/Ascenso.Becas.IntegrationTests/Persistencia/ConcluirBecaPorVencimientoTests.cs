@@ -129,6 +129,34 @@ public sealed class ConcluirBecaPorVencimientoTests
     }
 
     [Fact]
+    public async Task FallaCerradoSiLaVentanaOficialEstaInactiva()
+    {
+        var beca = DatosPrueba.CrearBecaActiva(DatosPrueba.CrearDatosBeca(),
+            DatosPrueba.CrearContextoOperacion());
+        await using (var inicio = _fixture.CrearContexto())
+        {
+            inicio.Becas.Add(beca);
+            await inicio.SaveChangesAsync();
+        }
+
+        var periodoNuevo = Guid.CreateVersion7();
+        var cupos = Substitute.For<ILiberacionCupoPrograma>();
+        await using var contexto = _fixture.CrearContexto();
+        var handler = CrearHandler(contexto,
+            Ventanas(beca.ProgramaBecaId, periodoNuevo, false, activa: false),
+            cupos, Reloj(new DateTimeOffset(2026, 3, 16, 12, 0, 0,
+                TimeSpan.Zero)));
+
+        await Assert.ThrowsAsync<ConfiguracionProgramaNoDisponibleException>(() =>
+            handler.HandleAsync(new ConcluirBecaPorVencimientoCommand(
+                beca.Id, periodoNuevo)));
+        Assert.Equal(EstadoBeca.Activa, (await contexto.Becas.SingleAsync(valor =>
+            valor.Id == beca.Id)).Estado);
+        await cupos.DidNotReceiveWithAnyArgs().LiberarPorConclusionAsync(
+            default, default, default);
+    }
+
+    [Fact]
     public async Task FallaCerradoSiNoSeConoceLaExcepcionDeRenovacionTardia()
     {
         var beca = DatosPrueba.CrearBecaActiva(DatosPrueba.CrearDatosBeca(),
@@ -163,7 +191,7 @@ public sealed class ConcluirBecaPorVencimientoTests
         var periodoNuevo = Guid.CreateVersion7();
         var solicitud = SolicitudRenovacion.Solicitar(new DatosSolicitudRenovacion(
             beca.Id, beca.PeriodoVigenteActualId, periodoNuevo,
-            new DateOnly(2026, 3, 15), true, true),
+            new DateOnly(2026, 3, 15), true, true, 1500m),
             DatosPrueba.CrearContextoOperacion());
         await using (var inicio = _fixture.CrearContexto())
         {
@@ -187,12 +215,12 @@ public sealed class ConcluirBecaPorVencimientoTests
     }
 
     private static IVentanaRenovacionPrograma Ventanas(Guid programaId,
-        Guid periodoId, bool? permiteTardia)
+        Guid periodoId, bool? permiteTardia, bool activa = true)
     {
         var ventanas = Substitute.For<IVentanaRenovacionPrograma>();
         ventanas.ObtenerAsync(programaId, periodoId, Arg.Any<CancellationToken>())
             .Returns(new VentanaRenovacionPrograma(new DateOnly(2026, 3, 1),
-                new DateOnly(2026, 3, 15), false, permiteTardia));
+                new DateOnly(2026, 3, 15), activa, permiteTardia));
         return ventanas;
     }
 

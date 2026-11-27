@@ -59,4 +59,11 @@ public interface IBecaRepository
     Task<IReadOnlyList<Beca>> ObtenerActivasPorEstudianteAsync(
         Guid estudianteId,
         CancellationToken cancellationToken = default);
+
+    Task<IReadOnlyList<BecaCandidataConclusion>> ObtenerActivasSinRenovacionAsync(
+        int limite, Guid? ultimoId = null,
+        CancellationToken cancellationToken = default);
 }
+
+public sealed record BecaCandidataConclusion(
+    Guid BecaId, Guid ProgramaBecaId, Guid PeriodoOrigenId);

@@ -158,7 +158,8 @@ public sealed class RenovacionesControllerTests : IClassFixture<OfertasBecaApiFa
     private static SolicitudRenovacionDto CrearSolicitud(Guid becaId)
         => new(Guid.CreateVersion7(), becaId, Guid.CreateVersion7(),
             Guid.CreateVersion7(), new DateOnly(2026, 3, 15),
-            EstadoRenovacion.SolicitadaEnCurso, 0m, null, null, null);
+            EstadoRenovacion.SolicitadaEnCurso, 1600m, 0m,
+            null, null, null);
 
     private static void Autenticar(HttpClient cliente, string rol,
         Guid? postulanteId = null, Guid? programaId = null, bool con2Fa = false)

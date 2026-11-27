@@ -58,6 +58,21 @@ public sealed class EvaluacionPermanenciaTests
     }
 
     [Fact]
+    public void SinHorasDeclaradasCumpleCuandoElProgramaNoLasExige()
+    {
+        var reporte = CrearReporte(17m, 5, 0, null,
+            incluirComprobanteServicio: false);
+        var condiciones = new CondicionesPermanencia(17m, 5, 1, 0,
+            ConsecuenciaPermanencia.Suspension);
+
+        var evaluacion = reporte.Evaluar(condiciones, CrearContexto());
+
+        Assert.True(evaluacion.CumpleCondiciones);
+        Assert.True(evaluacion.DetalleCondiciones.Single(detalle =>
+            detalle.Condicion == TipoCondicionPermanencia.HorasServicioPorPeriodo).Cumple);
+    }
+
+    [Fact]
     public void SinEvidenciaDeHorasRequeridasNoEvalua()
     {
         var reporte = CrearReporte(17m, 5, 0, null);

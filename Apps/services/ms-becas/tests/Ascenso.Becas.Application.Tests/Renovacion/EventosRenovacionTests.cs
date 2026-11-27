@@ -24,6 +24,18 @@ public sealed class EventosRenovacionTests
             destinoId, correlacionId, fecha);
         var mensajeSolicitud = Assert.IsType<EventoIntegracion<RenovacionBecaSolicitada>>(
             MapeadorEventosIntegracion.Mapear(solicitud, 1));
+        var aprobacion = new RenovacionBecaAprobadaEvento(solicitudId,
+            becaId, Guid.CreateVersion7(), Guid.CreateVersion7(), origenId,
+            destinoId, correlacionId, fecha);
+        var activacion = new BecaActivadaNuevoPeriodoEvento(
+            aprobacion.BecaSucesoraId, becaId, aprobacion.CadenaBecaId,
+            destinoId, correlacionId, fecha);
+        var mensajeAprobacion = Assert.IsType<
+            EventoIntegracion<RenovacionBecaAprobada>>(
+            MapeadorEventosIntegracion.Mapear(aprobacion, 2));
+        var mensajeActivacion = Assert.IsType<
+            EventoIntegracion<BecaActivadaNuevoPeriodo>>(
+            MapeadorEventosIntegracion.Mapear(activacion, 1));
         var mensajeConclusion = Assert.IsType<
             EventoIntegracion<BecaConcluidaPorVencimientoRenovacion>>(
             MapeadorEventosIntegracion.Mapear(conclusion, 2));
@@ -32,9 +44,13 @@ public sealed class EventosRenovacionTests
         Assert.Equal(becaId, mensajeSolicitud.Payload.BecaId);
         Assert.Equal(becaId, mensajeConclusion.AggregateId);
         Assert.Equal(destinoId, mensajeConclusion.Payload.PeriodoSolicitadoId);
+        Assert.Equal(aprobacion.BecaSucesoraId,
+            mensajeAprobacion.Payload.BecaSucesoraId);
+        Assert.Equal(aprobacion.BecaSucesoraId, mensajeActivacion.AggregateId);
         var json = JsonSerializer.Serialize(new object[]
         {
-            mensajeSolicitud, mensajeConclusion
+            mensajeSolicitud, mensajeAprobacion, mensajeActivacion,
+            mensajeConclusion
         });
         Assert.DoesNotContain("documento", json, StringComparison.OrdinalIgnoreCase);
         Assert.DoesNotContain("postulante", json, StringComparison.OrdinalIgnoreCase);

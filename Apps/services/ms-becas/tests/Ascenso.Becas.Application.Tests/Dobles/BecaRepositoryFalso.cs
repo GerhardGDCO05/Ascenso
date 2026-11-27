@@ -90,4 +90,20 @@ public sealed class BecaRepositoryFalso : IBecaRepository
             .Where(beca => beca.PostulanteEstudianteId == estudianteId
                 && beca.Estado == EstadoBeca.Activa)
             .ToArray());
+
+    public Task<IReadOnlyList<BecaCandidataConclusion>> ObtenerActivasSinRenovacionAsync(
+        int limite, Guid? ultimoId = null,
+        CancellationToken cancellationToken = default)
+    {
+        ArgumentOutOfRangeException.ThrowIfNegativeOrZero(limite);
+        return Task.FromResult<IReadOnlyList<BecaCandidataConclusion>>(Becas
+            .Where(beca => beca.Estado == EstadoBeca.Activa
+                && !beca.TieneRenovacionEnCurso
+                && (ultimoId is null || beca.Id.CompareTo(ultimoId.Value) > 0))
+            .OrderBy(beca => beca.Id)
+            .Take(limite)
+            .Select(beca => new BecaCandidataConclusion(
+                beca.Id, beca.ProgramaBecaId, beca.PeriodoVigenteActualId))
+            .ToArray());
+    }
 }

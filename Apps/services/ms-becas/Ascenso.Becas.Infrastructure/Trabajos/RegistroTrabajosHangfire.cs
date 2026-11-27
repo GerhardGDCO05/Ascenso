@@ -33,6 +33,9 @@ public static class RegistroTrabajosHangfire
                 opciones => opciones.LimiteOfertasPorReconciliacion > 0,
                 "El límite de ofertas por reconciliación debe ser mayor que cero.")
             .Validate(
+                opciones => opciones.LimiteRenovacionesPorReconciliacion > 0,
+                "El límite de renovaciones por reconciliación debe ser mayor que cero.")
+            .Validate(
                 opciones => opciones.LimiteSuspensionesPorPagina > 0,
                 "El tamaño de página de suspensiones debe ser mayor que cero.")
             .ValidateOnStart();
@@ -40,6 +43,8 @@ public static class RegistroTrabajosHangfire
         servicios.AddScoped<IProgramadorExpiracionOfertas, ProgramadorExpiracionHangfire>();
         servicios.AddScoped<ExpirarOfertaBecaJob>();
         servicios.AddScoped<ConcluirBecaJob>();
+        servicios.AddScoped<DescubrirConclusionesRenovacionJob>();
+        servicios.AddScoped<ReconciliarRenovacionesJob>();
         servicios.AddScoped<ReconciliarEmisionesOfertaJob>();
         servicios.AddScoped<ReconciliarAceptacionesOfertaJob>();
         servicios.AddScoped<ReconciliarCalendariosInicialesJob>();

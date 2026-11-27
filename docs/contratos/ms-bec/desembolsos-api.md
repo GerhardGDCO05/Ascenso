@@ -36,6 +36,27 @@ el calendario se crea en la misma transacción local y nunca se inventan cuotas.
 Un job recurrente busca becas activas sin calendario y reintenta crearlo de
 forma idempotente desde el mismo plan oficial cuando la configuración llegue.
 
+Suspensión, reanudación y revocación usan un puerto de movimiento contable con
+claves de idempotencia estables. El adaptador productivo actual falla cerrado
+antes de cambiar el estado o consumir el OTP. Falta acordar con MS-PRG el
+contrato de movimientos y la recuperación duradera entre la respuesta remota
+y el commit local.
+
+## Ciclo de vida administrativo
+
+| Operación | Ruta | Respuesta correcta |
+| :--- | :--- | :--- |
+| Suspender | `POST /api/v1/becas/{becaId}/suspender` | `200` con ID de suspensión |
+| Reanudar | `POST /api/v1/becas/{becaId}/reanudar` | `200` con ID de suspensión levantada |
+| Revocar | `POST /api/v1/becas/{becaId}/revocar` | `200` |
+
+Las tres rutas requieren `COORDINADOR_PROGRAMA` o `DIRECCION`, 2FA de Keycloak
+y alcance sobre el programa. La revocación requiere además
+`X-Autorizacion-OTP-Id` y `codigoOtp` en el cuerpo. Sus casos de uso exigen
+movimiento contable confirmado; el adaptador actual devuelve `503` sin
+transición local hasta acordar MS-PRG. Las rutas y la transmisión del OTP
+pueden verificarse con dobles del caso de uso.
+
 Los siguientes códigos de enumeración se usan en los DTO de MS-BEC. Salvo
 `EstadoDesembolso`, son decisiones locales: su compatibilidad con los
 consumidores aún requiere revisión.

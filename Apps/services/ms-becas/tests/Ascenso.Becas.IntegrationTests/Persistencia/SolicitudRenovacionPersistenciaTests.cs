@@ -19,6 +19,40 @@ public sealed class SolicitudRenovacionPersistenciaTests
         => _fixture = fixture;
 
     [Fact]
+    public async Task PaginaSolicitudesVencidasSinOmitirLasDeLaMismaFecha()
+    {
+        var contexto = DatosPrueba.CrearContextoOperacion(
+            new DateTimeOffset(2025, 12, 31, 12, 0, 0, TimeSpan.Zero));
+        var fechas = new[] { new DateOnly(2026, 1, 1),
+            new DateOnly(2026, 1, 1), new DateOnly(2026, 1, 2) };
+        var becas = fechas.Select(_ => DatosPrueba.CrearBecaActiva(
+            DatosPrueba.CrearDatosBeca(), contexto)).ToArray();
+        var solicitudes = becas.Select((beca, indice) =>
+            SolicitudRenovacion.Solicitar(new DatosSolicitudRenovacion(
+                beca.Id, beca.PeriodoVigenteActualId, Guid.CreateVersion7(),
+                fechas[indice], true, true, 1500m), contexto)).ToArray();
+        await using (var escritura = _fixture.CrearContexto())
+        {
+            escritura.Becas.AddRange(becas);
+            escritura.SolicitudesRenovacion.AddRange(solicitudes);
+            await escritura.SaveChangesAsync();
+        }
+
+        await using var lectura = _fixture.CrearContexto();
+        var repositorio = new SolicitudRenovacionRepository(lectura);
+        var primera = await repositorio.ObtenerEnCursoVencidasAsync(
+            new DateOnly(2026, 1, 3), 2);
+        var segunda = await repositorio.ObtenerEnCursoVencidasAsync(
+            new DateOnly(2026, 1, 3), 2,
+            primera[^1].FechaLimite, primera[^1].Id);
+
+        Assert.Equal(2, primera.Count);
+        Assert.Single(segunda);
+        Assert.Equal(solicitudes.Select(valor => valor.Id).Order(),
+            primera.Concat(segunda).Select(valor => valor.Id).Order());
+    }
+
+    [Fact]
     public async Task ReconstruyeSolicitudConReservaDecisionYReferenciaJob()
     {
         var beca = DatosPrueba.CrearBecaActiva(DatosPrueba.CrearDatosBeca(),
@@ -27,7 +61,7 @@ public sealed class SolicitudRenovacionPersistenciaTests
         var contexto = DatosPrueba.CrearContextoOperacion();
         var solicitud = SolicitudRenovacion.Solicitar(new DatosSolicitudRenovacion(
             beca.Id, beca.PeriodoVigenteActualId, periodoSolicitadoId,
-            new DateOnly(2026, 3, 15), true, true), contexto);
+            new DateOnly(2026, 3, 15), true, true, 1500m), contexto);
         solicitud.RegistrarReferenciaJobVencimiento("job-renovacion-1", contexto);
         var reservaId = Guid.CreateVersion7();
         solicitud.ConfirmarReservaPresupuestaria(reservaId, 1500m, contexto);
@@ -68,7 +102,7 @@ public sealed class SolicitudRenovacionPersistenciaTests
         SolicitudRenovacion NuevaSolicitud()
             => SolicitudRenovacion.Solicitar(new DatosSolicitudRenovacion(
                 beca.Id, beca.PeriodoVigenteActualId, periodoSolicitadoId,
-                new DateOnly(2026, 3, 15), true, true),
+                new DateOnly(2026, 3, 15), true, true, 1500m),
                 DatosPrueba.CrearContextoOperacion());
 
         await using (var primera = _fixture.CrearContexto())
@@ -110,7 +144,7 @@ public sealed class SolicitudRenovacionPersistenciaTests
             beca.IniciarRenovacion(contexto);
             var solicitud = SolicitudRenovacion.Solicitar(new DatosSolicitudRenovacion(
                 beca.Id, beca.PeriodoVigenteActualId, periodoNuevoId,
-                new DateOnly(2026, 3, 15), true, true), contexto);
+                new DateOnly(2026, 3, 15), true, true, 1600m), contexto);
             var reservaId = Guid.CreateVersion7();
             solicitud.ConfirmarReservaPresupuestaria(reservaId, 1600m, contexto);
             var sucesora = beca.CrearSucesoraPorRenovacion(new DatosBecaSucesora(
@@ -163,10 +197,10 @@ public sealed class SolicitudRenovacionPersistenciaTests
         var solicitudes = Enumerable.Range(0, 3).Select(_ =>
             SolicitudRenovacion.Solicitar(new DatosSolicitudRenovacion(
                 beca.Id, beca.PeriodoVigenteActualId, Guid.CreateVersion7(),
-                new DateOnly(2026, 3, 15), true, true), contexto)).ToArray();
+                new DateOnly(2026, 3, 15), true, true, 1500m), contexto)).ToArray();
         var ajena = SolicitudRenovacion.Solicitar(new DatosSolicitudRenovacion(
             otra.Id, otra.PeriodoVigenteActualId, Guid.CreateVersion7(),
-            new DateOnly(2026, 3, 15), true, true), contexto);
+            new DateOnly(2026, 3, 15), true, true, 1500m), contexto);
         await using (var escritura = _fixture.CrearContexto())
         {
             escritura.Becas.AddRange(beca, otra);

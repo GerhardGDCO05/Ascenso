@@ -1,9 +1,9 @@
 using Ascenso.Becas.Application.Idempotencia;
 using Ascenso.Becas.Application.Otorgamiento.Puertos;
+using Ascenso.Becas.Application.Otorgamiento.Servicios;
 using Ascenso.Becas.Application.Renovacion.Puertos;
 using Ascenso.Becas.Application.Renovacion.Servicios;
 using Ascenso.Becas.Application.SeguimientoAcademico.Puertos;
-using Ascenso.Becas.Application.Otorgamiento.Servicios;
 using Ascenso.Becas.Domain.Ports;
 using Ascenso.Becas.Infrastructure.Clientes;
 using Ascenso.Becas.Infrastructure.Persistence;
@@ -39,13 +39,23 @@ public static class RegistroPersistencia
 
         servicios.AddScoped<IAlmacenIdempotencia, AlmacenIdempotencia>();
         servicios.AddScoped<IBecaRepository, BecaRepository>();
+        servicios.AddScoped<IIntencionEmisionOfertaStore, IntencionEmisionOfertaStore>();
+        servicios.AddScoped<FinalizadorEmisionOferta>();
+        servicios.AddScoped<IIntencionAceptacionOfertaStore, IntencionAceptacionOfertaStore>();
+        servicios.AddScoped<FinalizadorAceptacionOferta>();
         servicios.AddScoped<IReporteAcademicoRepository, ReporteAcademicoRepository>();
         servicios.AddScoped<ISolicitudRenovacionRepository, SolicitudRenovacionRepository>();
         servicios.AddScoped<IConsultasRenovacion, ConsultasRenovacion>();
         servicios.AddScoped<ICalendarioAcademicoPrograma, CalendarioAcademicoProgramaNoDisponible>();
         servicios.AddScoped<IVentanaRenovacionPrograma, VentanaRenovacionProgramaNoDisponible>();
+        servicios.AddScoped<IPeriodoSiguienteRenovacionPrograma,
+            PeriodoSiguienteRenovacionProgramaNoDisponible>();
         servicios.AddScoped<IPresupuestoRenovacionPrograma, PresupuestoRenovacionProgramaNoDisponible>();
+        servicios.AddScoped<IPlanNuevoPeriodoPrograma, PlanNuevoPeriodoProgramaNoDisponible>();
+        servicios.AddScoped<IPlanDesembolsoPrograma, PlanDesembolsoProgramaNoDisponible>();
         servicios.AddScoped<ILiberacionCupoPrograma, LiberacionCupoProgramaNoDisponible>();
+        servicios.AddScoped<IMovimientoPresupuestoPrograma, MovimientoPresupuestoProgramaNoDisponible>();
+        servicios.AddScoped<ICuentaInstitucionalPrograma, CuentaInstitucionalProgramaNoDisponible>();
         servicios.AddScoped<EvaluadorElegibilidadRenovacion>();
         servicios.AddScoped<IIntencionEmisionOfertaStore, IntencionEmisionOfertaStore>();
         servicios.AddScoped<FinalizadorEmisionOferta>();

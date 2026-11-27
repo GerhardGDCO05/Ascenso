@@ -82,7 +82,7 @@ public sealed class ProgramasClientFalso : IProgramasClient
         cancellationToken.ThrowIfCancellationRequested();
         if (ErrorConfirmar is not null)
             throw ErrorConfirmar;
-        Confirmaciones.Add((programaBecaId, reservaId, ofertaId));
+        Confirmaciones.Add((programaBecaId, reservaId, referenciaId));
         return Task.CompletedTask;
     }
 
@@ -93,7 +93,7 @@ public sealed class ProgramasClientFalso : IProgramasClient
         cancellationToken.ThrowIfCancellationRequested();
         if (ErrorActivar is not null)
             throw ErrorActivar;
-        Activaciones.Add((programaBecaId, reservaId, ofertaId));
+        Activaciones.Add((programaBecaId, reservaId, referenciaId));
         return Task.CompletedTask;
     }
 
@@ -104,7 +104,7 @@ public sealed class ProgramasClientFalso : IProgramasClient
         cancellationToken.ThrowIfCancellationRequested();
         if (ErrorLiberar is not null)
             throw ErrorLiberar;
-        Liberaciones.Add((programaBecaId, reservaId, ofertaId));
+        Liberaciones.Add((programaBecaId, reservaId, referenciaId));
         return Task.CompletedTask;
     }
 }

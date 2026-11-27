@@ -13,6 +13,8 @@ namespace Ascenso.Becas.Infrastructure.Trabajos;
 public sealed class ProgramadorTrabajosHangfireRecurrentes : IHostedService
 {
     public const string ReconciliacionId = "reconciliar-ofertas-pendientes";
+    public const string ReconciliacionRenovacionesId = "reconciliar-renovaciones";
+    public const string DescubrirConclusionesRenovacionId = "descubrir-conclusiones-renovacion";
     public const string ReconciliarEmisionesOfertaId = "reconciliar-emisiones-oferta";
     public const string ReconciliarAceptacionesOfertaId = "reconciliar-aceptaciones-oferta";
     public const string ReconciliarCalendariosInicialesId = "reconciliar-calendarios-iniciales";
@@ -38,6 +40,26 @@ public sealed class ProgramadorTrabajosHangfireRecurrentes : IHostedService
 
         _gestor.AddOrUpdate<ReconciliarOfertasPendientesJob>(
             ReconciliacionId,
+            RegistroHangfire.ColaCritica,
+            job => job.Ejecutar(CancellationToken.None),
+            $"*/{minutos} * * * *",
+            new RecurringJobOptions
+            {
+                TimeZone = TimeZoneInfo.Utc
+            });
+
+        _gestor.AddOrUpdate<ReconciliarRenovacionesJob>(
+            ReconciliacionRenovacionesId,
+            RegistroHangfire.ColaCritica,
+            job => job.Ejecutar(CancellationToken.None),
+            $"*/{minutos} * * * *",
+            new RecurringJobOptions
+            {
+                TimeZone = TimeZoneInfo.Utc
+            });
+
+        _gestor.AddOrUpdate<DescubrirConclusionesRenovacionJob>(
+            DescubrirConclusionesRenovacionId,
             RegistroHangfire.ColaCritica,
             job => job.Ejecutar(CancellationToken.None),
             $"*/{minutos} * * * *",

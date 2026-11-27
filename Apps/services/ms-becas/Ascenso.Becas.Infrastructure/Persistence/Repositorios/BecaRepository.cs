@@ -146,6 +146,25 @@ public sealed class BecaRepository : IBecaRepository
             .ToListAsync(cancellationToken);
     }
 
+    public async Task<IReadOnlyList<BecaCandidataConclusion>> ObtenerActivasSinRenovacionAsync(
+        int limite, Guid? ultimoId = null,
+        CancellationToken cancellationToken = default)
+    {
+        ArgumentOutOfRangeException.ThrowIfNegativeOrZero(limite);
+
+        var consulta = _contexto.Becas.AsNoTracking()
+            .Where(beca => beca.Estado == EstadoBeca.Activa
+                && !beca.TieneRenovacionEnCurso);
+        if (ultimoId is not null)
+            consulta = consulta.Where(beca => beca.Id.CompareTo(ultimoId.Value) > 0);
+
+        return await consulta.OrderBy(beca => beca.Id)
+            .Take(limite)
+            .Select(beca => new BecaCandidataConclusion(
+                beca.Id, beca.ProgramaBecaId, beca.PeriodoVigenteActualId))
+            .ToArrayAsync(cancellationToken);
+    }
+
     private void ExigirTransaccionActiva()
     {
         if (_contexto.Database.CurrentTransaction is null)

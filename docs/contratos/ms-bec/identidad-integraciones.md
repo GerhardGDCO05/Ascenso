@@ -228,8 +228,9 @@ precede al commit local dentro de la transacción de MS-BEC; ambos servicios
 no comparten una transacción distribuida.
 
 La revocación definitiva también exige OTP (`REVOCAR_BECA`, `recursoTipo = BECA`,
-`recursoId = becaId`). Su caso de uso consume y valida el código en MS-PLT
-bajo bloqueo de la beca, antes de confirmar la transición y la cancelación de cuotas.
+`recursoId = becaId`). Su caso de uso verifica primero la disponibilidad del
+movimiento contable y después consume y valida el código en MS-PLT bajo
+bloqueo de la beca, antes de confirmar la transición y cancelar las cuotas.
 
 ## MS-PRG: reservar cupo y presupuesto
 

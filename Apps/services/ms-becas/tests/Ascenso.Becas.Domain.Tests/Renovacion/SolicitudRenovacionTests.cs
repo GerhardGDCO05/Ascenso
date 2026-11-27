@@ -33,6 +33,7 @@ public sealed class SolicitudRenovacionTests
         Assert.Equal(datos.PeriodoSolicitadoId, solicitud.PeriodoSolicitadoId);
         Assert.Equal(EstadoRenovacion.SolicitadaEnCurso, solicitud.Estado);
         Assert.Equal(0m, solicitud.MontoReservadoRenovacion);
+        Assert.Equal(1500m, solicitud.MontoSolicitado);
         Assert.Null(solicitud.ReservaPresupuestoId);
         Assert.Null(solicitud.FechaDecision);
         Assert.Equal(1, solicitud.Version);
@@ -119,6 +120,8 @@ public sealed class SolicitudRenovacionTests
             Guid.Empty, 1500m, Contexto()));
         Assert.Throws<ArgumentException>(() => solicitud.ConfirmarReservaPresupuestaria(
             Guid.CreateVersion7(), 0m, Contexto()));
+        Assert.Throws<ArgumentException>(() => solicitud.ConfirmarReservaPresupuestaria(
+            Guid.CreateVersion7(), 1600m, Contexto()));
         Assert.Null(solicitud.ReservaPresupuestoId);
     }
 
@@ -126,7 +129,7 @@ public sealed class SolicitudRenovacionTests
         bool cumpleRendimiento = true, bool tienePresupuesto = true)
         => new(Guid.CreateVersion7(), Guid.CreateVersion7(),
             Guid.CreateVersion7(), new DateOnly(2026, 11, 26),
-            cumpleRendimiento, tienePresupuesto);
+            cumpleRendimiento, tienePresupuesto, 1500m);
 
     private static ContextoOperacion Contexto(DateTimeOffset? fecha = null)
         => new(Guid.CreateVersion7(), Guid.CreateVersion7(), fecha ?? _fechaBase);

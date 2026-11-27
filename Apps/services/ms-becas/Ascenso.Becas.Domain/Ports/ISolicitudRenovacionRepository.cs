@@ -14,6 +14,13 @@ public interface ISolicitudRenovacionRepository
         Guid becaId, Guid periodoSolicitadoId,
         CancellationToken cancellationToken = default);
 
+    Task<IReadOnlyList<SolicitudRenovacionVencida>> ObtenerEnCursoVencidasAsync(
+        DateOnly fechaActual, int limite, DateOnly? ultimaFecha = null,
+        Guid? ultimoId = null,
+        CancellationToken cancellationToken = default);
+
     Task AgregarAsync(SolicitudRenovacion solicitud,
         CancellationToken cancellationToken = default);
 }
+
+public sealed record SolicitudRenovacionVencida(Guid Id, DateOnly FechaLimite);
