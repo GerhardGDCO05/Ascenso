@@ -5,9 +5,12 @@ SOLUTION := Apps/services/ms-becas/Ascenso.Becas.sln
 API_PROJECT := Apps/services/ms-becas/Ascenso.Becas.Api/Ascenso.Becas.Api.csproj
 INFRASTRUCTURE_PROJECT := Apps/services/ms-becas/Ascenso.Becas.Infrastructure/Ascenso.Becas.Infrastructure.csproj
 
-.PHONY: up down migrate run test format dev-up
+.PHONY: up down migrate run test format dev-up keycloak-local-realm
 
-up:
+keycloak-local-realm:
+	python3 scripts/generar-realm-local.py
+
+up: keycloak-local-realm
 	$(COMPOSE) up --wait -d
 
 down:

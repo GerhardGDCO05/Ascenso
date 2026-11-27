@@ -272,6 +272,8 @@
 - [x] 13.13 Actualizar las respuestas de cartas y compromisos para resolver enlaces solo después de validar JWT Keycloak y propiedad/alcance; agregar pruebas que aseguren que una petición no autorizada no recibe enlace, y documentar el comportamiento de la API.
 - [x] 13.14 Conservar el archivo de Firebase Security Rules para una publicación futura, documentar IAM mínimo y que las reglas no están publicadas; no ejecutar pruebas contra un proyecto real.
 - [x] 13.15 Ejecutar `dotnet test` (con build), validar Compose y ejecutar validación estricta OpenSpec con almacenamiento local y pruebas aisladas del adaptador cloud; confirmar que CI no usa credenciales ni contacta proyectos reales.
+- [x] 13.16 Extraer la configuración base de Keycloak a `deploy/keycloak/ascenso-realm.json`, generar el fixture de MS-BEC desde un overlay local y mantener un solo origen de roles, audiencias y mapper `permissions`. Verificado con importación de Keycloak 26 de ambos realms y tokens reales: `permissions` es arreglo, `roles` se conserva y el service token mantiene `client_id`/scope. Los otros MS no se modifican.
+- [ ] 13.17 Coordinar con el responsable de identidad/MS-PLT la aplicación del realm compartido y el mapeo oficial de RBAC. La base ya define TOTP por los seis roles internos de RN-PLT-01 mediante la marca heredada `EXIGE_2FA`, pero falta validar con identidad el enrolamiento por navegador y usuarios futuros en el entorno común. Confirmar clientes y audiencias de cada MS antes de conectar sus APIs; la verificación local de MS-BEC no sustituye esa validación conjunta.
 
 ## 14. Documentación de contratos y cierre del cambio
 
