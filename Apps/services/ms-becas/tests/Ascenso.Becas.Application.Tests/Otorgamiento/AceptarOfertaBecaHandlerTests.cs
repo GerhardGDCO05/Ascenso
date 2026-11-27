@@ -1,16 +1,58 @@
 using Ascenso.Becas.Application.Excepciones;
 using Ascenso.Becas.Application.Otorgamiento.Comandos.AceptarOfertaBeca;
+using Ascenso.Becas.Application.Otorgamiento.Puertos;
+using Ascenso.Becas.Domain.Desembolsos.Agregados;
+using Ascenso.Becas.Domain.Desembolsos.Eventos;
 using Ascenso.Becas.Domain.Enums;
 using Ascenso.Becas.Domain.Excepciones;
 using Ascenso.Becas.Domain.Otorgamiento.Agregados;
 using Ascenso.Becas.Domain.Otorgamiento.Eventos;
 using Ascenso.Becas.Domain.Ports;
 using FluentAssertions;
+using NSubstitute;
 
 namespace Ascenso.Becas.Application.Tests.Otorgamiento;
 
 public sealed class AceptarOfertaBecaHandlerTests
 {
+    [Fact]
+    public async Task Debe_ConservarIntencionYReintentarCuando_FallaActivacionRemota()
+    {
+        var escenario = new EscenarioOtorgamiento();
+        var beca = CrearOfertaPendiente(escenario);
+        escenario.Programas.ErrorActivar = new HttpRequestException("MS-PRG no disponible");
+
+        await Assert.ThrowsAsync<DependenciaNoDisponibleException>(() =>
+            escenario.CrearAceptar().HandleAsync(new AceptarOfertaBecaCommand(beca.Oferta!.Id)));
+
+        escenario.Aceptaciones.Pendientes.Should().ContainSingle();
+        beca.Estado.Should().Be(EstadoBeca.Otorgada);
+        escenario.Programas.Activaciones.Should().BeEmpty();
+        escenario.Programas.ErrorActivar = null;
+        escenario.Reloj.UtcNow = DatosAplicacion.FechaBase.AddDays(16);
+
+        await escenario.CrearAceptar().HandleAsync(new AceptarOfertaBecaCommand(beca.Oferta!.Id));
+
+        beca.Estado.Should().Be(EstadoBeca.Activa);
+        escenario.Aceptaciones.Pendientes.Should().BeEmpty();
+        escenario.Programas.Activaciones.Should().ContainSingle()
+            .Which.ReferenciaId.Should().Be(beca.Oferta.Id);
+    }
+
+    [Fact]
+    public async Task Debe_NoPersistirIntencionCuando_LaOfertaEstaVencida()
+    {
+        var escenario = new EscenarioOtorgamiento();
+        var beca = CrearOfertaPendiente(escenario);
+        escenario.Reloj.UtcNow = DatosAplicacion.FechaBase.AddDays(16);
+
+        await Assert.ThrowsAsync<OfertaVencidaException>(() =>
+            escenario.CrearAceptar().HandleAsync(new AceptarOfertaBecaCommand(beca.Oferta!.Id)));
+
+        escenario.Aceptaciones.Pendientes.Should().BeEmpty();
+        escenario.Programas.Activaciones.Should().BeEmpty();
+    }
+
     [Fact]
     public async Task Debe_AceptarLaOferta_Cuando_EstaPendienteYVigente()
     {
@@ -30,15 +72,43 @@ public sealed class AceptarOfertaBecaHandlerTests
         beca.FechaActivacion.Should().Be(DateOnly.FromDateTime(DatosAplicacion.FechaBase.UtcDateTime));
         beca.HabilitadaParaDesembolso.Should().BeTrue();
 
-        escenario.Repositorio.EstudiantesBloqueados.Should().ContainSingle()
-            .Which.Should().Be(escenario.EstudianteId);
-        escenario.Unidad.NivelesSolicitados.Should().ContainSingle()
-            .Which.Should().Be(NivelAislamientoTransaccion.Serializable);
-        escenario.Unidad.Confirmaciones.Should().Be(1);
+        escenario.Repositorio.EstudiantesBloqueados.Should().HaveCount(2)
+            .And.OnlyContain(id => id == escenario.EstudianteId);
+        escenario.Unidad.NivelesSolicitados.Should().HaveCount(2)
+            .And.OnlyContain(nivel => nivel == NivelAislamientoTransaccion.Serializable);
+        escenario.Unidad.Confirmaciones.Should().Be(2);
         escenario.Outbox.Confirmados.Should()
             .ContainSingle(evento => evento is BecaActivadaEvento);
+        escenario.Outbox.Confirmados.Should()
+            .ContainSingle(evento => evento is DesembolsoProgramadoEvento);
+        await escenario.Calendarios.Received(1).AgregarAsync(
+            Arg.Is<CalendarioDesembolso>(calendario =>
+                calendario.BecaId == beca.Id
+                && calendario.PeriodoAcademicoId == beca.PeriodoVigenteActualId
+                && calendario.MontoMaximoAprobadoPeriodo == beca.Oferta.MontoOfertaPorPeriodo),
+            Arg.Any<CancellationToken>());
         escenario.Programador.Canceladas.Should().ContainSingle()
             .Which.Should().Be(escenario.Programador.Referencia);
+    }
+
+    [Fact]
+    public async Task Debe_FallarCerradoSinPlanOficialAntesDeActivarLaBeca()
+    {
+        var escenario = new EscenarioOtorgamiento();
+        var beca = CrearOfertaPendiente(escenario);
+        escenario.Planes.ObtenerAsync(escenario.ProgramaBecaId,
+                escenario.PeriodoAcademicoId, Arg.Any<CancellationToken>())
+            .Returns(Task.FromResult<PlanDesembolsoPrograma?>(null));
+
+        await Assert.ThrowsAsync<ConfiguracionProgramaNoDisponibleException>(() =>
+            escenario.CrearAceptar().HandleAsync(
+                new AceptarOfertaBecaCommand(beca.Oferta!.Id)));
+
+        beca.Estado.Should().Be(EstadoBeca.Otorgada);
+        beca.Oferta!.Estado.Should().Be(EstadoOferta.PendienteRespuesta);
+        escenario.Unidad.Confirmaciones.Should().Be(0);
+        await escenario.Calendarios.DidNotReceive().AgregarAsync(
+            Arg.Any<CalendarioDesembolso>(), Arg.Any<CancellationToken>());
     }
 
     [Fact]

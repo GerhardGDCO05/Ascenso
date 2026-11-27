@@ -2,6 +2,7 @@ using Ascenso.Becas.Application.Comun;
 using Ascenso.Becas.Application.Despacho;
 using Ascenso.Becas.Application.Excepciones;
 using Ascenso.Becas.Application.Otorgamiento.Puertos;
+using Ascenso.Becas.Application.Otorgamiento.Servicios;
 using Ascenso.Becas.Domain.Enums;
 using Ascenso.Becas.Domain.Otorgamiento.Agregados;
 using Ascenso.Becas.Domain.Ports;
@@ -21,6 +22,8 @@ public sealed class ExpirarOfertaBecaHandler
     private readonly IBecaRepository _repositorio;
     private readonly IUnitOfWork _unidadDeTrabajo;
     private readonly IOutboxBeca _outbox;
+    private readonly IProgramasClient _programas;
+    private readonly IIntencionAceptacionOfertaStore _intenciones;
 
     public ExpirarOfertaBecaHandler(
         IContextoOperacionActual contextoActual,
@@ -28,7 +31,9 @@ public sealed class ExpirarOfertaBecaHandler
         IMetricasOtorgamiento metricas,
         IBecaRepository repositorio,
         IUnitOfWork unidadDeTrabajo,
-        IOutboxBeca outbox)
+        IOutboxBeca outbox,
+        IProgramasClient programas,
+        IIntencionAceptacionOfertaStore intenciones)
     {
         _contextoActual = contextoActual ?? throw new ArgumentNullException(nameof(contextoActual));
         _reloj = reloj ?? throw new ArgumentNullException(nameof(reloj));
@@ -36,6 +41,8 @@ public sealed class ExpirarOfertaBecaHandler
         _repositorio = repositorio ?? throw new ArgumentNullException(nameof(repositorio));
         _unidadDeTrabajo = unidadDeTrabajo ?? throw new ArgumentNullException(nameof(unidadDeTrabajo));
         _outbox = outbox ?? throw new ArgumentNullException(nameof(outbox));
+        _programas = programas ?? throw new ArgumentNullException(nameof(programas));
+        _intenciones = intenciones ?? throw new ArgumentNullException(nameof(intenciones));
     }
 
     public async Task<bool> HandleAsync(
@@ -66,10 +73,16 @@ public sealed class ExpirarOfertaBecaHandler
                     return;
                 }
 
+                if (await _intenciones.ObtenerAsync(command.OfertaId, token) is not null)
+                    return;
+
                 var contexto = ContextoAplicacion.Crear(
                     _contextoActual,
                     _reloj,
                     exigirUsuario: false);
+
+                await LiberacionReservaOferta.ConfirmarAsync(beca,
+                    command.OfertaId, EstadoOferta.Expirada, _programas, token);
 
                 try
                 {

@@ -1,3 +1,4 @@
+using Ascenso.Postulaciones.Application.Consolidacion.Interfaces;
 using Ascenso.Postulaciones.Application.Evaluaciones.Comandos.EnviarEvaluacionDefinitiva;
 using Ascenso.Postulaciones.Application.Evaluaciones.Comandos.GuardarBorradorEvaluacion;
 using Ascenso.Postulaciones.Application.Evaluaciones.Servicios;
@@ -785,6 +786,7 @@ public sealed class EvaluacionPostgreSqlTests
         return new GuardarBorradorEvaluacionCommandHandler(
             new UsuarioActualFijo(usuarioEvaluadorId),
             new ConsultaAsignacionParaEvaluacionRepository(contexto),
+            new ConvocatoriaEvaluacionAbiertaFija(timeProvider),
             new ComiteEvaluadorRepository(contexto),
             new ConsultaRubricaParaEvaluacionRepository(contexto),
             new EvaluacionRepository(contexto),
@@ -808,13 +810,40 @@ public sealed class EvaluacionPostgreSqlTests
         return new EnviarEvaluacionDefinitivaCommandHandler(
             new UsuarioActualFijo(usuarioEvaluadorId),
             new ConsultaAsignacionParaEvaluacionRepository(contexto),
+            new ConvocatoriaEvaluacionAbiertaFija(timeProvider),
             new EvaluacionRepository(contexto),
             new ComiteEvaluadorRepository(contexto),
             new ConsultaRubricaParaEvaluacionRepository(contexto),
             bloqueadorAdapter,
+            new ConsolidadorPostulacionNoOp(),
             contexto,
             new EnviarEvaluacionDefinitivaCommandValidator(),
             timeProvider);
+    }
+
+    private sealed class ConsolidadorPostulacionNoOp : IConsolidadorPostulacionEvaluacion
+    {
+        public Task IntentarConsolidarAutomaticamenteAsync(
+            Guid postulacionId,
+            CancellationToken cancellationToken = default)
+            => Task.CompletedTask;
+    }
+
+    private sealed class ConvocatoriaEvaluacionAbiertaFija(TimeProvider timeProvider)
+        : IConvocatoriaEvaluacionClient
+    {
+        public Task<VentanaRevisionConvocatoria?> ObtenerVentanaRevisionAsync(
+            Guid convocatoriaId,
+            CancellationToken cancellationToken = default)
+        {
+            var ahora = timeProvider.GetUtcNow();
+            return Task.FromResult<VentanaRevisionConvocatoria?>(
+                new VentanaRevisionConvocatoria(
+                    convocatoriaId,
+                    EstadoConvocatoriaExterna.Publicada,
+                    ahora.AddDays(-10),
+                    ahora.AddDays(30)));
+        }
     }
 
     private sealed class UsuarioActualFijo : IUsuarioActual

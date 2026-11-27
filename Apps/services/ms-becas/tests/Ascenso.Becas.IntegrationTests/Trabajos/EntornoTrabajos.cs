@@ -10,6 +10,7 @@ using Ascenso.Becas.IntegrationTests.Persistencia;
 using Hangfire;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Options;
+using NSubstitute;
 
 namespace Ascenso.Becas.IntegrationTests.Trabajos;
 
@@ -57,6 +58,7 @@ internal static class EntornoTrabajos
         servicios.AddSingleton<OutboxBecaTrabajosFalso>();
         servicios.AddSingleton<IOutboxBeca>(
             proveedor => proveedor.GetRequiredService<OutboxBecaTrabajosFalso>());
+        servicios.AddSingleton(Substitute.For<IProgramasClient>());
         servicios.AddSingleton<IOptions<OpcionesTrabajosHangfire>>(
             Options.Create(opciones));
         servicios.AddScoped<ExpirarOfertaBecaJob>();

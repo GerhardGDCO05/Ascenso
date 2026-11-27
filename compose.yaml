@@ -95,6 +95,8 @@ services:
       Clientes__Postulaciones__UsaServiceToken: "false"
       Clientes__Programas__BaseUrl: http://dev-stubs:8080
       Clientes__Programas__UsaServiceToken: "false"
+      Clientes__Plataforma__BaseUrl: http://dev-stubs:8080
+      Clientes__Plataforma__UsaServiceToken: "false"
       Storage__Provider: ${STORAGE_PROVIDER:-Local}
       Storage__Firebase__Bucket: ${FIREBASE_STORAGE_BUCKET:-}
     ports:

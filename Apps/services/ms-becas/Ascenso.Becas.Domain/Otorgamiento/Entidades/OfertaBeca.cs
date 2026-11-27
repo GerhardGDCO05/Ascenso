@@ -188,6 +188,16 @@ public sealed class OfertaBeca : EntidadAuditable
 
     internal void Aceptar(ContextoOperacion contexto, Guid? autorizacionOtpAceptacionId = null)
     {
+        ValidarAceptacion(contexto, autorizacionOtpAceptacionId);
+
+        Estado = EstadoOferta.Aceptada;
+        FechaRespuesta = contexto.Fecha;
+        AutorizacionOtpAceptacionId = autorizacionOtpAceptacionId;
+        ActualizarAuditoria(contexto.UsuarioAutorId, contexto.Fecha);
+    }
+
+    internal void ValidarAceptacion(ContextoOperacion contexto, Guid? autorizacionOtpAceptacionId = null)
+    {
         ArgumentNullException.ThrowIfNull(contexto);
         ValidarTransicion(EstadoOferta.Aceptada);
 
@@ -203,10 +213,6 @@ public sealed class OfertaBeca : EntidadAuditable
             throw new Excepciones.OfertaVencidaException(Id, FechaVencimientoAceptacion, contexto.Fecha);
         }
 
-        Estado = EstadoOferta.Aceptada;
-        FechaRespuesta = contexto.Fecha;
-        AutorizacionOtpAceptacionId = autorizacionOtpAceptacionId;
-        ActualizarAuditoria(contexto.UsuarioAutorId, contexto.Fecha);
     }
 
     internal void Rechazar(string? motivo, ContextoOperacion contexto)

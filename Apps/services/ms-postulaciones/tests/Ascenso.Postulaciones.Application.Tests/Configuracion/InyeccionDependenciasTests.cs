@@ -9,8 +9,19 @@ using Ascenso.Postulaciones.Application.Comites.Comandos.CrearComiteEvaluador;
 using Ascenso.Postulaciones.Application.Comites.Comandos.DesvincularMiembroComite;
 using Ascenso.Postulaciones.Application.Comites.Consultas.ObtenerComiteEvaluador;
 using Ascenso.Postulaciones.Application.Comites.Consultas.ObtenerComitePorPrograma;
+using Ascenso.Postulaciones.Application.Consolidacion.Comandos.ConfirmarRankingConvocatoria;
+using Ascenso.Postulaciones.Application.Consolidacion.Comandos.ConsolidarPostulacion;
+using Ascenso.Postulaciones.Application.Consolidacion.Comandos.ResolverCasoLimiteRanking;
+using Ascenso.Postulaciones.Application.Consolidacion.Comandos.RevisarDiscrepanciaConsolidacion;
+using Ascenso.Postulaciones.Application.Consolidacion.Consultas.ConsultarAdjudicabilidadPostulacion;
+using Ascenso.Postulaciones.Application.Consolidacion.Consultas.ListarResultadosConsolidadosConvocatoria;
+using Ascenso.Postulaciones.Application.Consolidacion.Consultas.ObtenerRankingConvocatoria;
+using Ascenso.Postulaciones.Application.Consolidacion.Consultas.ObtenerResultadoConsolidadoPostulacion;
+using Ascenso.Postulaciones.Application.Consolidacion.Interfaces;
+using Ascenso.Postulaciones.Application.Consolidacion.Servicios;
 using Ascenso.Postulaciones.Application.Evaluaciones.Comandos.EnviarEvaluacionDefinitiva;
 using Ascenso.Postulaciones.Application.Evaluaciones.Comandos.GuardarBorradorEvaluacion;
+using Ascenso.Postulaciones.Application.Evaluaciones.Consultas.ObtenerEvaluacionesCoevaluadoresPostulacion;
 using Ascenso.Postulaciones.Application.Evaluaciones.Consultas.ObtenerEvaluacionesPostulacion;
 using Ascenso.Postulaciones.Application.Evaluaciones.Consultas.ObtenerMiEvaluacionPorAsignacion;
 using Ascenso.Postulaciones.Application.Evaluaciones.Consultas.ObtenerMisEvaluaciones;
@@ -43,6 +54,7 @@ public sealed class InyeccionDependenciasTests
         var servicios = new ServiceCollection();
 
         servicios.AddSingleton(Substitute.For<IUsuarioActual>());
+        servicios.AddSingleton(Substitute.For<IRolesUsuarioActual>());
         servicios.AddSingleton(Substitute.For<IPostulanteRepository>());
         servicios.AddSingleton(Substitute.For<IRubricaRepository>());
         servicios.AddSingleton(Substitute.For<IComiteEvaluadorRepository>());
@@ -51,8 +63,19 @@ public sealed class InyeccionDependenciasTests
         servicios.AddSingleton(Substitute.For<IEvaluacionRepository>());
         servicios.AddSingleton(Substitute.For<IConsultaAsignacionParaEvaluacionRepository>());
         servicios.AddSingleton(Substitute.For<IConsultaRubricaParaEvaluacionRepository>());
+        servicios.AddSingleton(Substitute.For<IConsultaEvaluacionesCoevaluadoresRepository>());
+        servicios.AddSingleton(Substitute.For<IResultadoConsolidadoRepository>());
+        servicios.AddSingleton(Substitute.For<IConsultaDatosConsolidacionRepository>());
+        servicios.AddSingleton(Substitute.For<IProveedorParametrosConsolidacion>());
+        servicios.AddSingleton(Substitute.For<IRankingConvocatoriaRepository>());
+        servicios.AddSingleton(Substitute.For<IConsultaEstadoEvaluacionesConvocatoriaRepository>());
+        servicios.AddSingleton(Substitute.For<IDisponibilidadRankingClient>());
+        servicios.AddSingleton(Substitute.For<IProveedorMontoEstimadoBeca>());
+        servicios.AddSingleton(Substitute.For<IConsultaJefaturaComiteRepository>());
+        servicios.AddSingleton(Substitute.For<IVerificadorConflictoInteresDecisor>());
         servicios.AddSingleton(Substitute.For<IPeriodoAcademicoClient>());
         servicios.AddSingleton(Substitute.For<ICatalogoAcademicoClient>());
+        servicios.AddSingleton(Substitute.For<IConvocatoriaEvaluacionClient>());
         servicios.AddSingleton(Substitute.For<IUnitOfWork>());
         servicios.AddSingleton(TimeProvider.System);
 
@@ -114,6 +137,26 @@ public sealed class InyeccionDependenciasTests
         alcance.ServiceProvider.GetRequiredService<ObtenerMisEvaluacionesQueryHandler>()
             .Should().NotBeNull();
         alcance.ServiceProvider.GetRequiredService<ObtenerEvaluacionesPostulacionQueryHandler>()
+            .Should().NotBeNull();
+        alcance.ServiceProvider.GetRequiredService<ObtenerEvaluacionesCoevaluadoresPostulacionQueryHandler>()
+            .Should().NotBeNull();
+        alcance.ServiceProvider.GetRequiredService<IConsolidadorPostulacionEvaluacion>()
+            .Should().BeOfType<ConsolidadorPostulacionEvaluacionAdapter>();
+        alcance.ServiceProvider.GetRequiredService<ConsolidarPostulacionCommandHandler>()
+            .Should().NotBeNull();
+        alcance.ServiceProvider.GetRequiredService<RevisarDiscrepanciaConsolidacionCommandHandler>()
+            .Should().NotBeNull();
+        alcance.ServiceProvider.GetRequiredService<ObtenerResultadoConsolidadoPostulacionQueryHandler>()
+            .Should().NotBeNull();
+        alcance.ServiceProvider.GetRequiredService<ListarResultadosConsolidadosConvocatoriaQueryHandler>()
+            .Should().NotBeNull();
+        alcance.ServiceProvider.GetRequiredService<ObtenerRankingConvocatoriaQueryHandler>()
+            .Should().NotBeNull();
+        alcance.ServiceProvider.GetRequiredService<ConfirmarRankingConvocatoriaCommandHandler>()
+            .Should().NotBeNull();
+        alcance.ServiceProvider.GetRequiredService<ResolverCasoLimiteRankingCommandHandler>()
+            .Should().NotBeNull();
+        alcance.ServiceProvider.GetRequiredService<ConsultarAdjudicabilidadPostulacionQueryHandler>()
             .Should().NotBeNull();
 
         var validadoresRegistro = alcance.ServiceProvider
@@ -235,5 +278,59 @@ public sealed class InyeccionDependenciasTests
 
         validadoresEvaluacionesPostulacion.Should().ContainSingle(
             validador => validador is ObtenerEvaluacionesPostulacionQueryValidator);
+
+        var validadoresEvaluacionesCoevaluadores = alcance.ServiceProvider
+            .GetServices<IValidator<ObtenerEvaluacionesCoevaluadoresPostulacionQuery>>();
+
+        validadoresEvaluacionesCoevaluadores.Should().ContainSingle(
+            validador => validador is ObtenerEvaluacionesCoevaluadoresPostulacionQueryValidator);
+
+        var validadoresConsolidarPostulacion = alcance.ServiceProvider
+            .GetServices<IValidator<ConsolidarPostulacionCommand>>();
+
+        validadoresConsolidarPostulacion.Should().ContainSingle(
+            validador => validador is ConsolidarPostulacionCommandValidator);
+
+        var validadoresRevisarDiscrepancia = alcance.ServiceProvider
+            .GetServices<IValidator<RevisarDiscrepanciaConsolidacionCommand>>();
+
+        validadoresRevisarDiscrepancia.Should().ContainSingle(
+            validador => validador is RevisarDiscrepanciaConsolidacionCommandValidator);
+
+        var validadoresObtenerConsolidado = alcance.ServiceProvider
+            .GetServices<IValidator<ObtenerResultadoConsolidadoPostulacionQuery>>();
+
+        validadoresObtenerConsolidado.Should().ContainSingle(
+            validador => validador is ObtenerResultadoConsolidadoPostulacionQueryValidator);
+
+        var validadoresListarConsolidados = alcance.ServiceProvider
+            .GetServices<IValidator<ListarResultadosConsolidadosConvocatoriaQuery>>();
+
+        validadoresListarConsolidados.Should().ContainSingle(
+            validador => validador is ListarResultadosConsolidadosConvocatoriaQueryValidator);
+
+        var validadoresObtenerRanking = alcance.ServiceProvider
+            .GetServices<IValidator<ObtenerRankingConvocatoriaQuery>>();
+
+        validadoresObtenerRanking.Should().ContainSingle(
+            validador => validador is ObtenerRankingConvocatoriaQueryValidator);
+
+        var validadoresConfirmarRanking = alcance.ServiceProvider
+            .GetServices<IValidator<ConfirmarRankingConvocatoriaCommand>>();
+
+        validadoresConfirmarRanking.Should().ContainSingle(
+            validador => validador is ConfirmarRankingConvocatoriaCommandValidator);
+
+        var validadoresResolverCasoLimite = alcance.ServiceProvider
+            .GetServices<IValidator<ResolverCasoLimiteRankingCommand>>();
+
+        validadoresResolverCasoLimite.Should().ContainSingle(
+            validador => validador is ResolverCasoLimiteRankingCommandValidator);
+
+        var validadoresConsultarAdjudicabilidad = alcance.ServiceProvider
+            .GetServices<IValidator<ConsultarAdjudicabilidadPostulacionQuery>>();
+
+        validadoresConsultarAdjudicabilidad.Should().ContainSingle(
+            validador => validador is ConsultarAdjudicabilidadPostulacionQueryValidator);
     }
 }

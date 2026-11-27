@@ -54,6 +54,12 @@ public sealed class BecasDbContext : DbContext
 
     public DbSet<IdempotencyRequest> SolicitudesIdempotencia => Set<IdempotencyRequest>();
 
+    public DbSet<IntencionEmisionOfertaRegistro> IntencionesEmisionOferta
+        => Set<IntencionEmisionOfertaRegistro>();
+
+    public DbSet<IntencionAceptacionOfertaRegistro> IntencionesAceptacionOferta
+        => Set<IntencionAceptacionOfertaRegistro>();
+
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
         base.OnModelCreating(modelBuilder);

@@ -75,6 +75,28 @@ public static class EvaluacionMapeador
             evaluacion.Version);
     }
 
+    public static EvaluacionCoevaluadorDto ACoevaluadorDto(this Evaluacion evaluacion)
+    {
+        ArgumentNullException.ThrowIfNull(evaluacion);
+
+        if (evaluacion.Estado != EstadoEvaluacion.EnviadaDefinitiva
+            || !evaluacion.FechaEnvio.HasValue
+            || !evaluacion.PuntajeTotalPonderado.HasValue)
+        {
+            throw new InvalidOperationException(
+                "Solo se pueden mapear evaluaciones en estado ENVIADA_DEFINITIVA con fecha de envío y puntaje definitivo.");
+        }
+
+        return new EvaluacionCoevaluadorDto(
+            evaluacion.Id,
+            evaluacion.RubricaEvaluacionId,
+            evaluacion.Estado.ACodigo(),
+            evaluacion.FechaEnvio.Value,
+            evaluacion.PuntajeTotalPonderado.Value,
+            evaluacion.ComentariosGenerales,
+            MapearCalificacionesOrdenadas(evaluacion));
+    }
+
     private static CalificacionCriterioDto[] MapearCalificacionesOrdenadas(Evaluacion evaluacion)
         => evaluacion.Calificaciones
             .OrderBy(calificacion => calificacion.CriterioEvaluacionId)

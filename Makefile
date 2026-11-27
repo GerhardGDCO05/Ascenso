@@ -5,9 +5,12 @@ SOLUTION := Apps/services/ms-becas/Ascenso.Becas.sln
 API_PROJECT := Apps/services/ms-becas/Ascenso.Becas.Api/Ascenso.Becas.Api.csproj
 INFRASTRUCTURE_PROJECT := Apps/services/ms-becas/Ascenso.Becas.Infrastructure/Ascenso.Becas.Infrastructure.csproj
 
-.PHONY: up down migrate run test format dev-up
+.PHONY: up down migrate run test format dev-up keycloak-local-realm
 
-up:
+keycloak-local-realm:
+	python3 scripts/generar-realm-local.py
+
+up: keycloak-local-realm
 	$(COMPOSE) up --wait -d
 
 down:
@@ -55,6 +58,8 @@ run: dev-up
 	Clientes__Postulaciones__UsaServiceToken=false \
 	Clientes__Programas__BaseUrl="http://localhost:$$dev_stubs_port" \
 	Clientes__Programas__UsaServiceToken=false \
+	Clientes__Plataforma__BaseUrl="http://localhost:$$dev_stubs_port" \
+	Clientes__Plataforma__UsaServiceToken=false \
 	Storage__Provider="$$storage_provider" \
 	Storage__Firebase__Bucket="$$firebase_bucket" \
 		ASPNETCORE_ENVIRONMENT=Development $(DOTNET) run --project "$(API_PROJECT)"

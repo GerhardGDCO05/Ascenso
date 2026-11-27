@@ -236,8 +236,7 @@ public sealed class Beca : AggregateRoot
         ArgumentNullException.ThrowIfNull(contexto);
         var oferta = ObtenerOferta(ofertaId);
 
-        TransicionesBeca.Tabla.Validar(Estado, EstadoBeca.Activa);
-        TransicionesOfertaBeca.Tabla.Validar(oferta.Estado, EstadoOferta.Aceptada);
+        ValidarAceptacionOferta(ofertaId, contexto, autorizacionOtpAceptacionId);
 
         var estadoAnteriorBeca = Estado;
         var estadoAnteriorOferta = oferta.Estado;
@@ -273,6 +272,20 @@ public sealed class Beca : AggregateRoot
             PeriodoVigenteActualId,
             contexto.CorrelacionId,
             contexto.Fecha));
+    }
+
+    public void ValidarAceptacionOferta(Guid ofertaId, ContextoOperacion contexto,
+        Guid? autorizacionOtpAceptacionId = null)
+    {
+        ArgumentNullException.ThrowIfNull(contexto);
+        var oferta = ObtenerOferta(ofertaId);
+
+        TransicionesBeca.Tabla.Validar(Estado, EstadoBeca.Activa);
+        TransicionesOfertaBeca.Tabla.Validar(oferta.Estado, EstadoOferta.Aceptada);
+        var contextoConOtp = autorizacionOtpAceptacionId is null
+            ? contexto
+            : ContextoConOtp(contexto, autorizacionOtpAceptacionId.Value);
+        oferta.ValidarAceptacion(contextoConOtp, autorizacionOtpAceptacionId);
     }
 
     public void RechazarOferta(Guid ofertaId, ContextoOperacion contexto)

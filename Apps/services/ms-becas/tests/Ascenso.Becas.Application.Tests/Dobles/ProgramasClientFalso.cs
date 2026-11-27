@@ -15,6 +15,16 @@ public sealed class ProgramasClientFalso : IProgramasClient
 
     public Exception? Error { get; set; }
 
+    public Exception? ErrorLiberar { get; set; }
+
+    public Exception? ErrorConfirmar { get; set; }
+    public Exception? ErrorActivar { get; set; }
+    public List<(Guid ProgramaId, Guid ReservaId, Guid ReferenciaId)> Activaciones { get; } = [];
+
+    public List<(Guid ProgramaId, Guid ReservaId, Guid ReferenciaId)> Confirmaciones { get; } = [];
+
+    public List<(Guid ProgramaId, Guid ReservaId, Guid ReferenciaId)> Liberaciones { get; } = [];
+
     public Guid? ProgramaSolicitado { get; private set; }
 
     public SolicitudReservaPresupuesto? UltimaSolicitud { get; private set; }
@@ -68,15 +78,33 @@ public sealed class ProgramasClientFalso : IProgramasClient
     public Task ConfirmarReservaAsync(
         Guid programaBecaId, Guid reservaId, Guid referenciaId,
         CancellationToken cancellationToken = default)
-        => Task.CompletedTask;
+    {
+        cancellationToken.ThrowIfCancellationRequested();
+        if (ErrorConfirmar is not null)
+            throw ErrorConfirmar;
+        Confirmaciones.Add((programaBecaId, reservaId, ofertaId));
+        return Task.CompletedTask;
+    }
 
     public Task ActivarReservaAsync(
         Guid programaBecaId, Guid reservaId, Guid referenciaId,
         CancellationToken cancellationToken = default)
-        => Task.CompletedTask;
+    {
+        cancellationToken.ThrowIfCancellationRequested();
+        if (ErrorActivar is not null)
+            throw ErrorActivar;
+        Activaciones.Add((programaBecaId, reservaId, ofertaId));
+        return Task.CompletedTask;
+    }
 
     public Task LiberarReservaAsync(
         Guid programaBecaId, Guid reservaId, Guid referenciaId,
         CancellationToken cancellationToken = default)
-        => Task.CompletedTask;
+    {
+        cancellationToken.ThrowIfCancellationRequested();
+        if (ErrorLiberar is not null)
+            throw ErrorLiberar;
+        Liberaciones.Add((programaBecaId, reservaId, ofertaId));
+        return Task.CompletedTask;
+    }
 }

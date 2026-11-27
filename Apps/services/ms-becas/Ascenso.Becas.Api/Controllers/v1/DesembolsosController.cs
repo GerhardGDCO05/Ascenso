@@ -161,9 +161,9 @@ public sealed class DesembolsosController : ControllerBase
             });
         ExigirAutorizacionOtp(autorizacionOtpId);
         await ExigirAlcanceCalendarioAsync(calendarioId, cancellationToken);
-        // La confirmación no se despacha hasta que 16.10 garantice el
-        // movimiento contable idempotente en MS-PRG.
-        throw new DependenciaNoDisponibleException("MS-PRG: movimientos-presupuesto");
+        return Ok(await _comandos.EnviarAsync<ConfirmarDesembolsoCommand,
+            DesembolsoDto>(new(calendarioId, numeroCuota, solicitud.CodigoOtp),
+            cancellationToken));
     }
 
     private static void ExigirAutorizacionOtp(Guid? autorizacionOtpId)

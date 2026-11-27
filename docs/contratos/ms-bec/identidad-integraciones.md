@@ -98,14 +98,18 @@ X-Correlation-Id: <uuid>
 El endpoint no requiere cuerpo. Una respuesta `2xx` confirma la transición
 `EN_EVALUACION → OTORGADA`; `409` y `422` se conservan como rechazos de
 negocio y timeout, error de red u otra respuesta no exitosa se traducen a
-`503 DEPENDENCIA_NO_DISPONIBLE`. Si falla la llamada, MS-BEC no persiste la
-oferta, elimina los documentos y el job de expiración, y deja que la reserva
-pendiente de MS-PRG expire por TTL.
+`503 DEPENDENCIA_NO_DISPONIBLE`. Antes de la llamada remota, MS-BEC persiste
+una intención con el mismo `ofertaId` y los datos necesarios para reconstruir
+la oferta. La intención se escribe en una conexión independiente de la
+transacción HTTP y sobrevive si el commit local falla. Una vez preparada,
+MS-BEC conserva los documentos y el job mientras la intención está pendiente.
 
-La llamada remota y la transacción local no son atómicas. Si MS-POS confirma
-la transición y luego falla el guardado local, este contrato no define una
-compensación; la clave de idempotencia y la reconciliación deben ser
-confirmadas por los equipos propietarios.
+El finalizador confirma primero la reserva de MS-PRG con la misma identidad de
+oferta; solo entonces repite `otorgar-{ofertaId}`, guarda beca y Outbox y
+elimina la intención en una transacción local. Un job crítico reintenta las
+intenciones por páginas. Si la reserva venció o MS-PRG no confirma, conserva
+la intención y no crea la beca. La respuesta idempotente de MS-POS y la
+resolución de reservas vencidas requieren validación con los equipos dueños.
 
 ## MS-PRG: consultar condiciones vigentes
 
@@ -214,8 +218,9 @@ operación) y `codigo`. La confirmación usa `recursoTipo = DESEMBOLSO` e ID de
 la cuota; el cambio de cuenta usa `recursoTipo = BECA` e ID de la beca. La
 API pública recibe el identificador de la autorización en
 `X-Autorizacion-OTP-Id` y el código en el cuerpo; el contexto HTTP entrega el
-identificador al caso de uso. La ruta de confirmación permanece cerrada con
-`503` hasta que MS-PRG garantice el movimiento contable de 16.10. La petición
+identificador al caso de uso. El endpoint despacha la confirmación, pero el
+adaptador productivo del movimiento contable responde `503` antes de consumir
+el OTP hasta que MS-PRG garantice el contrato de 16.10. La petición
 lleva `Idempotency-Key` derivada del identificador de la autorización OTP,
 que distingue operaciones sucesivas sobre la misma beca. MS-BEC no persiste
 ni registra el código OTP ni el número de cuenta en claro. El consumo remoto
@@ -275,9 +280,16 @@ La reserva nace `PENDIENTE`. Conforme al contrato 6.2 y DEC-08 del DDD, MS-BEC
 debe llamar `POST /internal/v1/programas/{programaBecaId}/reservas/{reservaId}/confirmar`,
 `/activar` o `/liberar`, según la transición. Cada llamada usa un *Service Token*,
 `X-Correlation-Id` e `Idempotency-Key: {operacion}-{ofertaId}`. El cliente HTTP y
-sus pruebas de contrato están implementados; la orquestación de estas llamadas
-con las transacciones locales y su recuperación aún está pendiente en la tarea
-15.4. Los eventos de oferta documentados en [eventos](./eventos.md) comunican
+sus pruebas de contrato están implementados. La emisión confirma `/confirmar`
+desde una intención duradera antes de llamar a MS-POS. Rechazo, anulación y
+expiración exigen confirmar `/liberar` antes del cierre local y conservan la
+oferta para reintento si falla MS-PRG. La aceptación guarda una intención
+duradera con el plan oficial antes de llamar `/activar`; un job reintenta con
+la misma clave y confirma beca, calendario y Outbox localmente. Mientras esa
+intención esté pendiente, expiración, rechazo, anulación y revocación de la
+oferta otorgada no pueden cerrarla. Falta verificar el ciclo y la idempotencia
+con MS-PRG real, incluida una reserva que haya vencido antes del reintento.
+Los eventos de oferta documentados en [eventos](./eventos.md) comunican
 hechos de negocio y no reemplazan estas operaciones REST.
 
 ## Validación pendiente de equipos

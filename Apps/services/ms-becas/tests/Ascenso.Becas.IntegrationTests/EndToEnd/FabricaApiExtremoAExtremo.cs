@@ -1,6 +1,8 @@
 using System.Security.Claims;
 using System.Text.Encodings.Web;
 using Ascenso.Becas.Application.Otorgamiento.Puertos;
+using Ascenso.Becas.Domain.Desembolsos.Datos;
+using Ascenso.Becas.Domain.Enums;
 using Ascenso.Becas.Domain.Ports;
 using Hangfire;
 using Microsoft.AspNetCore.Authentication;
@@ -84,6 +86,9 @@ public sealed class FabricaApiExtremoAExtremo : WebApplicationFactory<Program>
 
             servicios.RemoveAll<IAlmacenamientoArchivos>();
             servicios.AddSingleton<IAlmacenamientoArchivos, AlmacenamientoExtremoAExtremo>();
+
+            servicios.RemoveAll<IPlanDesembolsoPrograma>();
+            servicios.AddSingleton<IPlanDesembolsoPrograma, PlanDesembolsoExtremoAExtremo>();
 
             servicios.AddHangfireServer(opciones =>
             {
@@ -218,5 +223,18 @@ public sealed class FabricaApiExtremoAExtremo : WebApplicationFactory<Program>
                     ',',
                     StringSplitOptions.RemoveEmptyEntries
                         | StringSplitOptions.TrimEntries);
+    }
+}
+
+internal sealed class PlanDesembolsoExtremoAExtremo : IPlanDesembolsoPrograma
+{
+    public Task<PlanDesembolsoPrograma?> ObtenerAsync(Guid programaBecaId,
+        Guid periodoAcademicoId, CancellationToken cancellationToken = default)
+    {
+        var fecha = DateOnly.FromDateTime(DateTime.UtcNow);
+        return Task.FromResult<PlanDesembolsoPrograma?>(new(
+            programaBecaId, periodoAcademicoId,
+            FrecuenciaDesembolso.Mensual, DestinatarioPago.Becario,
+            fecha, fecha, [new CuotaProgramada(1, fecha, 100m)]));
     }
 }

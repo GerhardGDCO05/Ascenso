@@ -129,7 +129,8 @@ public sealed class CasosUsoDesembolsoTests
         var beca = DatosPrueba.CrearBecaActiva(datos, DatosPrueba.CrearContextoOperacion());
         db.Becas.Add(beca);
         await db.SaveChangesAsync();
-        var casos = CrearCasos(db);
+        var movimientos = new MovimientosPrueba();
+        var casos = CrearCasos(db, movimientos: movimientos);
         var fecha = new DateOnly(2026, 9, 1);
         var cuentaId = await casos.HandleAsync(new ActualizarDatosPagoBecarioCommand(
             beca.Id, "Banco", "0102", TipoCuentaBancaria.Ahorro,
@@ -151,6 +152,12 @@ public sealed class CasosUsoDesembolsoTests
             calendarioId, 1, "123456"));
 
         Assert.Equal("PAGADO_CONFIRMADO", confirmado.Estado);
+        var movimiento = Assert.Single(movimientos.Registrados);
+        Assert.Equal(TipoMovimientoPresupuestoPrograma.DesembolsoConfirmado,
+            movimiento.Tipo);
+        Assert.Equal(100m, movimiento.Monto);
+        Assert.Equal($"desembolso-confirmado-{confirmado.Id:N}",
+            movimiento.ClaveIdempotencia);
         db.ChangeTracker.Clear();
         var becaActualizada = await db.Becas.SingleAsync(item => item.Id == beca.Id);
         Assert.Equal(1400m, becaActualizada.MontoComprometidoPeriodoActual);
@@ -162,6 +169,65 @@ public sealed class CasosUsoDesembolsoTests
                 .CuentaBancariaDestinoSnapshot);
         Assert.DoesNotContain("01020000000000000001", cuenta.NumeroCuentaCifradoAesGcm,
             StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public async Task SinCuentaInstitucionalOficialNoAceptaSnapshotDelRequest()
+    {
+        await using var db = _fixture.CrearContexto();
+        var beca = DatosPrueba.CrearBecaActiva(DatosPrueba.CrearDatosBeca(),
+            DatosPrueba.CrearContextoOperacion());
+        db.Becas.Add(beca);
+        await db.SaveChangesAsync();
+        var casos = CrearCasos(db, cuentaInstitucional:
+            new CuentaInstitucionalPrueba { Snapshot = null });
+        var fecha = new DateOnly(2026, 9, 1);
+        var calendarioId = await casos.HandleAsync(new ProgramarCalendarioDesembolsoCommand(
+            beca.Id, beca.PeriodoVigenteActualId, FrecuenciaDesembolso.Mensual,
+            DestinatarioPago.Institucion, 100m, fecha, fecha,
+            [new CuotaProgramada(1, fecha, 100m)]));
+
+        await Assert.ThrowsAsync<ConfiguracionProgramaNoDisponibleException>(() =>
+            casos.HandleAsync(new RegistrarEjecucionDesembolsoCommand(calendarioId,
+                1, 100m, fecha, DestinatarioPago.Institucion, null,
+                "v1:AAAAAAAAAAAAAAAA:AAAAAAAAAAAAAAAAAAAAAA==:AQ==",
+                MetodoPago.TransferenciaBancaria, "REF-NO-OFICIAL")));
+
+        db.ChangeTracker.Clear();
+        Assert.Equal(EstadoDesembolso.Programado,
+            (await db.Desembolsos.SingleAsync(item => item.CalendarioDesembolsoId == calendarioId)).Estado);
+    }
+
+    [Fact]
+    public async Task SinMovimientoContableNoConsumeOtpNiConfirmaDesembolso()
+    {
+        await using var db = _fixture.CrearContexto();
+        var beca = DatosPrueba.CrearBecaActiva(DatosPrueba.CrearDatosBeca(),
+            DatosPrueba.CrearContextoOperacion());
+        db.Becas.Add(beca);
+        await db.SaveChangesAsync();
+        var otp = new OtpPrueba();
+        var movimientos = new MovimientosPrueba { Disponible = false };
+        var casos = CrearCasos(db, otp, movimientos);
+        var fecha = new DateOnly(2026, 9, 1);
+        var calendarioId = await casos.HandleAsync(new ProgramarCalendarioDesembolsoCommand(
+            beca.Id, beca.PeriodoVigenteActualId, FrecuenciaDesembolso.Mensual,
+            DestinatarioPago.Institucion, 100m, fecha, fecha,
+            [new CuotaProgramada(1, fecha, 100m)]));
+        await casos.HandleAsync(new RegistrarEjecucionDesembolsoCommand(calendarioId,
+            1, 100m, fecha, DestinatarioPago.Institucion, null, string.Empty,
+            MetodoPago.TransferenciaBancaria, "REF-SIN-MOVIMIENTO"));
+
+        await Assert.ThrowsAsync<DependenciaNoDisponibleException>(() =>
+            casos.HandleAsync(new ConfirmarDesembolsoCommand(calendarioId, 1, "123456")));
+
+        db.ChangeTracker.Clear();
+        Assert.Equal(EstadoDesembolso.EnProceso,
+            (await db.Desembolsos.SingleAsync(item => item.CalendarioDesembolsoId == calendarioId)).Estado);
+        Assert.Equal(1500m,
+            (await db.Becas.SingleAsync(item => item.Id == beca.Id)).MontoComprometidoPeriodoActual);
+        Assert.Equal(0, otp.Consumos);
+        Assert.Empty(movimientos.Registrados);
     }
 
     [Fact]
@@ -261,7 +327,9 @@ public sealed class CasosUsoDesembolsoTests
             new UnidadDeTrabajo(contextoRevocacion),
             new ContextoPrueba(), new RelojPrueba(), otpRevocacion,
             new OutboxPrueba(), new ProgramadorPrueba(),
-            NullLogger<CasosUsoCicloVidaBeca>.Instance);
+            NullLogger<CasosUsoCicloVidaBeca>.Instance,
+            new MovimientosPrueba(),
+            new IntencionAceptacionOfertaStore(contextoRevocacion));
         await cicloVida.HandleAsync(new RevocarBecaDefinitivamenteCommand(
             beca.Id, "Revocación justificada", "123456"));
         await transaccion.CommitAsync();
@@ -278,7 +346,8 @@ public sealed class CasosUsoDesembolsoTests
     }
 
     private static CasosUsoDesembolso CrearCasos(Infrastructure.Persistence.BecasDbContext db,
-        IOtpClient? otp = null)
+        IOtpClient? otp = null, IMovimientoPresupuestoPrograma? movimientos = null,
+        ICuentaInstitucionalPrograma? cuentaInstitucional = null)
         => new(
             new CalendarioDesembolsoRepository(db),
             new DatosPagoBecarioRepository(db),
@@ -288,7 +357,35 @@ public sealed class CasosUsoDesembolsoTests
             new RelojPrueba(),
             new CifradorCuentaBancariaAesGcm(Convert.ToBase64String(RandomNumberGenerator.GetBytes(32))),
             otp ?? new OtpPrueba(),
-            new OutboxPrueba());
+            new OutboxPrueba(), movimientos ?? new MovimientosPrueba(),
+            cuentaInstitucional ?? new CuentaInstitucionalPrueba());
+
+    private sealed class MovimientosPrueba : IMovimientoPresupuestoPrograma
+    {
+        public bool Disponible { get; set; } = true;
+        public List<MovimientoPresupuestoPrograma> Registrados { get; } = [];
+
+        public Task AsegurarDisponibleAsync(CancellationToken cancellationToken = default)
+            => Disponible ? Task.CompletedTask
+                : throw new DependenciaNoDisponibleException("MS-PRG: movimientos-presupuesto");
+
+        public Task RegistrarAsync(MovimientoPresupuestoPrograma movimiento,
+            CancellationToken cancellationToken = default)
+        {
+            Registrados.Add(movimiento);
+            return Task.CompletedTask;
+        }
+    }
+
+    private sealed class CuentaInstitucionalPrueba : ICuentaInstitucionalPrograma
+    {
+        public string? Snapshot { get; set; } =
+            "v1:AAAAAAAAAAAAAAAA:AAAAAAAAAAAAAAAAAAAAAA==:AQ==";
+
+        public Task<string?> ObtenerSnapshotCifradoAsync(Guid programaBecaId,
+            Guid periodoAcademicoId, CancellationToken cancellationToken = default)
+            => Task.FromResult(Snapshot);
+    }
 
     private sealed class OutboxPrueba : IOutboxBeca
     {

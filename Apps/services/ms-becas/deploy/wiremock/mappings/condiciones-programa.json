@@ -1,0 +1,56 @@
+{
+  "request": {
+    "method": "GET",
+    "urlPath": "/internal/v1/programas/11111111-1111-4111-8111-111111111111/condiciones",
+    "queryParameters": {
+      "carreraId": {
+        "equalTo": "66666666-6666-4666-8666-666666666666"
+      },
+      "periodoId": {
+        "equalTo": "44444444-4444-4444-8444-444444444444"
+      }
+    }
+  },
+  "response": {
+    "status": 200,
+    "headers": {
+      "Content-Type": "application/json"
+    },
+    "jsonBody": {
+      "programaBecaId": "11111111-1111-4111-8111-111111111111",
+      "carreraId": "66666666-6666-4666-8666-666666666666",
+      "periodoAcademicoId": "44444444-4444-4444-8444-444444444444",
+      "universidadAliadaId": "55555555-5555-4555-8555-555555555555",
+      "politicaCobertura": {
+        "modalidad": "TOTAL",
+        "porcentajeCobertura": 100,
+        "montoFijoPeriodo": 0,
+        "moneda": "USD"
+      },
+      "condicionesPermanencia": {
+        "promedioMinimoRenovacion": 13,
+        "materiasMinimasAprobadas": 4,
+        "maximoMateriasReprobadas": 1,
+        "horasServicioPorPeriodo": 40,
+        "consecuenciaIncumplimiento": "LLAMADO_ATENCION"
+      },
+      "costoMatricula": {
+        "costoMatriculaReferenciaId": "99999999-9999-4999-8999-999999999999",
+        "carreraId": "66666666-6666-4666-8666-666666666666",
+        "periodoAcademicoId": "44444444-4444-4444-8444-444444444444",
+        "montoReferenciaMatricula": 1500,
+        "moneda": "USD",
+        "numeroVersion": 1,
+        "fechaVigenciaDesde": "2020-01-01",
+        "fechaVigenciaHasta": null,
+        "estado": "VIGENTE"
+      },
+      "convenio": {
+        "universidadAliadaId": "55555555-5555-4555-8555-555555555555",
+        "convenioId": "dddddddd-dddd-4ddd-8ddd-dddddddddddd",
+        "estado": "VIGENTE",
+        "fechaFin": "2099-12-31"
+      }
+    }
+  }
+}

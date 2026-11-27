@@ -41,6 +41,7 @@ builder.Services.AddProblemDetails();
 builder.Services.AddExceptionHandler<ManejadorExcepcionesDominio>();
 builder.Services.AddHttpContextAccessor();
 builder.Services.AddScoped<IUsuarioActual, UsuarioActualJwt>();
+builder.Services.AddScoped<IRolesUsuarioActual, RolesUsuarioActualJwt>();
 
 var keycloakAuthority = builder.Configuration["Keycloak:Authority"];
 var keycloakAudience = builder.Configuration["Keycloak:Audience"];
@@ -104,6 +105,37 @@ builder.Services.AddAuthorization(options =>
     options.AddPolicy(
         PoliticasAutorizacionEvaluaciones.SupervisionEvaluaciones,
         policy => policy.RequireRole(PoliticasAutorizacionEvaluaciones.RolCoordinadorPrograma));
+
+    options.AddPolicy(
+        PoliticasAutorizacionConsolidacion.ConsultaConsolidacion,
+        policy => policy.RequireRole(
+            PoliticasAutorizacionConsolidacion.RolCoordinadorPrograma,
+            PoliticasAutorizacionConsolidacion.RolDireccion));
+
+    options.AddPolicy(
+        PoliticasAutorizacionConsolidacion.GestionConsolidacion,
+        policy => policy.RequireRole(PoliticasAutorizacionConsolidacion.RolCoordinadorPrograma));
+
+    options.AddPolicy(
+        PoliticasAutorizacionConsolidacion.ResolucionCasosLimiteRanking,
+        policy => policy.RequireRole(
+            PoliticasAutorizacionConsolidacion.RolCoordinadorPrograma,
+            PoliticasAutorizacionConsolidacion.RolMiembroComite));
+
+    options.AddPolicy(
+        PoliticasAutorizacionConsolidacion.ConsultaAdjudicabilidadInterna,
+        policy => policy.RequireAssertion(context =>
+            context.User.IsInRole(PoliticasAutorizacionConsolidacion.RolCoordinadorPrograma)
+            || context.User.IsInRole(PoliticasAutorizacionConsolidacion.RolDireccion)
+            || context.User.Claims.Any(claim =>
+                (string.Equals(claim.Type, "scope", StringComparison.OrdinalIgnoreCase)
+                    || string.Equals(claim.Type, "scp", StringComparison.OrdinalIgnoreCase))
+                && claim.Value
+                    .Split(' ', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries)
+                    .Contains(PoliticasAutorizacionConsolidacion.ScopeLecturaInterna, StringComparer.Ordinal))
+            || context.User.Claims.Any(claim =>
+                string.Equals(claim.Type, "permissions", StringComparison.OrdinalIgnoreCase)
+                && string.Equals(claim.Value, PoliticasAutorizacionConsolidacion.PermisoLecturaInterna, StringComparison.Ordinal))));
 });
 builder.Services.AddSingleton<IAuthorizationMiddlewareResultHandler, ManejadorResultadoAutorizacionRubricas>();
 

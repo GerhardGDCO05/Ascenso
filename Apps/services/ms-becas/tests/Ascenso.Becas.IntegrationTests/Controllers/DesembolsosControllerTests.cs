@@ -259,6 +259,10 @@ public sealed class DesembolsosControllerTests : IClassFixture<OfertasBecaApiFac
         var programaId = Guid.CreateVersion7();
         var calendario = CrearCalendario(becaId);
         var comandos = Substitute.For<ICommandDispatcher>();
+        comandos.EnviarAsync<ConfirmarDesembolsoCommand, DesembolsoDto>(
+            Arg.Any<ConfirmarDesembolsoCommand>(), Arg.Any<CancellationToken>())
+            .Returns(Task.FromException<DesembolsoDto>(
+                new DependenciaNoDisponibleException("MS-PRG: movimientos-presupuesto")));
         using var fabrica = CrearFabrica(becaId, programaId, comandos,
             calendarios: CrearRepositorioCalendario(calendario));
         using var cliente = fabrica.CreateClient();
@@ -272,8 +276,10 @@ public sealed class DesembolsosControllerTests : IClassFixture<OfertasBecaApiFac
         Assert.Equal(HttpStatusCode.ServiceUnavailable, respuesta.StatusCode);
         using var problema = JsonDocument.Parse(await respuesta.Content.ReadAsStringAsync());
         Assert.Equal("DEPENDENCIA_NO_DISPONIBLE", problema.RootElement.GetProperty("code").GetString());
-        await comandos.DidNotReceive().EnviarAsync<ConfirmarDesembolsoCommand, DesembolsoDto>(
-            Arg.Any<ConfirmarDesembolsoCommand>(), Arg.Any<CancellationToken>());
+        await comandos.Received(1).EnviarAsync<ConfirmarDesembolsoCommand, DesembolsoDto>(
+            Arg.Is<ConfirmarDesembolsoCommand>(valor =>
+                valor.CalendarioId == calendario.Id && valor.NumeroCuota == 1
+                && valor.CodigoOtp == "123456"), Arg.Any<CancellationToken>());
     }
 
     private WebApplicationFactory<Program> CrearFabrica(Guid becaId, Guid programaId,

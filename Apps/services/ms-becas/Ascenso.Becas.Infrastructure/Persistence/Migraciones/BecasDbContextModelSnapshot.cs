@@ -1593,6 +1593,66 @@ namespace Ascenso.Becas.Infrastructure.Persistence.Migraciones
                         });
                 });
 
+            modelBuilder.Entity("Ascenso.Becas.Infrastructure.Persistence.Modelos.IntencionAceptacionOfertaRegistro", b =>
+                {
+                    b.Property<Guid>("OfertaId")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid")
+                        .HasColumnName("oferta_id");
+
+                    b.Property<Guid>("BecaId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("beca_id");
+
+                    b.Property<DateTimeOffset>("CreadoEn")
+                        .HasColumnType("timestamptz")
+                        .HasColumnName("creado_en");
+
+                    b.Property<string>("Payload")
+                        .IsRequired()
+                        .HasColumnType("jsonb")
+                        .HasColumnName("payload");
+
+                    b.HasKey("OfertaId")
+                        .HasName("pk_intencion_aceptacion_oferta");
+
+                    b.HasIndex("BecaId")
+                        .IsUnique()
+                        .HasDatabaseName("ux_intencion_aceptacion_oferta_beca");
+
+                    b.ToTable("intencion_aceptacion_oferta", "becas");
+                });
+
+            modelBuilder.Entity("Ascenso.Becas.Infrastructure.Persistence.Modelos.IntencionEmisionOfertaRegistro", b =>
+                {
+                    b.Property<Guid>("OfertaId")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid")
+                        .HasColumnName("oferta_id");
+
+                    b.Property<DateTimeOffset>("CreadoEn")
+                        .HasColumnType("timestamptz")
+                        .HasColumnName("creado_en");
+
+                    b.Property<string>("Payload")
+                        .IsRequired()
+                        .HasColumnType("jsonb")
+                        .HasColumnName("payload");
+
+                    b.Property<Guid>("PostulacionId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("postulacion_id");
+
+                    b.HasKey("OfertaId")
+                        .HasName("pk_intencion_emision_oferta");
+
+                    b.HasIndex("PostulacionId")
+                        .IsUnique()
+                        .HasDatabaseName("ux_intencion_emision_oferta_postulacion");
+
+                    b.ToTable("intencion_emision_oferta", "becas");
+                });
+
             modelBuilder.Entity("Ascenso.Becas.Infrastructure.Persistence.Modelos.ProgramaBecaRef", b =>
                 {
                     b.Property<Guid>("ProgramaBecaId")

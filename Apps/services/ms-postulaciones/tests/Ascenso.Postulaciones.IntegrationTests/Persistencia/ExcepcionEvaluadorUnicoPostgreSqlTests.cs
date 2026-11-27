@@ -1,5 +1,6 @@
 using Ascenso.Postulaciones.Application.Asignaciones.Comandos.AsignarEvaluadoresPostulacion;
 using Ascenso.Postulaciones.Application.Asignaciones.Comandos.AutorizarExcepcionEvaluadorUnico;
+using Ascenso.Postulaciones.Application.Consolidacion.Interfaces;
 using Ascenso.Postulaciones.Application.Interfaces;
 using Ascenso.Postulaciones.Domain.Asignaciones.Entidades;
 using Ascenso.Postulaciones.Domain.Comites.Agregados;
@@ -316,6 +317,7 @@ public sealed class ExcepcionEvaluadorUnicoPostgreSqlTests
                 usuarioActual,
                 new ExcepcionEvaluadorUnicoRepository(contextoAutorizar),
                 new AsignacionEvaluacionRepository(contextoAutorizar),
+                Substitute.For<IConsolidadorPostulacionEvaluacion>(),
                 contextoAutorizar,
                 new AutorizarExcepcionEvaluadorUnicoCommandValidator(),
                 timeProvider);

@@ -1,4 +1,5 @@
 using Ascenso.Postulaciones.Application.Common;
+using Ascenso.Postulaciones.Application.Consolidacion.Interfaces;
 using Ascenso.Postulaciones.Application.Evaluaciones.DTOs;
 using Ascenso.Postulaciones.Application.Evaluaciones.Interfaces;
 using Ascenso.Postulaciones.Application.Interfaces;
@@ -13,10 +14,12 @@ public sealed class EnviarEvaluacionDefinitivaCommandHandler
 {
     private readonly IUsuarioActual _usuarioActual;
     private readonly IConsultaAsignacionParaEvaluacionRepository _asignacionRepository;
+    private readonly IConvocatoriaEvaluacionClient _convocatoriaClient;
     private readonly IEvaluacionRepository _evaluacionRepository;
     private readonly IComiteEvaluadorRepository _comiteRepository;
     private readonly IConsultaRubricaParaEvaluacionRepository _rubricaRepository;
     private readonly IBloqueadorRubricaEvaluacion _bloqueadorRubrica;
+    private readonly IConsolidadorPostulacionEvaluacion _consolidadorPostulacion;
     private readonly IUnitOfWork _unitOfWork;
     private readonly IValidator<EnviarEvaluacionDefinitivaCommand> _validator;
     private readonly TimeProvider _timeProvider;
@@ -24,20 +27,24 @@ public sealed class EnviarEvaluacionDefinitivaCommandHandler
     public EnviarEvaluacionDefinitivaCommandHandler(
         IUsuarioActual usuarioActual,
         IConsultaAsignacionParaEvaluacionRepository asignacionRepository,
+        IConvocatoriaEvaluacionClient convocatoriaClient,
         IEvaluacionRepository evaluacionRepository,
         IComiteEvaluadorRepository comiteRepository,
         IConsultaRubricaParaEvaluacionRepository rubricaRepository,
         IBloqueadorRubricaEvaluacion bloqueadorRubrica,
+        IConsolidadorPostulacionEvaluacion consolidadorPostulacion,
         IUnitOfWork unitOfWork,
         IValidator<EnviarEvaluacionDefinitivaCommand> validator,
         TimeProvider timeProvider)
     {
         _usuarioActual = usuarioActual ?? throw new ArgumentNullException(nameof(usuarioActual));
         _asignacionRepository = asignacionRepository ?? throw new ArgumentNullException(nameof(asignacionRepository));
+        _convocatoriaClient = convocatoriaClient ?? throw new ArgumentNullException(nameof(convocatoriaClient));
         _evaluacionRepository = evaluacionRepository ?? throw new ArgumentNullException(nameof(evaluacionRepository));
         _comiteRepository = comiteRepository ?? throw new ArgumentNullException(nameof(comiteRepository));
         _rubricaRepository = rubricaRepository ?? throw new ArgumentNullException(nameof(rubricaRepository));
         _bloqueadorRubrica = bloqueadorRubrica ?? throw new ArgumentNullException(nameof(bloqueadorRubrica));
+        _consolidadorPostulacion = consolidadorPostulacion ?? throw new ArgumentNullException(nameof(consolidadorPostulacion));
         _unitOfWork = unitOfWork ?? throw new ArgumentNullException(nameof(unitOfWork));
         _validator = validator ?? throw new ArgumentNullException(nameof(validator));
         _timeProvider = timeProvider ?? throw new ArgumentNullException(nameof(timeProvider));
@@ -62,6 +69,13 @@ public sealed class EnviarEvaluacionDefinitivaCommandHandler
             throw new EvaluacionConfidencialException();
         }
 
+        var ahora = _timeProvider.GetUtcNow();
+
+        var ventanaRevision = await _convocatoriaClient
+            .ObtenerVentanaRevisionAsync(asignacion.ConvocatoriaId, cancellationToken)
+            ?? throw new ConvocatoriaNoEncontradaException();
+        ventanaRevision.AsegurarPeriodoAbiertoParaEvaluacion(ahora);
+
         var evaluacion = await _evaluacionRepository
             .ObtenerParaActualizarPorAsignacionAsync(asignacion.Id, cancellationToken)
             ?? throw new EvaluacionNoEncontradaException();
@@ -76,8 +90,6 @@ public sealed class EnviarEvaluacionDefinitivaCommandHandler
                 comite.ConvocatoriaId,
                 cancellationToken)
             ?? throw new RubricaNoEncontradaException();
-
-        var ahora = _timeProvider.GetUtcNow();
 
         evaluacion.EnviarDefinitiva(
             rubrica,
@@ -95,6 +107,10 @@ public sealed class EnviarEvaluacionDefinitivaCommandHandler
                 rubrica.Id,
                 cancellationToken);
         }
+
+        await _consolidadorPostulacion.IntentarConsolidarAutomaticamenteAsync(
+            asignacion.PostulacionId,
+            cancellationToken);
 
         return evaluacion.ADto();
     }

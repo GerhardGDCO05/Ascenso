@@ -33,6 +33,8 @@ public sealed class CasosUsoDesembolso :
     private readonly ICifradorCuentaBancaria _cifrador;
     private readonly IOtpClient _otp;
     private readonly IOutboxBeca _outbox;
+    private readonly IMovimientoPresupuestoPrograma _movimientos;
+    private readonly ICuentaInstitucionalPrograma _cuentaInstitucional;
 
     public CasosUsoDesembolso(
         ICalendarioDesembolsoRepository calendarios,
@@ -43,7 +45,8 @@ public sealed class CasosUsoDesembolso :
         IClock reloj,
         ICifradorCuentaBancaria cifrador,
         IOtpClient otp,
-        IOutboxBeca outbox)
+        IOutboxBeca outbox, IMovimientoPresupuestoPrograma movimientos,
+        ICuentaInstitucionalPrograma cuentaInstitucional)
     {
         _calendarios = calendarios;
         _datosPago = datosPago;
@@ -54,6 +57,8 @@ public sealed class CasosUsoDesembolso :
         _cifrador = cifrador;
         _otp = otp;
         _outbox = outbox;
+        _movimientos = movimientos ?? throw new ArgumentNullException(nameof(movimientos));
+        _cuentaInstitucional = cuentaInstitucional ?? throw new ArgumentNullException(nameof(cuentaInstitucional));
     }
 
     public async Task<Guid> HandleAsync(ProgramarCalendarioDesembolsoCommand command,
@@ -129,6 +134,15 @@ public sealed class CasosUsoDesembolso :
                     throw new ConflictoOperacionException("Los datos de pago no pertenecen a la cuenta activa de la beca.");
                 cuentaCifrada = cuenta.NumeroCuentaCifradoAesGcm;
             }
+            else
+            {
+                cuentaCifrada = await _cuentaInstitucional.ObtenerSnapshotCifradoAsync(
+                    beca.ProgramaBecaId, beca.PeriodoVigenteActualId, token);
+                if (string.IsNullOrWhiteSpace(cuentaCifrada))
+                    throw new ConfiguracionProgramaNoDisponibleException(
+                        beca.ProgramaBecaId,
+                        "No está confirmada la cuenta institucional de destino.");
+            }
             calendario.RegistrarEjecucion(command.NumeroCuota, command.Monto, command.FechaEjecucion,
                 command.Destinatario, command.DatosPagoBecarioId, cuentaCifrada,
                 command.MetodoPago, command.ReferenciaBancaria, Contexto());
@@ -150,9 +164,15 @@ public sealed class CasosUsoDesembolso :
                 ?? throw new RecursoNoEncontradoException("beca", calendario.BecaId);
             beca.ExigirHabilitacionDesembolso();
             var cuota = calendario.ObtenerCuotaVigente(command.NumeroCuota);
+            await _movimientos.AsegurarDisponibleAsync(token);
             await ConsumirOtpAsync(autorizacionId, TipoOperacionOTP.ConfirmarDesembolso, "DESEMBOLSO", cuota.Id,
                 FormattableString.Invariant($"{cuota.Id:N}|{cuota.MontoEjecutado}|{cuota.ReferenciaBancaria}"),
                 command.CodigoOtp, token);
+            await _movimientos.RegistrarAsync(new MovimientoPresupuestoPrograma(
+                beca.ProgramaBecaId, beca.Id, beca.PeriodoVigenteActualId,
+                cuota.Id, TipoMovimientoPresupuestoPrograma.DesembolsoConfirmado,
+                cuota.MontoEjecutado ?? throw new InvalidOperationException("Falta el monto ejecutado."),
+                $"desembolso-confirmado-{cuota.Id:N}"), token);
             calendario.Confirmar(command.NumeroCuota, autorizacionId, Contexto(autorizacionId));
             beca.RegistrarDesembolsoConfirmado(
                 cuota.MontoEjecutado ?? throw new InvalidOperationException("Falta el monto ejecutado."),
