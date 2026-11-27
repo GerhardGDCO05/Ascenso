@@ -637,6 +637,8 @@ public sealed class AsignacionesEvaluacionControllerTests : IClassFixture<WebApp
                 servicios.RemoveAll<IProveedorParametrosConsolidacion>();
                 servicios.RemoveAll<IRankingConvocatoriaRepository>();
                 servicios.RemoveAll<IConsultaEstadoEvaluacionesConvocatoriaRepository>();
+                servicios.RemoveAll<IConsultaJefaturaComiteRepository>();
+                servicios.RemoveAll<IVerificadorConflictoInteresDecisor>();
                 servicios.RemoveAll<IDisponibilidadRankingClient>();
                 servicios.RemoveAll<IProveedorMontoEstimadoBeca>();
                 servicios.RemoveAll<IPeriodoAcademicoClient>();
@@ -658,6 +660,8 @@ public sealed class AsignacionesEvaluacionControllerTests : IClassFixture<WebApp
                 servicios.AddSingleton(Substitute.For<IProveedorParametrosConsolidacion>());
                 servicios.AddSingleton(Substitute.For<IRankingConvocatoriaRepository>());
                 servicios.AddSingleton(Substitute.For<IConsultaEstadoEvaluacionesConvocatoriaRepository>());
+                servicios.AddSingleton(Substitute.For<IConsultaJefaturaComiteRepository>());
+                servicios.AddSingleton(Substitute.For<IVerificadorConflictoInteresDecisor>());
                 servicios.AddSingleton(Substitute.For<IDisponibilidadRankingClient>());
                 servicios.AddSingleton(Substitute.For<IProveedorMontoEstimadoBeca>());
                 servicios.AddSingleton(Substitute.For<IPeriodoAcademicoClient>());

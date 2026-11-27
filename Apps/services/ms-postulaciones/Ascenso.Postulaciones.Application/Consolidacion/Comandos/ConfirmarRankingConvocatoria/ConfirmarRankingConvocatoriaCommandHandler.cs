@@ -119,6 +119,11 @@ public sealed class ConfirmarRankingConvocatoriaCommandHandler
             throw new EmpatesSinResolverEnCorteException();
         }
 
+        if (corte.TieneDecisionCasoLimiteInvalidaPorDisponibilidad)
+        {
+            throw new DecisionCasoLimiteInvalidaPorDisponibilidadException();
+        }
+
         if (corte.TieneAdvertenciaDiscrepanciasEnCorte && !command.ConfirmarConAdvertenciaDiscrepancias)
         {
             throw new DiscrepanciasSinRevisarEnCorteException();

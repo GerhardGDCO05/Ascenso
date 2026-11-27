@@ -21,7 +21,13 @@ public sealed record class ElementoRankingEvaluado : ValueObject
         bool discrepanciaRevisada,
         bool afectaAdvertenciaDiscrepanciaEnCorte,
         bool excepcionEvaluadorUnico,
-        DateTimeOffset fechaConsolidacion)
+        DateTimeOffset fechaConsolidacion,
+        TipoCasoLimite? tipoCasoLimite = null,
+        bool? seleccionadoEnCasoLimite = null,
+        string? justificacionDesempateCasoLimite = null,
+        Guid? decididoPorUsuarioId = null,
+        DateTimeOffset? fechaDecisionCasoLimite = null,
+        bool casoLimiteResuelto = false)
     {
         if (resultadoConsolidadoId == Guid.Empty)
         {
@@ -74,6 +80,63 @@ public sealed record class ElementoRankingEvaluado : ValueObject
             throw new RankingInvalidoException("La fecha de consolidación es obligatoria.");
         }
 
+        var tieneAlgunDatoCasoLimite = tipoCasoLimite.HasValue
+            || seleccionadoEnCasoLimite.HasValue
+            || justificacionDesempateCasoLimite is not null
+            || decididoPorUsuarioId.HasValue
+            || fechaDecisionCasoLimite.HasValue;
+
+        var tieneTodosLosDatosCasoLimite = tipoCasoLimite.HasValue
+            && seleccionadoEnCasoLimite.HasValue
+            && !string.IsNullOrWhiteSpace(justificacionDesempateCasoLimite)
+            && decididoPorUsuarioId.HasValue
+            && fechaDecisionCasoLimite.HasValue;
+
+        if (tieneAlgunDatoCasoLimite && !tieneTodosLosDatosCasoLimite)
+        {
+            throw new RankingInvalidoException(
+                "Los metadatos de decisión de caso límite deben estar completamente poblados o completamente nulos.");
+        }
+
+        string? justificacionNormalizada = null;
+        DateTimeOffset? fechaDecisionUtc = null;
+
+        if (tieneTodosLosDatosCasoLimite)
+        {
+            if (!Enum.IsDefined(tipoCasoLimite!.Value))
+            {
+                throw new RankingInvalidoException("El tipo de caso límite indicado no es válido.");
+            }
+
+            justificacionNormalizada = justificacionDesempateCasoLimite!.Trim();
+            if (justificacionNormalizada.Length < CasoLimiteRankingDetectado.LongitudMinimaJustificacion
+                || justificacionNormalizada.Length > CasoLimiteRankingDetectado.LongitudMaximaJustificacion)
+            {
+                throw new RankingInvalidoException(
+                    $"La justificación del caso límite debe tener entre {CasoLimiteRankingDetectado.LongitudMinimaJustificacion} y {CasoLimiteRankingDetectado.LongitudMaximaJustificacion} caracteres.");
+            }
+
+            if (decididoPorUsuarioId!.Value == Guid.Empty)
+            {
+                throw new RankingInvalidoException(
+                    "El identificador del usuario decisor del caso límite es obligatorio.");
+            }
+
+            if (fechaDecisionCasoLimite!.Value == default)
+            {
+                throw new RankingInvalidoException(
+                    "La fecha de decisión del caso límite es obligatoria.");
+            }
+
+            fechaDecisionUtc = fechaDecisionCasoLimite.Value.ToUniversalTime();
+        }
+
+        if (casoLimiteResuelto && !tipoCasoLimite.HasValue)
+        {
+            throw new RankingInvalidoException(
+                "No puede marcarse un elemento como caso límite resuelto sin metadatos de decisión.");
+        }
+
         ResultadoConsolidadoId = resultadoConsolidadoId;
         PostulacionId = postulacionId;
         PosicionRanking = posicionRanking;
@@ -86,6 +149,12 @@ public sealed record class ElementoRankingEvaluado : ValueObject
         AfectaAdvertenciaDiscrepanciaEnCorte = afectaAdvertenciaDiscrepanciaEnCorte;
         ExcepcionEvaluadorUnico = excepcionEvaluadorUnico;
         FechaConsolidacion = fechaConsolidacion.ToUniversalTime();
+        TipoCasoLimite = tipoCasoLimite;
+        SeleccionadoEnCasoLimite = seleccionadoEnCasoLimite;
+        JustificacionDesempateCasoLimite = justificacionNormalizada;
+        DecididoPorUsuarioId = decididoPorUsuarioId;
+        FechaDecisionCasoLimite = fechaDecisionUtc;
+        CasoLimiteResuelto = casoLimiteResuelto;
     }
 
     public Guid ResultadoConsolidadoId { get; }
@@ -111,4 +180,16 @@ public sealed record class ElementoRankingEvaluado : ValueObject
     public bool ExcepcionEvaluadorUnico { get; }
 
     public DateTimeOffset FechaConsolidacion { get; }
+
+    public TipoCasoLimite? TipoCasoLimite { get; }
+
+    public bool? SeleccionadoEnCasoLimite { get; }
+
+    public string? JustificacionDesempateCasoLimite { get; }
+
+    public Guid? DecididoPorUsuarioId { get; }
+
+    public DateTimeOffset? FechaDecisionCasoLimite { get; }
+
+    public bool CasoLimiteResuelto { get; }
 }

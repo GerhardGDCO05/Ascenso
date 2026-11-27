@@ -11,6 +11,7 @@ using Ascenso.Postulaciones.Application.Comites.Consultas.ObtenerComiteEvaluador
 using Ascenso.Postulaciones.Application.Comites.Consultas.ObtenerComitePorPrograma;
 using Ascenso.Postulaciones.Application.Consolidacion.Comandos.ConfirmarRankingConvocatoria;
 using Ascenso.Postulaciones.Application.Consolidacion.Comandos.ConsolidarPostulacion;
+using Ascenso.Postulaciones.Application.Consolidacion.Comandos.ResolverCasoLimiteRanking;
 using Ascenso.Postulaciones.Application.Consolidacion.Comandos.RevisarDiscrepanciaConsolidacion;
 using Ascenso.Postulaciones.Application.Consolidacion.Consultas.ConsultarAdjudicabilidadPostulacion;
 using Ascenso.Postulaciones.Application.Consolidacion.Consultas.ListarResultadosConsolidadosConvocatoria;
@@ -84,6 +85,7 @@ public static class DependencyInjection
         services.AddScoped<ListarResultadosConsolidadosConvocatoriaQueryHandler>();
         services.AddScoped<ObtenerRankingConvocatoriaQueryHandler>();
         services.AddScoped<ConfirmarRankingConvocatoriaCommandHandler>();
+        services.AddScoped<ResolverCasoLimiteRankingCommandHandler>();
         services.AddScoped<ConsultarAdjudicabilidadPostulacionQueryHandler>();
 
         return services;

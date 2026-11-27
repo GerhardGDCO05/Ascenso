@@ -948,6 +948,8 @@ public sealed class EvaluacionesControllerTests : IClassFixture<WebApplicationFa
                 servicios.RemoveAll<IProveedorParametrosConsolidacion>();
                 servicios.RemoveAll<IRankingConvocatoriaRepository>();
                 servicios.RemoveAll<IConsultaEstadoEvaluacionesConvocatoriaRepository>();
+                servicios.RemoveAll<IConsultaJefaturaComiteRepository>();
+                servicios.RemoveAll<IVerificadorConflictoInteresDecisor>();
                 servicios.RemoveAll<IDisponibilidadRankingClient>();
                 servicios.RemoveAll<IProveedorMontoEstimadoBeca>();
                 servicios.RemoveAll<IBloqueadorRubricaEvaluacion>();
@@ -983,6 +985,8 @@ public sealed class EvaluacionesControllerTests : IClassFixture<WebApplicationFa
                 servicios.AddSingleton(Substitute.For<IProveedorParametrosConsolidacion>());
                 servicios.AddSingleton(Substitute.For<IRankingConvocatoriaRepository>());
                 servicios.AddSingleton(Substitute.For<IConsultaEstadoEvaluacionesConvocatoriaRepository>());
+                servicios.AddSingleton(Substitute.For<IConsultaJefaturaComiteRepository>());
+                servicios.AddSingleton(Substitute.For<IVerificadorConflictoInteresDecisor>());
                 servicios.AddSingleton(Substitute.For<IDisponibilidadRankingClient>());
                 servicios.AddSingleton(Substitute.For<IProveedorMontoEstimadoBeca>());
                 servicios.AddSingleton(bloqueadorRubrica ?? Substitute.For<IBloqueadorRubricaEvaluacion>());

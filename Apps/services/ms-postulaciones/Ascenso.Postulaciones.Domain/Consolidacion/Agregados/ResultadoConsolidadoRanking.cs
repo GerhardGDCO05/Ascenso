@@ -16,6 +16,12 @@ public sealed class ResultadoConsolidadoRanking : AggregateRoot
 
     public const int LongitudMaximaComentarioRevision = 1000;
 
+    public const int LongitudMinimaJustificacionCasoLimite =
+        CasoLimiteRankingDetectado.LongitudMinimaJustificacion;
+
+    public const int LongitudMaximaJustificacionCasoLimite =
+        CasoLimiteRankingDetectado.LongitudMaximaJustificacion;
+
     public const int LongitudMaximaJustificacionExcepcion =
         AutorizacionExcepcionEvaluadorUnico.LongitudMaximaJustificacion;
 
@@ -79,6 +85,18 @@ public sealed class ResultadoConsolidadoRanking : AggregateRoot
 
     public Guid? ConfirmadoPorUsuarioId { get; private set; }
 
+    public TipoCasoLimite? TipoCasoLimite { get; private set; }
+
+    public bool? SeleccionadoEnCasoLimite { get; private set; }
+
+    public string? JustificacionDesempateCasoLimite { get; private set; }
+
+    public Guid? DecididoPorUsuarioId { get; private set; }
+
+    public DateTimeOffset? FechaDecisionCasoLimite { get; private set; }
+
+    public bool TieneDecisionCasoLimite => TipoCasoLimite.HasValue;
+
     public bool EsAdjudicable
         => EstadoConfirmacionRanking == EstadoRanking.Confirmado
             && Clasificacion == ClasificacionRanking.DentroDeCupo;
@@ -135,6 +153,12 @@ public sealed class ResultadoConsolidadoRanking : AggregateRoot
         if (CoincideConCalculo(calculo))
         {
             return false;
+        }
+
+        if (TieneDecisionCasoLimite)
+        {
+            throw new CasoLimiteYaResueltoException(
+                "No es posible recalcular un resultado consolidado que ya cuenta con una decisión inalterable de caso límite.");
         }
 
         var fechaUtc = fechaConsolidacion.ToUniversalTime();
@@ -228,6 +252,51 @@ public sealed class ResultadoConsolidadoRanking : AggregateRoot
         ConfirmadoPorUsuarioId = usuarioConfirmadorId;
         EstadoConfirmacionRanking = EstadoRanking.Confirmado;
         ActualizarAuditoria(usuarioConfirmadorId, fechaUtc);
+    }
+
+    public void RegistrarDecisionCasoLimite(
+        TipoCasoLimite tipoCasoLimite,
+        bool seleccionado,
+        string justificacion,
+        DateTimeOffset fechaDecision,
+        Guid usuarioDecisorId)
+    {
+        ValidarArgumentosTemporalesYUsuario(fechaDecision, usuarioDecisorId);
+
+        if (EstadoConfirmacionRanking == EstadoRanking.Confirmado)
+        {
+            throw new RankingYaConfirmadoException();
+        }
+
+        if (TieneDecisionCasoLimite)
+        {
+            throw new CasoLimiteYaResueltoException();
+        }
+
+        if (!Enum.IsDefined(tipoCasoLimite))
+        {
+            throw new CasoLimiteInvalidoException("El tipo de caso límite indicado no es válido.");
+        }
+
+        if (string.IsNullOrWhiteSpace(justificacion))
+        {
+            throw new JustificacionCasoLimiteInvalidaException();
+        }
+
+        var justificacionNormalizada = justificacion.Trim();
+        if (justificacionNormalizada.Length < LongitudMinimaJustificacionCasoLimite
+            || justificacionNormalizada.Length > LongitudMaximaJustificacionCasoLimite)
+        {
+            throw new JustificacionCasoLimiteInvalidaException();
+        }
+
+        var fechaUtc = fechaDecision.ToUniversalTime();
+        TipoCasoLimite = tipoCasoLimite;
+        SeleccionadoEnCasoLimite = seleccionado;
+        JustificacionDesempateCasoLimite = justificacionNormalizada;
+        DecididoPorUsuarioId = usuarioDecisorId;
+        FechaDecisionCasoLimite = fechaUtc;
+        ActualizarAuditoria(usuarioDecisorId, fechaUtc);
     }
 
     private void AplicarCalculo(ResultadoCalculoConsolidacion calculo, DateTimeOffset fechaConsolidacionUtc)

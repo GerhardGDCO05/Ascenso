@@ -398,6 +398,8 @@ public sealed class RankingsControllerTests : IClassFixture<WebApplicationFactor
                 servicios.RemoveAll<IProveedorParametrosConsolidacion>();
                 servicios.RemoveAll<IRankingConvocatoriaRepository>();
                 servicios.RemoveAll<IConsultaEstadoEvaluacionesConvocatoriaRepository>();
+                servicios.RemoveAll<IConsultaJefaturaComiteRepository>();
+                servicios.RemoveAll<IVerificadorConflictoInteresDecisor>();
                 servicios.RemoveAll<IDisponibilidadRankingClient>();
                 servicios.RemoveAll<IProveedorMontoEstimadoBeca>();
                 servicios.RemoveAll<IPeriodoAcademicoClient>();
@@ -419,6 +421,8 @@ public sealed class RankingsControllerTests : IClassFixture<WebApplicationFactor
                 servicios.AddSingleton(Substitute.For<IProveedorParametrosConsolidacion>());
                 servicios.AddSingleton(repoRanking ?? Substitute.For<IRankingConvocatoriaRepository>());
                 servicios.AddSingleton(repoEstadoEvaluaciones ?? Substitute.For<IConsultaEstadoEvaluacionesConvocatoriaRepository>());
+                servicios.AddSingleton(Substitute.For<IConsultaJefaturaComiteRepository>());
+                servicios.AddSingleton(Substitute.For<IVerificadorConflictoInteresDecisor>());
                 servicios.AddSingleton(disponibilidadClient ?? Substitute.For<IDisponibilidadRankingClient>());
                 servicios.AddSingleton(proveedorMonto ?? Substitute.For<IProveedorMontoEstimadoBeca>());
                 servicios.AddSingleton(Substitute.For<IPeriodoAcademicoClient>());

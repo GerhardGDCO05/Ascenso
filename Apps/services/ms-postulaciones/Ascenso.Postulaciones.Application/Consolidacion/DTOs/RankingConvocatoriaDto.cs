@@ -18,4 +18,11 @@ public sealed record class RankingConvocatoriaDto(
     bool TieneAdvertenciaDiscrepanciasEnCorte,
     int CantidadDiscrepanciasSinRevisarEnCorte,
     IReadOnlyList<Guid> PostulacionesConDiscrepanciaSinRevisarEnCorte,
-    PaginaDto<ElementoRankingDto> Elementos);
+    PaginaDto<ElementoRankingDto> Elementos,
+    bool TieneCasoLimiteActivo = false,
+    string? TipoCasoLimiteActivo = null,
+    IReadOnlyList<Guid>? PostulacionesEnCasoLimiteActivo = null,
+    int? CuposDisponiblesEnCasoLimite = null,
+    decimal? PresupuestoDisponibleEnCasoLimite = null,
+    bool TieneCasoLimiteResuelto = false,
+    bool TieneDecisionCasoLimiteInvalidaPorDisponibilidad = false);
