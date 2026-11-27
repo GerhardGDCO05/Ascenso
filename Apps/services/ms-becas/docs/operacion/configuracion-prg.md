@@ -1,8 +1,10 @@
 # Configuración faltante de `MS-PRG` en `MS-BEC`
 
 Este documento describe la métrica, la alerta y el procedimiento operativo para
-resolver una emisión de oferta bloqueada con
-`422 CONFIGURACION_PROGRAMA_NO_DISPONIBLE`.
+resolver una emisión de oferta bloqueada por configuración de MS-PRG. La emisión
+lee primero las proyecciones locales y después consulta las condiciones
+oficiales por `GET /internal/v1/programas/{id}/condiciones?carreraId=&periodoId=`.
+Una falla de cualquiera de las dos fuentes impide reservar presupuesto.
 
 ## 1. Señal observable
 
@@ -12,13 +14,14 @@ resolver una emisión de oferta bloqueada con
 becas.configuracion_faltante{recurso="programa|costo_matricula|convenio"}
 ```
 
-Cada vez que una emisión se bloquea porque la proyección local de `MS-PRG` no
-existe o no está vigente, el contador se incrementa en una unidad con la
-etiqueta `recurso`:
+El contador se incrementa cuando la emisión detecta una proyección local
+inexistente o no vigente, o cuando MS-PRG responde `404` al consultar las
+condiciones oficiales. Otros rechazos de la consulta oficial pueden producir
+`422` o `503` sin incrementar este contador. La etiqueta `recurso` indica:
 
 | `recurso` | Causa |
 | :--- | :--- |
-| `programa` | No existe `ProgramaBecaRef`, el programa no está `ACTIVO`/`CONFIGURADO`, su duración es inválida o no fue posible calcular un monto positivo. |
+| `programa` | No existe `ProgramaBecaRef`, el programa no está `ACTIVO`/`CONFIGURADO`, su duración es inválida, no fue posible calcular un monto positivo o MS-PRG no devolvió condiciones para el programa/carrera/periodo. |
 | `costo_matricula` | No existe un `CostoMatriculaRef` vigente para la carrera y el periodo, o su estado no es `VIGENTE`. |
 | `convenio` | No existe `ConvenioRef` para la universidad aliada, su estado no es `VIGENTE` o su `FechaFin` ya pasó. |
 
@@ -52,14 +55,15 @@ groups:
 ```
 
 La alerta es de advertencia porque la emisión se bloquea de forma segura
-(*fail-closed*): no se crea una beca, no se reserva presupuesto y no se publica
-ningún evento.
+(*fail-closed*) antes de reservar presupuesto, crear una beca o publicar un
+evento.
 
 ## 3. Diagnóstico
 
 1. Confirmar el `recurso` de la alerta y la ventana temporal.
-2. Buscar en los logs la solicitud rechazada con
-   `Codigo=CONFIGURACION_PROGRAMA_NO_DISPONIBLE` y su `correlationId`.
+2. Buscar en los logs la solicitud rechazada y su `correlationId`. Una
+   configuración faltante puede producir `422 CONFIGURACION_PROGRAMA_NO_DISPONIBLE`;
+   una consulta remota fallida o inválida puede producir `503 DEPENDENCIA_NO_DISPONIBLE`.
 3. Consultar la proyección local con el identificador del programa, la carrera,
    el periodo y la universidad que reporta la respuesta de `MS-POS`:
 
@@ -82,10 +86,18 @@ FROM becas.convenio_ref
 WHERE universidad_aliada_id = :universidadAliadaId;
 ```
 
-Si la fila no existe, `MS-BEC` nunca recibió el evento. Si existe pero está
-desactualizada, el evento llegó antes que la corrección en `MS-PRG`.
+Si la fila no existe, `MS-BEC` no recibió una proyección válida. Si existe pero
+está desactualizada, revisar el último evento aplicado y la configuración de
+origen. Antes de solicitar una reemisión, consultar también las condiciones
+oficiales de MS-PRG con el mismo programa, carrera y periodo; confirmar que
+incluyen el convenio de la universidad, cobertura, arancel vigente y reglas de
+permanencia. Un `404`, `422` o `503` en esa consulta requiere corregir o
+restablecer la fuente oficial; reemitir el evento por sí solo no lo resuelve.
 
-## 4. Procedimiento de reemisión desde `MS-PRG`
+## 4. Reemisión de la proyección local desde `MS-PRG`
+
+Aplicar este procedimiento solo cuando las condiciones oficiales son válidas y
+el problema está en una proyección local faltante o desactualizada.
 
 1. Abrir un caso con el equipo de `MS-PRG` indicando:
    - `programaBecaId`, `carreraId`, `periodoAcademicoId` y
@@ -103,7 +115,7 @@ desactualizada, el evento llegó antes que la corrección en `MS-PRG`.
    - `eventId` nuevo y distinto de cualquier intento anterior;
    - el mismo `aggregateId` de la configuración corregida;
    - `occurredAt` posterior al `occurred_at` guardado en la proyección local;
-   - el payload completo documentado en `design.md`, sin datos personales.
+   - el payload completo de `docs/contratos/ms-bec/eventos.md`, sin datos personales.
 4. Verificar en RabbitMQ que el mensaje llegó a la cola de `MS-BEC`:
    - `ms-bec.programa-beca-configurado`
    - `ms-bec.costo-matricula-actualizado`
@@ -119,10 +131,11 @@ reemisión con una marca temporal posterior.
 
 ## 5. Reintento de la emisión
 
-Con la proyección actualizada, repetir la emisión desde la interfaz o con la
-misma `Idempotency-Key` de la solicitud original. El middleware de idempotencia
-devuelve la respuesta previa si la operación ya se había completado; si la
-emisión había fallado antes de persistir, se crea una única oferta nueva.
+Una vez corregidas ambas fuentes, repetir la emisión desde la interfaz. Si la
+operación original llegó a reservar presupuesto o a persistir una intención de
+emisión, verificar antes su estado y la reconciliación; no iniciar otra oferta
+para la misma postulación. La clave `Idempotency-Key` de la petición debe
+conservarse para reintentar la misma operación.
 
 No se debe:
 
