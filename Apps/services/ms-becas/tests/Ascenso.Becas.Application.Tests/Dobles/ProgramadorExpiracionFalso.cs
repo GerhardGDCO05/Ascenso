@@ -13,7 +13,11 @@ public sealed class ProgramadorExpiracionFalso : IProgramadorExpiracionOfertas
 
     public Exception? ErrorCancelar { get; set; }
 
+    public bool ResultadoCancelar { get; set; } = true;
+
     public List<(Guid OfertaId, DateTimeOffset FechaVencimiento)> Programadas { get; } = [];
+
+    public List<string> SolicitudesCancelacion { get; } = [];
 
     public List<string> Canceladas { get; } = [];
 
@@ -33,18 +37,23 @@ public sealed class ProgramadorExpiracionFalso : IProgramadorExpiracionOfertas
         return Task.FromResult(Referencia);
     }
 
-    public Task CancelarAsync(
+    public Task<bool> CancelarAsync(
         string referenciaJob,
         CancellationToken cancellationToken = default)
     {
         cancellationToken.ThrowIfCancellationRequested();
+        SolicitudesCancelacion.Add(referenciaJob);
 
         if (ErrorCancelar is not null)
         {
             throw ErrorCancelar;
         }
 
-        Canceladas.Add(referenciaJob);
-        return Task.CompletedTask;
+        if (ResultadoCancelar)
+        {
+            Canceladas.Add(referenciaJob);
+        }
+
+        return Task.FromResult(ResultadoCancelar);
     }
 }

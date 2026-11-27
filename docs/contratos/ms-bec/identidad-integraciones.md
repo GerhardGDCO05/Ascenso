@@ -79,6 +79,153 @@ no deben incluirse en eventos ni logs. Respuestas y errores relevantes:
 El timeout configurado por MS-BEC es de 3 segundos. La respuesta no debe
 contener información socioeconómica.
 
+## MS-POS: marcar la postulación como otorgada
+
+Antes de confirmar localmente una oferta, MS-BEC consume:
+
+```http
+POST /internal/v1/postulaciones/{postulacionId}/otorgar
+Authorization: Bearer <service-token>
+Idempotency-Key: otorgar-{ofertaId}
+X-Correlation-Id: <uuid>
+```
+
+El endpoint no requiere cuerpo. Una respuesta `2xx` confirma la transición
+`EN_EVALUACION → OTORGADA`; `409` y `422` se conservan como rechazos de
+negocio y timeout, error de red u otra respuesta no exitosa se traducen a
+`503 DEPENDENCIA_NO_DISPONIBLE`. Antes de la llamada remota, MS-BEC persiste
+una intención con el mismo `ofertaId` y los datos necesarios para reconstruir
+la oferta. La intención se escribe en una conexión independiente de la
+transacción HTTP y sobrevive si el commit local falla. Una vez preparada,
+MS-BEC conserva los documentos y el job mientras la intención está pendiente.
+
+El finalizador confirma primero la reserva de MS-PRG con la misma identidad de
+oferta; solo entonces repite `otorgar-{ofertaId}`, guarda beca y Outbox y
+elimina la intención en una transacción local. Un job crítico reintenta las
+intenciones por páginas. Si la reserva venció o MS-PRG no confirma, conserva
+la intención y no crea la beca. La respuesta idempotente de MS-POS y la
+resolución de reservas vencidas requieren validación con los equipos dueños.
+
+## MS-PRG: consultar condiciones vigentes
+
+Para emitir, MS-BEC consume:
+
+```http
+GET /internal/v1/programas/{programaBecaId}/condiciones?carreraId={carreraId}&periodoId={periodoId}
+Authorization: Bearer <service-token>
+X-Correlation-Id: <uuid>
+```
+
+Respuesta `200` esperada:
+
+```json
+{
+  "programaBecaId": "uuid",
+  "carreraId": "uuid",
+  "periodoAcademicoId": "uuid",
+  "universidadAliadaId": "uuid",
+  "politicaCobertura": {
+    "modalidad": "PARCIAL",
+    "porcentajeCobertura": 50.00,
+    "montoFijoPeriodo": 0.00,
+    "moneda": "USD"
+  },
+  "condicionesPermanencia": {
+    "promedioMinimoRenovacion": 14.00,
+    "materiasMinimasAprobadas": 4,
+    "maximoMateriasReprobadas": 1,
+    "horasServicioPorPeriodo": 80,
+    "consecuenciaIncumplimiento": "SUSPENSION"
+  },
+  "costoMatricula": {
+    "costoMatriculaReferenciaId": "uuid",
+    "carreraId": "uuid",
+    "periodoAcademicoId": "uuid",
+    "montoReferenciaMatricula": 1500.00,
+    "moneda": "USD",
+    "numeroVersion": 2,
+    "fechaVigenciaDesde": "2026-01-01",
+    "fechaVigenciaHasta": null,
+    "estado": "VIGENTE"
+  },
+  "convenio": {
+    "universidadAliadaId": "uuid",
+    "convenioId": "uuid",
+    "estado": "VIGENTE",
+    "fechaFin": "2027-12-31"
+  }
+}
+```
+
+MS-BEC conserva las proyecciones locales como caché de metadatos del programa,
+pero utiliza la política, condiciones, arancel y vigencia del convenio
+devueltos por esta consulta para crear el snapshot de la oferta. Un `404` se
+traduce a `422 CONFIGURACION_PROGRAMA_NO_DISPONIBLE`; una configuración presente
+pero incompleta o inválida también produce `422`. `422 CONVENIO_VENCIDO`
+se conserva como rechazo; timeout, error de red, JSON malformado o identificadores
+incompatibles se traducen a `503 DEPENDENCIA_NO_DISPONIBLE`.
+
+## MS-PLT: consultar el periodo académico actual
+
+Antes de emitir, MS-BEC consume:
+
+```http
+GET /internal/v1/periodos-academicos/actual
+Authorization: Bearer <service-token>
+X-Correlation-Id: <uuid>
+```
+
+Respuesta `200` esperada:
+
+```json
+{
+  "periodoAcademicoId": "uuid",
+  "codigo": "2026-2",
+  "nombre": "Segundo periodo 2026",
+  "ordenSecuencia": 2,
+  "fechaInicio": "2026-07-01",
+  "fechaFin": "2026-12-31",
+  "estado": "ACTIVO",
+  "esActual": true
+}
+```
+
+La respuesta debe identificar un periodo activo y actual. MS-BEC responde
+`503 DEPENDENCIA_NO_DISPONIBLE` si la respuesta falta, es inválida, el
+proveedor no está disponible o el identificador/código no coincide con los
+de la postulación adjudicable.
+
+La URL base se configura en `Clientes.Plataforma.BaseUrl` y debe apuntar a
+MS-PLT; no debe asumirse que coincide con la autoridad de Keycloak. La URL
+efectiva del entorno sigue pendiente de confirmación.
+
+## Política OTP para otorgamiento
+
+MS-BEC sigue DEC-07 del DDD: emisión y anulación administrativa de ofertas no
+requieren consumir una autorización OTP adicional; las operaciones
+administrativas continúan protegidas por 2FA de Keycloak. El consumo OTP queda
+reservado para las operaciones obligatorias definidas por el DDD.
+
+Para `CONFIRMAR_DESEMBOLSO` y `MODIFICAR_DATOS_PAGO`, MS-BEC consume
+`POST /internal/v1/otp/consumir` en MS-PLT. Envía `usuarioId`, `operacion`,
+`recursoTipo`, `recursoId`, `huellaPayload` (SHA-256 del contenido de la
+operación) y `codigo`. La confirmación usa `recursoTipo = DESEMBOLSO` e ID de
+la cuota; el cambio de cuenta usa `recursoTipo = BECA` e ID de la beca. La
+API pública recibe el identificador de la autorización en
+`X-Autorizacion-OTP-Id` y el código en el cuerpo; el contexto HTTP entrega el
+identificador al caso de uso. El endpoint despacha la confirmación, pero el
+adaptador productivo del movimiento contable responde `503` antes de consumir
+el OTP hasta que MS-PRG garantice el contrato de 16.10. La petición
+lleva `Idempotency-Key` derivada del identificador de la autorización OTP,
+que distingue operaciones sucesivas sobre la misma beca. MS-BEC no persiste
+ni registra el código OTP ni el número de cuenta en claro. El consumo remoto
+precede al commit local dentro de la transacción de MS-BEC; ambos servicios
+no comparten una transacción distribuida.
+
+La revocación definitiva también exige OTP (`REVOCAR_BECA`, `recursoTipo = BECA`,
+`recursoId = becaId`). Su caso de uso consume y valida el código en MS-PLT
+bajo bloqueo de la beca, antes de confirmar la transición y la cancelación de cuotas.
+
 ## MS-PRG: reservar cupo y presupuesto
 
 MS-BEC consume:
@@ -124,14 +271,26 @@ La misma oferta reutiliza la misma clave de idempotencia. Errores reconocidos:
 | Timeout, error de red u otra respuesta no exitosa | — | `503 DEPENDENCIA_NO_DISPONIBLE`. |
 
 MS-BEC acepta los campos de error `codigo`/`mensaje` o `code`/`message`.
-La reserva nace `PENDIENTE`; su confirmación/activación/liberación posterior
-se coordina por los eventos documentados en [eventos](./eventos.md), no por
-llamadas síncronas adicionales en este corte.
+La reserva nace `PENDIENTE`. Conforme al contrato 6.2 y DEC-08 del DDD, MS-BEC
+debe llamar `POST /internal/v1/programas/{programaBecaId}/reservas/{reservaId}/confirmar`,
+`/activar` o `/liberar`, según la transición. Cada llamada usa un *Service Token*,
+`X-Correlation-Id` e `Idempotency-Key: {operacion}-{ofertaId}`. El cliente HTTP y
+sus pruebas de contrato están implementados. La emisión confirma `/confirmar`
+desde una intención duradera antes de llamar a MS-POS. Rechazo, anulación y
+expiración exigen confirmar `/liberar` antes del cierre local y conservan la
+oferta para reintento si falla MS-PRG. La aceptación guarda una intención
+duradera con el plan oficial antes de llamar `/activar`; un job reintenta con
+la misma clave y confirma beca, calendario y Outbox localmente. Mientras esa
+intención esté pendiente, expiración, rechazo, anulación y revocación de la
+oferta otorgada no pueden cerrarla. Falta verificar el ciclo y la idempotencia
+con MS-PRG real, incluida una reserva que haya vencido antes del reintento.
+Los eventos de oferta documentados en [eventos](./eventos.md) comunican
+hechos de negocio y no reemplazan estas operaciones REST.
 
 ## Validación pendiente de equipos
 
 | Equipo | Confirmación requerida | Estado |
 | :--- | :--- | :--- |
-| MS-PLT | Claims, formato de alcance, audiencia y evidencia 2FA del access token. | Pendiente |
-| MS-POS | Ruta, campos de adjudicabilidad y errores 404/no adjudicable. | Pendiente |
-| MS-PRG | Ruta de reserva, idempotencia, payload, respuesta y errores 409/422. | Pendiente |
+| MS-PLT | Claims, formato de alcance, audiencia, evidencia 2FA y respuesta del periodo actual. | Pendiente |
+| MS-POS | Rutas/campos de adjudicabilidad y otorgamiento, idempotencia y errores 404/409/422. | Pendiente |
+| MS-PRG | Rutas/respuestas de condiciones y reserva, idempotencia, payload y errores 404/409/422. | Pendiente |

@@ -1,5 +1,7 @@
 # Specification: MS-BECA (Microservicio de Becas y Seguimiento)
 
+> Visión general del dominio. Los deltas de fundación y otorgamiento están en `openspec/changes/tech-bootstrap-int4-msbeca/specs/ms-beca/`; el plan completo de MS-BECA permanece en `tasks.md` de ese cambio. Al archivar, OpenSpec integrará los deltas en las especificaciones duraderas.
+
 > En la especificación maestra este contexto se identifica como `MS-BEC`. La carpeta `ms-beca` agrupa las especificaciones del microservicio de becas.
 
 ## Context
@@ -20,7 +22,7 @@ Gestión del otorgamiento y del ciclo de vida de la beca: emisión y respuesta d
 
 ## Scenarios
 
-<!-- OpenCode inyectará los escenarios GIVEN/WHEN/THEN detallados al archivar cada HU -->
+<!-- Los escenarios verificables de fundación y otorgamiento están en los deltas spec.md del cambio activo. -->
 
 ## Behaviors / Business Rules
 

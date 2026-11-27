@@ -2,7 +2,7 @@
 
 Ejecuta esta guía desde la raíz del repositorio. Requiere el .NET SDK fijado
 por `global.json`, Docker con el complemento Compose, `make`, `jq`, `curl` y
-`dotnet-ef`.
+`dotnet-ef`, además de Python 3 para generar el fixture local de Keycloak.
 
 ## Preparar el entorno
 
@@ -16,7 +16,8 @@ repositorio. Los valores incluidos en el realm y las cuentas de prueba son
 exclusivos para desarrollo local.
 
 Un solo comando crea la base `ascenso_becas`, levanta PostgreSQL, RabbitMQ y
-Keycloak, aplica las migraciones y comprueba que Keycloak cargó el realm:
+Keycloak, genera el fixture local desde el realm compartido, aplica las
+migraciones y comprueba que Keycloak cargó el realm:
 
 ```bash
 make dev-up
@@ -113,7 +114,15 @@ En un entorno administrado puede usarse Application Default Credentials o Worklo
 
 ## Tokens de prueba de Keycloak
 
-El realm `ascenso` contiene usuarios locales `coordinador.local`,
+La fuente del realm del equipo está en `deploy/keycloak/ascenso-realm.json`
+desde la raíz del repositorio. `make up` genera
+`deploy/keycloak/ascenso-realm.json` de MS-BEC a partir de esa fuente y
+`deploy/local/keycloak-overlay.json`, que agrega únicamente datos de prueba.
+Después de modificar la fuente o el overlay, vuelve a ejecutar `make up` y
+recrea el contenedor local de Keycloak para reimportar el realm; Keycloak no
+actualiza automáticamente un realm existente al importar de nuevo.
+
+El realm `ascenso` local contiene usuarios `coordinador.local`,
 `postulante.local` y `becario.local`. Sus contraseñas de demostración están
 declaradas en `deploy/keycloak/ascenso-realm.json`; no deben reutilizarse en
 ningún entorno compartido o productivo.
@@ -133,7 +142,9 @@ curl --fail-with-body --silent --show-error \
 ```
 
 El access token incluye `sub`, `roles`, `postulante_id` y `programa_ids`, y su
-audiencia incluye `ms-bec`.
+audiencia incluye `ms-bec`. El coordinador local recibe además
+`permissions` como arreglo con los permisos de convocatorias y la audiencia
+`ascenso-api` para probar compatibilidad con los consumidores actuales.
 
 El coordinador debe registrar un autenticador TOTP una vez por cada realm local
 recién creado: inicia sesión en <http://localhost:8080/realms/ascenso/account>
@@ -156,6 +167,17 @@ curl --fail-with-body --silent --show-error \
 El claim `amr` se deriva de las ejecuciones de contraseña y TOTP realmente
 completadas. El token del coordinador debe incluir `totp`; la API no acepta un
 claim estático de segundo factor.
+El realm compartido deshabilita el flujo de contraseña directa. El overlay
+local lo habilita para estos ejemplos; un usuario administrativo que todavía
+no configuró TOTP debe completar el registro en el navegador antes de usar
+el ejemplo `grant_type=password`. Keycloak 26 puede devolver un error del
+servidor en ese flujo directo si se intenta antes del registro, sin emitir JWT.
+
+El fixture incluye `lector-convocatorias.local` con el permiso de prueba
+`convocatorias:leer` y sin rol administrativo. Su token permite comprobar que
+`permissions` es un arreglo real de strings; no concede acceso a MS-BEC por
+carecer de los roles que esta API exige. La contraseña local figura en el
+overlay y no debe usarse fuera de desarrollo.
 
 Con ese token se puede verificar la emisión usando la postulación de
 demostración. Usa `localhost:5120` cuando la API se ejecuta con `make run`, o

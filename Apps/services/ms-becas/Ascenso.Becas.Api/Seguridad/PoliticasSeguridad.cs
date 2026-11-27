@@ -15,6 +15,8 @@ public static class PoliticasSeguridad
 
     public const string RolCoordinadorPrograma = "COORDINADOR_PROGRAMA";
 
+    public const string RolAdministradorFinanciero = "ADMIN_FINANCIERO";
+
     public const string RolDireccion = "DIRECCION";
 
     public const string RolPostulante = "POSTULANTE";

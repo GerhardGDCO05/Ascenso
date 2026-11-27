@@ -8,7 +8,14 @@ using Ascenso.Becas.Application.Otorgamiento.Comandos.RevisarCompromisoBecario;
 using Ascenso.Becas.Application.Otorgamiento.Consultas.ConsultarBecasActivas;
 using Ascenso.Becas.Application.Otorgamiento.Consultas.ObtenerBeca;
 using Ascenso.Becas.Application.Otorgamiento.Consultas.ObtenerOferta;
+using Ascenso.Becas.Application.Otorgamiento.Puertos;
+using Ascenso.Becas.Application.Otorgamiento.Servicios;
 using Ascenso.Becas.Application.Tests.Dobles;
+using Ascenso.Becas.Domain.Desembolsos.Datos;
+using Ascenso.Becas.Domain.Enums;
+using Ascenso.Becas.Domain.Ports;
+using Microsoft.Extensions.Logging.Abstractions;
+using NSubstitute;
 
 namespace Ascenso.Becas.Application.Tests.Otorgamiento;
 
@@ -42,7 +49,13 @@ internal sealed class EscenarioOtorgamiento
 
     public PostulacionesClientFalso Postulaciones { get; } = new();
 
+    public PeriodosAcademicosClientFalso Periodos { get; } = new();
+
     public ProgramasClientFalso Programas { get; } = new();
+
+    public IntencionEmisionOfertaStoreFalso Intenciones { get; } = new();
+
+    public IntencionAceptacionOfertaStoreFalso Aceptaciones { get; } = new();
 
     public ProyeccionesOtorgamientoFalso Proyecciones { get; } = new();
 
@@ -66,6 +79,12 @@ internal sealed class EscenarioOtorgamiento
 
     public OutboxBecaFalso Outbox { get; } = new();
 
+    public ICalendarioDesembolsoRepository Calendarios { get; } =
+        Substitute.For<ICalendarioDesembolsoRepository>();
+
+    public IPlanDesembolsoPrograma Planes { get; } =
+        Substitute.For<IPlanDesembolsoPrograma>();
+
     public ConsultasBecaFalsas Consultas { get; } = new();
 
     public EscenarioOtorgamiento()
@@ -79,22 +98,79 @@ internal sealed class EscenarioOtorgamiento
             EstudianteId,
             ConvocatoriaId);
 
+        Periodos.Resultado = new ResultadoPeriodoAcademico(
+            PeriodoAcademicoId,
+            "2026-2",
+            "Segundo periodo 2026",
+            2,
+            new DateOnly(2026, 7, 1),
+            new DateOnly(2026, 12, 31),
+            "ACTIVO",
+            true);
+
         Proyecciones.Proyeccion = DatosAplicacion.Proyeccion(
             ProgramaBecaId,
             CostoMatriculaId,
             ConvenioId,
             DateOnly.FromDateTime(DatosAplicacion.FechaBase.UtcDateTime));
 
+        Programas.CrearCondiciones = (_, carreraId, periodoId, universidadId) =>
+        {
+            var proyeccion = Proyecciones.Proyeccion;
+
+            if (proyeccion is null)
+            {
+                return null;
+            }
+
+            return new ResultadoCondicionesPrograma(
+                ProgramaBecaId,
+                carreraId,
+                periodoId,
+                universidadId,
+                proyeccion.Programa.PoliticaCobertura,
+                proyeccion.Programa.CondicionesPermanencia,
+                new CostoMatriculaVigente(
+                    proyeccion.CostoMatricula.CostoMatriculaReferenciaId,
+                    carreraId,
+                    periodoId,
+                    proyeccion.CostoMatricula.MontoReferenciaMatricula,
+                    proyeccion.CostoMatricula.Moneda,
+                    proyeccion.CostoMatricula.NumeroVersion,
+                    proyeccion.CostoMatricula.FechaVigenciaDesde,
+                    proyeccion.CostoMatricula.FechaVigenciaHasta,
+                    proyeccion.CostoMatricula.Estado),
+                new ConvenioVigente(
+                    universidadId,
+                    proyeccion.Convenio.ConvenioId,
+                    proyeccion.Convenio.Estado,
+                    proyeccion.Convenio.FechaFin));
+        };
+
         Programas.Resultado = DatosAplicacion.Reserva(monto: 2000m);
+
+        var fechaPlan = DateOnly.FromDateTime(DatosAplicacion.FechaBase.UtcDateTime);
+        Planes.ObtenerAsync(ProgramaBecaId, PeriodoAcademicoId,
+                Arg.Any<CancellationToken>())
+            .Returns(new PlanDesembolsoPrograma(ProgramaBecaId,
+                PeriodoAcademicoId, FrecuenciaDesembolso.Mensual,
+                DestinatarioPago.Becario, fechaPlan, fechaPlan,
+                [new CuotaProgramada(1, fechaPlan, 100m)]));
 
         Unidad.AlConfirmar = _ =>
         {
+            Repositorio.Confirmar();
+            Intenciones.Confirmar();
+            Aceptaciones.Confirmar();
             Outbox.Confirmar();
             return Task.CompletedTask;
         };
 
         Unidad.AlRevertir = _ =>
         {
+            Repositorio.Revertir();
+            Intenciones.Revertir();
+            Aceptaciones.Revertir();
             Outbox.Descartar();
             return Task.CompletedTask;
         };
@@ -105,6 +181,7 @@ internal sealed class EscenarioOtorgamiento
             Contexto,
             Reloj,
             Postulaciones,
+            Periodos,
             Proyecciones,
             MetricaConfiguracion,
             Metricas,
@@ -113,21 +190,30 @@ internal sealed class EscenarioOtorgamiento
             GeneradorPlantilla,
             Almacenamiento,
             Programador,
-            Repositorio,
-            Unidad,
-            Outbox);
+            Intenciones,
+            new FinalizadorEmisionOferta(Postulaciones, Programas, Intenciones,
+                Repositorio, Unidad, Outbox));
 
     public AceptarOfertaBecaHandler CrearAceptar()
-        => new(Contexto, Reloj, Metricas, Repositorio, Unidad, Outbox);
+        => new(Contexto, Reloj, Repositorio, Unidad, Calendarios, Planes,
+            Aceptaciones, new FinalizadorAceptacionOferta(Repositorio,
+                Calendarios, Aceptaciones, Programas, Unidad, Outbox,
+                Programador, Metricas,
+                NullLogger<FinalizadorAceptacionOferta>.Instance));
 
     public RechazarOfertaBecaHandler CrearRechazar()
-        => new(Contexto, Reloj, Metricas, Repositorio, Unidad, Outbox);
+        => new(Contexto, Reloj, Metricas, Repositorio, Unidad,
+            Outbox, Programas, Aceptaciones, Programador,
+            NullLogger<RechazarOfertaBecaHandler>.Instance);
 
     public AnularOfertaBecaHandler CrearAnular()
-        => new(Contexto, Reloj, Repositorio, Unidad, Outbox);
+        => new(Contexto, Reloj, Repositorio, Unidad, Outbox,
+            Programas, Aceptaciones, Programador,
+            NullLogger<AnularOfertaBecaHandler>.Instance);
 
     public ExpirarOfertaBecaHandler CrearExpirar()
-        => new(Contexto, Reloj, Metricas, Repositorio, Unidad, Outbox);
+        => new(Contexto, Reloj, Metricas, Repositorio, Unidad, Outbox,
+            Programas, Aceptaciones);
 
     public CargarCompromisoBecarioHandler CrearCargarCompromiso()
         => new(Contexto, Reloj, Repositorio, Almacenamiento, Unidad, Outbox);

@@ -13,6 +13,29 @@ namespace Ascenso.Becas.Application.Tests.Otorgamiento;
 public sealed class RespuestaOfertaBecaHandlerTests
 {
     [Fact]
+    public async Task Debe_BloquearCierresMientras_LaAceptacionEstaPendiente()
+    {
+        var escenario = new EscenarioOtorgamiento();
+        var beca = CrearOfertaPendiente(escenario);
+        escenario.Programas.ErrorActivar = new HttpRequestException("MS-PRG no disponible");
+        await Assert.ThrowsAsync<DependenciaNoDisponibleException>(() =>
+            escenario.CrearAceptar().HandleAsync(
+                new Ascenso.Becas.Application.Otorgamiento.Comandos.AceptarOfertaBeca.AceptarOfertaBecaCommand(beca.Oferta!.Id)));
+
+        await Assert.ThrowsAsync<ConflictoOperacionException>(() =>
+            escenario.CrearRechazar().HandleAsync(new RechazarOfertaBecaCommand(
+                beca.Oferta!.Id, "Rechazo formal del postulante.")));
+        await Assert.ThrowsAsync<ConflictoOperacionException>(() =>
+            escenario.CrearAnular().HandleAsync(new AnularOfertaBecaCommand(
+                beca.Oferta!.Id, "Anulación formal por coordinación.")));
+        escenario.Reloj.UtcNow = DatosAplicacion.FechaBase.AddDays(16);
+        (await escenario.CrearExpirar().HandleAsync(
+            new ExpirarOfertaBecaCommand(beca.Oferta!.Id))).Should().BeFalse();
+        beca.Estado.Should().Be(EstadoBeca.Otorgada);
+        escenario.Programas.Liberaciones.Should().BeEmpty();
+    }
+
+    [Fact]
     public async Task Debe_RechazarLaOferta_Cuando_EstaPendiente()
     {
         var escenario = new EscenarioOtorgamiento();
@@ -29,6 +52,11 @@ public sealed class RespuestaOfertaBecaHandlerTests
         escenario.Unidad.Confirmaciones.Should().Be(1);
         escenario.Outbox.Confirmados.Should()
             .ContainSingle(evento => evento is OfertaBecaRechazadaEvento);
+        escenario.Programador.Canceladas.Should().ContainSingle()
+            .Which.Should().Be(escenario.Programador.Referencia);
+        escenario.Programas.Liberaciones.Should().ContainSingle()
+            .Which.Should().Be((beca.ProgramaBecaId,
+                beca.Oferta.ReservaPresupuestoId, beca.Oferta.Id));
     }
 
     [Fact]
@@ -63,6 +91,27 @@ public sealed class RespuestaOfertaBecaHandlerTests
         escenario.Unidad.Confirmaciones.Should().Be(1);
         escenario.Outbox.Confirmados.Should()
             .ContainSingle(evento => evento is OfertaBecaAnuladaEvento);
+        escenario.Programador.Canceladas.Should().ContainSingle()
+            .Which.Should().Be(escenario.Programador.Referencia);
+        escenario.Programas.Liberaciones.Should().ContainSingle()
+            .Which.Should().Be((beca.ProgramaBecaId,
+                beca.Oferta.ReservaPresupuestoId, beca.Oferta.Id));
+    }
+
+    [Fact]
+    public async Task Debe_ConservarElRechazo_Cuando_FallaLaCancelacionDelJob()
+    {
+        var escenario = new EscenarioOtorgamiento();
+        var beca = CrearOfertaPendiente(escenario);
+        escenario.Programador.ErrorCancelar = new InvalidOperationException("Hangfire no disponible");
+
+        await escenario.CrearRechazar().HandleAsync(
+            new RechazarOfertaBecaCommand(beca.Oferta!.Id, "No puedo continuar con el programa."));
+
+        beca.Oferta.Estado.Should().Be(EstadoOferta.RechazadaPorPostulante);
+        escenario.Programador.Canceladas.Should().BeEmpty();
+        escenario.Programador.SolicitudesCancelacion.Should().ContainSingle()
+            .Which.Should().Be(escenario.Programador.Referencia);
     }
 
     [Fact]
@@ -99,6 +148,70 @@ public sealed class RespuestaOfertaBecaHandlerTests
         escenario.Unidad.Confirmaciones.Should().Be(1);
         escenario.Outbox.Confirmados.Should()
             .ContainSingle(evento => evento is OfertaBecaExpiradaEvento);
+        escenario.Programas.Liberaciones.Should().ContainSingle()
+            .Which.Should().Be((beca.ProgramaBecaId,
+                beca.Oferta.ReservaPresupuestoId, beca.Oferta.Id));
+
+        (await escenario.CrearExpirar().HandleAsync(
+            new ExpirarOfertaBecaCommand(beca.Oferta.Id))).Should().BeFalse();
+        escenario.Programas.Liberaciones.Should().ContainSingle();
+    }
+
+    [Fact]
+    public async Task Debe_ConservarOfertaPendiente_Cuando_MS_PRGNoLiberaEnRechazo()
+    {
+        var escenario = new EscenarioOtorgamiento();
+        var beca = CrearOfertaPendiente(escenario);
+        escenario.Programas.ErrorLiberar = new HttpRequestException("MS-PRG no disponible");
+
+        var accion = () => escenario.CrearRechazar().HandleAsync(
+            new RechazarOfertaBecaCommand(beca.Oferta!.Id, "Rechazo formal del becario."));
+
+        await accion.Should().ThrowAsync<DependenciaNoDisponibleException>();
+        beca.Estado.Should().Be(EstadoBeca.Otorgada);
+        beca.Oferta!.Estado.Should().Be(EstadoOferta.PendienteRespuesta);
+        escenario.Unidad.Confirmaciones.Should().Be(0);
+        escenario.Programador.Canceladas.Should().BeEmpty();
+    }
+
+    [Fact]
+    public async Task Debe_ConservarOfertaPendiente_Cuando_MS_PRGNoLiberaEnAnulacion()
+    {
+        var escenario = new EscenarioOtorgamiento();
+        var beca = CrearOfertaPendiente(escenario);
+        escenario.Programas.ErrorLiberar = new HttpRequestException("MS-PRG no disponible");
+
+        var accion = () => escenario.CrearAnular().HandleAsync(
+            new AnularOfertaBecaCommand(beca.Oferta!.Id,
+                "Anulación aprobada por coordinación."));
+
+        await accion.Should().ThrowAsync<DependenciaNoDisponibleException>();
+        beca.Estado.Should().Be(EstadoBeca.Otorgada);
+        beca.Oferta!.Estado.Should().Be(EstadoOferta.PendienteRespuesta);
+        escenario.Unidad.Confirmaciones.Should().Be(0);
+        escenario.Programador.Canceladas.Should().BeEmpty();
+    }
+
+    [Fact]
+    public async Task Debe_ReintentarExpiracion_Cuando_MS_PRGNoLiberaPrimero()
+    {
+        var escenario = new EscenarioOtorgamiento();
+        var beca = CrearOfertaPendiente(escenario);
+        escenario.Reloj.UtcNow = DatosAplicacion.FechaBase.AddDays(16);
+        escenario.Programas.ErrorLiberar = new HttpRequestException("MS-PRG no disponible");
+
+        var accion = () => escenario.CrearExpirar().HandleAsync(
+            new ExpirarOfertaBecaCommand(beca.Oferta!.Id));
+
+        await accion.Should().ThrowAsync<DependenciaNoDisponibleException>();
+        beca.Estado.Should().Be(EstadoBeca.Otorgada);
+        beca.Oferta!.Estado.Should().Be(EstadoOferta.PendienteRespuesta);
+        escenario.Unidad.Confirmaciones.Should().Be(0);
+
+        escenario.Programas.ErrorLiberar = null;
+        (await escenario.CrearExpirar().HandleAsync(
+            new ExpirarOfertaBecaCommand(beca.Oferta.Id))).Should().BeTrue();
+        escenario.Programas.Liberaciones.Should().ContainSingle();
     }
 
     [Fact]

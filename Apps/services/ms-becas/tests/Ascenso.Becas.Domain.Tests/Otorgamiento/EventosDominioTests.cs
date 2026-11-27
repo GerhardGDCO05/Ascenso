@@ -150,7 +150,7 @@ public sealed class EventosDominioTests
         Assert.Throws<JustificacionRequeridaException>(
             () => beca.AnularOferta(beca.Oferta!.Id, contexto));
         Assert.Throws<TransicionEstadoInvalidaException>(
-            () => beca.Suspender(PruebasOtorgamiento.Contexto(
+            () => PruebasOtorgamiento.Suspender(beca, PruebasOtorgamiento.Contexto(
                 PruebasOtorgamiento.FechaBase.AddDays(1),
                 Justificacion)));
 

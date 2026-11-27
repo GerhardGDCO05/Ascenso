@@ -46,7 +46,7 @@ public sealed class ProgramadorExpiracionHangfire : IProgramadorExpiracionOferta
         return Task.FromResult(referencia);
     }
 
-    public Task CancelarAsync(
+    public Task<bool> CancelarAsync(
         string referenciaJob,
         CancellationToken cancellationToken = default)
     {
@@ -54,9 +54,9 @@ public sealed class ProgramadorExpiracionHangfire : IProgramadorExpiracionOferta
 
         if (!string.IsNullOrWhiteSpace(referenciaJob))
         {
-            _cliente.Delete(referenciaJob);
+            return Task.FromResult(_cliente.Delete(referenciaJob));
         }
 
-        return Task.CompletedTask;
+        return Task.FromResult(false);
     }
 }

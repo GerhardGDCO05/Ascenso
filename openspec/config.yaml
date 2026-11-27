@@ -6,7 +6,9 @@ context: |
   Arquitectura: Hexagonal con inversión de dependencias estricta y Domain-Driven Design (DDD).
 
   Documentación maestra obligatoria del repositorio (leer antes de diseñar o implementar):
+  - `docs/Enunciado/PRD Desarrollo.md` (requisitos funcionales y no funcionales)
   - `docs/Explicacion_del_DDD_V7.md` (Contexto General de Negocio y Glosario DDD)
+  - `docs/convenciones_c_y_ddd.md` (convenciones de implementación)
   - `docs/organizacion_repositorio.md` (Organización general del repositorio por microservicio)
 
   ## Requisitos Arquitectónicos No Funcionales (Atributos de Calidad)
@@ -54,32 +56,60 @@ context: |
   - El workflow `.github/workflows/ci-cd.yml` descubre automáticamente todas las soluciones `.sln`/`.slnx` de `Apps/services/` y ejecuta build + pruebas por microservicio.
   - Antes de crear un microservicio nuevo, seguir la guía de `docs/organizacion_repositorio.md`.
 
-  ## Reglas de Validación de OpenSpec para el Agente (DeepSeek / OpenCode):
+  ## Reglas de revisión para cualquier agente:
   1. RECHAZA cualquier propuesta de cambio si una propiedad mutable en `Domain/` contiene un setter público.
   2. Detén la generación si detectas nombres de entidades o agregados en inglés en la capa de Dominio.
   3. Asegúrate de que toda tarea de persistencia asíncrona incluya y pase el `CancellationToken`.
 
 rules:
   proposal:
-    - "Verificar que la propuesta respete los límites de proyectos de la Arquitectura Hexagonal de Ascenso."
-    - "El agente debe leer 'openspec/roadmaps/por_integrante.md' y 'openspec/roadmaps/por_microservicio.md' (si existen) ANTES de aceptar el cambio."
-    - "RECHAZAR la propuesta si el RF solicitado no corresponde al microservicio mapeado o si pertenece a otro Integrante del equipo."
-    - "Nombrar la carpeta del cambio siguiendo esta convencion '[ID-Cambio]-[Integrante]-[Microservicio]' para historias de usuario y tareas específicas."
-    - "Para el [ID-Cambio], utilizar el código de requerimiento (ej: rf15) si es una HU de negocio. Si es una tarea arbitraria o técnica, obligar al uso exclusivo de uno de estos cuatro identificadores: 'tech' (infraestructura/carpetas), 'test' (pruebas unitarias/integración), 'chore' (mantenimiento/NuGet) o 'fix' (corrección de fallos menores)."
-    
+    - "Verificar que la propuesta respete los límites de proyectos de la
+      Arquitectura Hexagonal de Ascenso."
+    - "El agente debe leer 'openspec/roadmaps/por_integrante.md' y
+      'openspec/roadmaps/por_microservicio.md' (si existen) ANTES de aceptar el
+      cambio."
+    - "En propuestas de MS-BEC, incluir solo las responsabilidades de MS-BEC
+      según el PRD y DDD, aunque la RF tenga otro integrante responsable;
+      explicitar las dependencias y contratos de otros servicios."
+    - "Nombrar la carpeta del cambio siguiendo esta convencion
+      '[ID-Cambio]-[Integrante]-[Microservicio]' para historias de usuario y
+      tareas específicas."
+    - "Para el [ID-Cambio], utilizar el código de requerimiento (ej: rf15) si es
+      una HU de negocio. Si es una tarea arbitraria o técnica, obligar al uso
+      exclusivo de uno de estos cuatro identificadores: 'tech'
+      (infraestructura/carpetas), 'test' (pruebas unitarias/integración),
+      'chore' (mantenimiento/NuGet) o 'fix' (corrección de fallos menores)."
+
   specs:
-    - "Garantizar que las reglas del negocio descritas utilicen la terminología de dominio estrictamente en español."
-    - "Organizar siempre las especificaciones dentro de una subcarpeta que corresponda al microservicio afectado en `openspec/specs/<microservicio>/`."
-    - "Mantener una carpeta por microservicio en `openspec/specs/`; no mezclar escenarios de contextos distintos."
+    - "Garantizar que las reglas del negocio descritas utilicen la terminología
+      de dominio estrictamente en español."
+    - "Organizar siempre las especificaciones dentro de una subcarpeta que
+      corresponda al microservicio afectado en
+      `openspec/specs/<microservicio>/`."
+    - "Mantener una carpeta por microservicio en `openspec/specs/`; no mezclar
+      escenarios de contextos distintos."
 
 operations:
   apply:
     guidance:
-      - "Identificar al Integrante actual del equipo antes de escribir código."
-      - "Solo trabajar en los RFs o tareas asignadas a dicho integrante que estén en estado `[ ]` (PENDIENTE)."
-      - "Está estrictamente PROHIBIDO modificar o asumir código de RFs asignados a otros miembros."
-      - "Al completar con éxito una funcionalidad de negocio, marcar con un check `[x]` el RF correspondiente tanto en `tasks.md` como en `openspec/roadmaps/por_integrante.md` y `openspec/roadmaps/por_microservicio.md` (si existen)."
+      - "Identificar el microservicio y sus responsabilidades en el PRD, el DDD
+        y los contratos antes de escribir código."
+      - "En MS-BEC implementar únicamente las responsabilidades de MS-BEC,
+        incluso cuando la RF tenga otro integrante responsable; no modificar
+        código ni asumir contratos internos de otros microservicios."
+      - "Usar `tasks.md` del cambio activo como plan completo de MS-BEC:
+        respetar la fase y las dependencias de cada sección, trabajar solo
+        tareas `[ ]` y marcar `[x]` al verificar todos sus criterios."
+      - "Al completar con éxito una funcionalidad de negocio, marcar con un
+        check `[x]` el RF correspondiente tanto en `tasks.md` como en
+        `openspec/roadmaps/por_integrante.md` y
+        `openspec/roadmaps/por_microservicio.md` (si existen)."
   archive:
     guidance:
-      - "Todo cambio archivado debe seguir estrictamente el formato de carpeta `YYYY-MM-DD-[ID-Cambio]-[Integrante]-[Microservicio]`, sin hora `HHMM`."
-      - "Antes de archivar un cambio con `/opsx:archive` o `openspec archive`, verificar que contenga `.openspec.yaml`, `proposal.md`, `design.md`, `tasks.md` (con todas las tareas en `[x]`) y su bitácora `log-YYYY-MM-DD-[ID-Cambio]-[Integrante]-[Microservicio].md`."
+      - "Todo cambio archivado debe seguir estrictamente el formato de carpeta
+        `YYYY-MM-DD-[ID-Cambio]-[Integrante]-[Microservicio]`, sin hora `HHMM`."
+      - "Antes de archivar un cambio con `/opsx:archive` o `openspec archive`,
+        verificar que contenga `.openspec.yaml`, `proposal.md`, `design.md`,
+        `tasks.md` (con todas las tareas en `[x]`) y su bitácora
+        `log-YYYY-MM-DD-[ID-Cambio]-[Integrante]-[Microservicio].md`."
+skillsScope: project

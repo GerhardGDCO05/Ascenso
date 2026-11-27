@@ -94,7 +94,7 @@ public sealed class PoliticaNoDobleBeneficioTests
             periodoId,
             PruebasOtorgamiento.Cobertura(TipoCobertura.Total, 100m),
             permiteAcumulacion: false);
-        suspendida.Suspender(PruebasOtorgamiento.Contexto(
+        PruebasOtorgamiento.Suspender(suspendida, PruebasOtorgamiento.Contexto(
             PruebasOtorgamiento.FechaBase.AddDays(10),
             "Suspensión temporal de la beca."));
 

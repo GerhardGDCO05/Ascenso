@@ -47,7 +47,11 @@ public sealed class ProgramadorExpiracionHangfireTests
             .Should().ContainSingle()
             .Which.Queue.Should().Be(RegistroHangfire.ColaCritica);
 
-        await programador.CancelarAsync(referencia);
+        var cancelado = await programador.CancelarAsync(referencia);
+
+        cancelado.Should().BeTrue();
+        almacenamiento.GetMonitoringApi().JobDetails(referencia)!
+            .History.First().StateName.Should().Be("Deleted");
     }
 
     [Fact]

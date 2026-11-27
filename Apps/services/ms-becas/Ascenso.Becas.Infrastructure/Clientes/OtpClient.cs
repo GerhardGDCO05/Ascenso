@@ -8,9 +8,8 @@ using Ascenso.Becas.Domain.Ports;
 namespace Ascenso.Becas.Infrastructure.Clientes;
 
 /// <summary>
-/// Cliente de <c>MS-PLT</c> para consumir códigos OTP. No se invoca todavía
-/// desde los casos de uso de este cambio; queda disponible para desembolsos,
-/// revocaciones y modificaciones de datos de pago.
+/// Cliente de <c>MS-PLT</c> para consumir códigos OTP de desembolsos y
+/// modificaciones de datos de pago. La revocación se conecta en la sección 17.
 /// </summary>
 public sealed class OtpClient : IOtpClient
 {
@@ -26,19 +25,30 @@ public sealed class OtpClient : IOtpClient
     }
 
     public async Task<ResultadoConsumoOtp> ConsumirAsync(
+        Guid autorizacionOtpId,
         Guid usuarioId,
         TipoOperacionOTP operacion,
+        string recursoTipo,
         Guid recursoId,
         string huellaPayload,
         string codigo,
         CancellationToken cancellationToken = default)
     {
+        if (autorizacionOtpId == Guid.Empty)
+        {
+            throw new ArgumentException(
+                "La autorización OTP es obligatoria.",
+                nameof(autorizacionOtpId));
+        }
+
         if (usuarioId == Guid.Empty)
         {
             throw new ArgumentException(
                 "El identificador del usuario es obligatorio.",
                 nameof(usuarioId));
         }
+
+        ArgumentException.ThrowIfNullOrWhiteSpace(recursoTipo);
 
         if (recursoId == Guid.Empty)
         {
@@ -57,12 +67,14 @@ public sealed class OtpClient : IOtpClient
 
         peticion.Headers.TryAddWithoutValidation(
             ProgramasClient.EncabezadoIdempotencia,
-            $"otp-{usuarioId:N}-{operacion.ACodigo()}-{recursoId:N}");
+            $"otp-{autorizacionOtpId:N}");
 
         peticion.Content = SolicitudIntegracion.ContenidoJson(new
         {
+            autorizacionOtpId,
             usuarioId,
             operacion = operacion.ACodigo(),
+            recursoTipo,
             recursoId,
             huellaPayload,
             codigo

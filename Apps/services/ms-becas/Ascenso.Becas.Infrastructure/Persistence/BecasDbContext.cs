@@ -1,3 +1,5 @@
+using Ascenso.Becas.Domain.Desembolsos.Agregados;
+using Ascenso.Becas.Domain.Desembolsos.Entidades;
 using Ascenso.Becas.Domain.Otorgamiento.Agregados;
 using Ascenso.Becas.Domain.Otorgamiento.Entidades;
 using Ascenso.Becas.Infrastructure.Persistence.Modelos;
@@ -21,6 +23,14 @@ public sealed class BecasDbContext : DbContext
 
     public DbSet<Beca> Becas => Set<Beca>();
 
+    public DbSet<CalendarioDesembolso> CalendariosDesembolso => Set<CalendarioDesembolso>();
+
+    public DbSet<Desembolso> Desembolsos => Set<Desembolso>();
+
+    public DbSet<DatosPagoBecario> DatosPagoBecarios => Set<DatosPagoBecario>();
+
+    public DbSet<IncidenciaDesembolso> IncidenciasDesembolso => Set<IncidenciaDesembolso>();
+
     public DbSet<OfertaBeca> OfertasBeca => Set<OfertaBeca>();
 
     public DbSet<CompromisoBecario> CompromisosBecarios => Set<CompromisoBecario>();
@@ -34,6 +44,12 @@ public sealed class BecasDbContext : DbContext
     public DbSet<ConvenioRef> ConveniosRef => Set<ConvenioRef>();
 
     public DbSet<IdempotencyRequest> SolicitudesIdempotencia => Set<IdempotencyRequest>();
+
+    public DbSet<IntencionEmisionOfertaRegistro> IntencionesEmisionOferta
+        => Set<IntencionEmisionOfertaRegistro>();
+
+    public DbSet<IntencionAceptacionOfertaRegistro> IntencionesAceptacionOferta
+        => Set<IntencionAceptacionOfertaRegistro>();
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {

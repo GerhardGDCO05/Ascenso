@@ -23,6 +23,7 @@ public sealed class Beca : AggregateRoot
     private const string JustificacionExpiracionOferta = "Expiración automática de la oferta de beca.";
 
     private readonly List<HistorialEstadoBeca> _historial = [];
+    private readonly List<SuspensionDesembolso> _suspensiones = [];
 
     private Beca()
     {
@@ -90,6 +91,8 @@ public sealed class Beca : AggregateRoot
     public CompromisoBecario? Compromiso { get; private set; }
 
     public IReadOnlyCollection<HistorialEstadoBeca> Historial => _historial.AsReadOnly();
+
+    public IReadOnlyCollection<SuspensionDesembolso> Suspensiones => _suspensiones.AsReadOnly();
 
     public static Beca CrearOtorgada(
         DatosCreacionBeca datos,
@@ -230,8 +233,7 @@ public sealed class Beca : AggregateRoot
         ArgumentNullException.ThrowIfNull(contexto);
         var oferta = ObtenerOferta(ofertaId);
 
-        TransicionesBeca.Tabla.Validar(Estado, EstadoBeca.Activa);
-        TransicionesOfertaBeca.Tabla.Validar(oferta.Estado, EstadoOferta.Aceptada);
+        ValidarAceptacionOferta(ofertaId, contexto, autorizacionOtpAceptacionId);
 
         var estadoAnteriorBeca = Estado;
         var estadoAnteriorOferta = oferta.Estado;
@@ -267,6 +269,20 @@ public sealed class Beca : AggregateRoot
             PeriodoVigenteActualId,
             contexto.CorrelacionId,
             contexto.Fecha));
+    }
+
+    public void ValidarAceptacionOferta(Guid ofertaId, ContextoOperacion contexto,
+        Guid? autorizacionOtpAceptacionId = null)
+    {
+        ArgumentNullException.ThrowIfNull(contexto);
+        var oferta = ObtenerOferta(ofertaId);
+
+        TransicionesBeca.Tabla.Validar(Estado, EstadoBeca.Activa);
+        TransicionesOfertaBeca.Tabla.Validar(oferta.Estado, EstadoOferta.Aceptada);
+        var contextoConOtp = autorizacionOtpAceptacionId is null
+            ? contexto
+            : ContextoConOtp(contexto, autorizacionOtpAceptacionId.Value);
+        oferta.ValidarAceptacion(contextoConOtp, autorizacionOtpAceptacionId);
     }
 
     public void RechazarOferta(Guid ofertaId, ContextoOperacion contexto)
@@ -379,15 +395,26 @@ public sealed class Beca : AggregateRoot
             contexto.Fecha));
     }
 
-    public void Suspender(ContextoOperacion contexto)
+    public SuspensionDesembolso Suspender(TipoSuspensionBeca tipo,
+        string motivo, string requisitos, DateOnly fechaInicio,
+        DateOnly? fechaRevision, bool esIndefinida, ContextoOperacion contexto)
     {
         ArgumentNullException.ThrowIfNull(contexto);
         TransicionesBeca.Tabla.Validar(Estado, EstadoBeca.Suspendida);
         ExigirJustificacion(contexto, "suspender la beca");
+        if (_suspensiones.Any(item => item.Estado == EstadoSuspension.Vigente))
+            throw new InvalidOperationException("La beca ya tiene una suspensión vigente.");
+
+        // Validar la entidad hija antes de mutar el estado de la raíz.
+        var suspension = SuspensionDesembolso.Crear(Id, tipo, motivo, requisitos,
+            fechaInicio, fechaRevision, esIndefinida, contexto);
 
         var estadoAnterior = Estado;
         Estado = EstadoBeca.Suspendida;
         HabilitadaParaDesembolso = false;
+        _suspensiones.Add(suspension);
+        // El saldo pendiente se traslada a la bolsa suspendida en MS-PRG;
+        // sigue comprometido para esta beca y no se libera.
         ActualizarAuditoria(contexto.UsuarioAutorId, contexto.Fecha);
 
         RegistrarHistorialBeca(
@@ -396,9 +423,13 @@ public sealed class Beca : AggregateRoot
             "Suspensión de la beca",
             contexto,
             estadoTerminalIrreversible: false);
+        RegistrarEventoDominio(new DesembolsosBecaSuspendidosEvento(
+            Id, suspension.Id, ProgramaBecaId, PeriodoVigenteActualId,
+            MontoComprometidoPeriodoActual, contexto.CorrelacionId, contexto.Fecha));
+        return suspension;
     }
 
-    public void Reactivar(ContextoOperacion contexto)
+    public SuspensionDesembolso Reactivar(ContextoOperacion contexto)
     {
         ArgumentNullException.ThrowIfNull(contexto);
 
@@ -409,7 +440,13 @@ public sealed class Beca : AggregateRoot
 
         TransicionesBeca.Tabla.Validar(Estado, EstadoBeca.Activa);
         ExigirJustificacion(contexto, "reactivar la beca");
+        var suspension = _suspensiones.SingleOrDefault(item => item.Estado == EstadoSuspension.Vigente)
+            ?? throw new InvalidOperationException("La beca suspendida no tiene una suspensión vigente.");
+        if (suspension.TipoSuspension == TipoSuspensionBeca.PausaAplazamiento)
+            throw new InvalidOperationException(
+                "La reactivación tras una pausa exige reporte académico y evaluación de permanencia favorables.");
 
+        suspension.Levantar(contexto);
         var estadoAnterior = Estado;
         Estado = EstadoBeca.Activa;
         HabilitadaParaDesembolso = !RequiereCompromisoFirmado || CompromisoFirmadoAprobado;
@@ -421,6 +458,10 @@ public sealed class Beca : AggregateRoot
             "Reactivación de la beca",
             contexto,
             estadoTerminalIrreversible: false);
+        RegistrarEventoDominio(new DesembolsosBecaReanudadosEvento(
+            Id, suspension.Id, ProgramaBecaId, PeriodoVigenteActualId,
+            MontoComprometidoPeriodoActual, contexto.CorrelacionId, contexto.Fecha));
+        return suspension;
     }
 
     public void Renovar(ContextoOperacion contexto)
@@ -454,6 +495,7 @@ public sealed class Beca : AggregateRoot
         Estado = EstadoBeca.Concluida;
         FechaConclusionORevocacion = DateOnly.FromDateTime(contexto.Fecha.UtcDateTime);
         HabilitadaParaDesembolso = false;
+        MontoComprometidoPeriodoActual = 0m;
         TieneRenovacionEnCurso = false;
         ActualizarAuditoria(contexto.UsuarioAutorId, contexto.Fecha);
 
@@ -469,16 +511,26 @@ public sealed class Beca : AggregateRoot
     {
         ArgumentNullException.ThrowIfNull(contexto);
 
-        if (Estado is not (EstadoBeca.Activa or EstadoBeca.Suspendida))
+        if (Estado is not (EstadoBeca.Otorgada or EstadoBeca.Activa or EstadoBeca.Suspendida))
         {
             throw new TransicionEstadoInvalidaException(Estado, EstadoBeca.Revocada);
         }
 
         TransicionesBeca.Tabla.Validar(Estado, EstadoBeca.Revocada);
         ExigirJustificacion(contexto, "revocar la beca");
+        if (contexto.AutorizacionOtpId is null)
+            throw new InvalidOperationException("La revocación definitiva requiere autorización OTP.");
 
         var estadoAnterior = Estado;
+        if (Oferta?.Estado == EstadoOferta.PendienteRespuesta)
+        {
+            Oferta.Anular(contexto.Justificacion!, contexto);
+            RegistrarHistorialOferta(EstadoOferta.PendienteRespuesta, Oferta.Estado,
+                "Cierre de la oferta por revocación definitiva", contexto,
+                estadoTerminalIrreversible: true);
+        }
         CerrarPorOferta(TipoCierreBeca.RevocacionDefinitiva, contexto);
+        MontoComprometidoPeriodoActual = 0m;
 
         RegistrarHistorialBeca(
             estadoAnterior,
@@ -486,6 +538,44 @@ public sealed class Beca : AggregateRoot
             "Revocación definitiva de la beca",
             contexto,
             estadoTerminalIrreversible: true);
+        RegistrarEventoDominio(new BecaRevocadaDefinitivamenteEvento(
+            Id, ProgramaBecaId, PeriodoVigenteActualId,
+            contexto.CorrelacionId, contexto.Fecha));
+    }
+
+    public void ExigirHabilitacionDesembolso()
+    {
+        if (RequiereCompromisoFirmado && !CompromisoFirmadoAprobado)
+        {
+            throw new CompromisoNoFirmadoException(Id);
+        }
+
+        if (Estado != EstadoBeca.Activa || !HabilitadaParaDesembolso)
+        {
+            throw new InvalidOperationException("La beca no está habilitada para desembolsos.");
+        }
+    }
+
+    public void RegistrarDesembolsoConfirmado(decimal monto, ContextoOperacion contexto)
+    {
+        ArgumentNullException.ThrowIfNull(contexto);
+        ExigirHabilitacionDesembolso();
+        if (monto <= 0 || decimal.Round(monto, 2) != monto)
+        {
+            throw new ArgumentOutOfRangeException(nameof(monto));
+        }
+
+        var totalAprobado = Oferta?.MontoOfertaPorPeriodo
+            ?? MontoComprometidoPeriodoActual + MontoDesembolsadoPeriodoActual;
+        if (monto > MontoComprometidoPeriodoActual
+            || MontoDesembolsadoPeriodoActual + monto > totalAprobado)
+        {
+            throw new ExcedeOfertaException(Id);
+        }
+
+        MontoComprometidoPeriodoActual -= monto;
+        MontoDesembolsadoPeriodoActual += monto;
+        ActualizarAuditoria(contexto.UsuarioAutorId, contexto.Fecha);
     }
 
     public void CargarCompromiso(

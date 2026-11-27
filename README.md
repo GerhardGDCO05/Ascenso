@@ -6,7 +6,7 @@ Base del proyecto Ascenso. Incluye el entorno de desarrollo, el frontend en Reac
 
 - `Apps/services/<microservicio>/`: código y pruebas de cada microservicio.
 - `openspec/specs/<microservicio>/`: especificaciones duraderas por microservicio.
-- `openspec/changes/`: cambios activos; históricos en `openspec/changes/archive/<fecha-hora>/`.
+- `openspec/changes/`: cambios activos; históricos en `openspec/changes/archive/YYYY-MM-DD-<cambio>/`.
 - `docs/`: contexto general (PRD, DDD, convenciones y organización).
 - `openspec/roadmaps/`: planificación general por integrante y microservicio.
 - `.github/workflows/ci-cd.yml`: descubre automáticamente las soluciones de `Apps/services/` y ejecuta restore bloqueado, build, formato y pruebas.
@@ -105,4 +105,4 @@ Las versiones están centralizadas en `Apps/services/ms-becas/Directory.Packages
 - [`docs/Explicacion_del_DDD_V7.md`](docs/Explicacion_del_DDD_V7.md): especificación del dominio.
 - [`docs/convenciones_c_y_ddd.md`](docs/convenciones_c_y_ddd.md): convenciones C#, DDD y arquitectura hexagonal.
 - [`docs/organizacion_repositorio.md`](docs/organizacion_repositorio.md): organización general y reglas por microservicio.
-- [`openspec/specs/ms-beca/spec_beca.md`](openspec/specs/ms-beca/spec_beca.md): especificación duradera de MS-BECA.
+- [`openspec/specs/ms-beca/spec_beca.md`](openspec/specs/ms-beca/spec_beca.md): visión general del dominio de MS-BECA. Los deltas OpenSpec de fundación y otorgamiento están en el cambio activo `tech-bootstrap-int4-msbeca` hasta que se archive.

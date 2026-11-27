@@ -9,7 +9,17 @@ namespace Ascenso.Becas.Application.Tests.Dobles;
 /// </summary>
 public sealed class BecaRepositoryFalso : IBecaRepository
 {
+    private readonly HashSet<Guid> _agregadasPendientes = [];
+
     public List<Beca> Becas { get; } = [];
+
+    public void Confirmar() => _agregadasPendientes.Clear();
+
+    public void Revertir()
+    {
+        Becas.RemoveAll(beca => _agregadasPendientes.Contains(beca.Id));
+        _agregadasPendientes.Clear();
+    }
 
     public List<Guid> EstudiantesBloqueados { get; } = [];
 
@@ -36,6 +46,7 @@ public sealed class BecaRepositoryFalso : IBecaRepository
         }
 
         Becas.Add(beca);
+        _agregadasPendientes.Add(beca.Id);
         return Task.CompletedTask;
     }
 

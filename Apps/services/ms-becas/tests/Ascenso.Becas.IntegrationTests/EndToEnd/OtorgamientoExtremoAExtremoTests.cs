@@ -91,6 +91,12 @@ public sealed class OtorgamientoExtremoAExtremoTests
             beca.Estado.Should().Be(EstadoBeca.Activa);
             beca.Oferta!.Estado.Should().Be(EstadoOferta.Aceptada);
             beca.FechaActivacion.Should().NotBeNull();
+            var calendario = await contexto.CalendariosDesembolso
+                .SingleAsync(item => item.BecaId == beca.Id
+                    && item.PeriodoAcademicoId == beca.PeriodoVigenteActualId);
+            calendario.MontoMaximoAprobadoPeriodo.Should().Be(
+                beca.Oferta.MontoOfertaPorPeriodo);
+            calendario.NumeroCuotas.Should().Be(1);
         }
 
         fabrica.Outbox.Eventos.OfType<BecaActivadaEvento>()
@@ -413,6 +419,85 @@ public sealed class OtorgamientoExtremoAExtremoTests
         _fixture.WireMock
             .Given(Request.Create()
                 .WithPath(
+                    $"/internal/v1/postulaciones/{escenario.PostulacionId}/otorgar")
+                .UsingPost())
+            .RespondWith(Response.Create().WithStatusCode(204));
+
+        _fixture.WireMock
+            .Given(Request.Create()
+                .WithPath("/internal/v1/periodos-academicos/actual")
+                .UsingGet())
+            .RespondWith(Response.Create()
+                .WithStatusCode(200)
+                .WithHeader("Content-Type", "application/json")
+                .WithBody(JsonSerializer.Serialize(new
+                {
+                    periodoAcademicoId = escenario.PeriodoId,
+                    codigo = "2026-1",
+                    nombre = "Periodo académico E2E",
+                    ordenSecuencia = 1,
+                    fechaInicio = new DateOnly(2026, 1, 1),
+                    fechaFin = new DateOnly(2026, 6, 30),
+                    estado = "ACTIVO",
+                    esActual = true
+                })));
+
+        _fixture.WireMock
+            .Given(Request.Create()
+                .WithPath(
+                    $"/internal/v1/programas/{escenario.ProgramaId}/condiciones")
+                .WithParam("carreraId", escenario.CarreraId.ToString())
+                .WithParam("periodoId", escenario.PeriodoId.ToString())
+                .UsingGet())
+            .RespondWith(Response.Create()
+                .WithStatusCode(200)
+                .WithHeader("Content-Type", "application/json")
+                .WithBody(JsonSerializer.Serialize(new
+                {
+                    programaBecaId = escenario.ProgramaId,
+                    carreraId = escenario.CarreraId,
+                    periodoAcademicoId = escenario.PeriodoId,
+                    universidadAliadaId = escenario.UniversidadId,
+                    politicaCobertura = new
+                    {
+                        modalidad = "TOTAL",
+                        porcentajeCobertura = 100m,
+                        montoFijoPeriodo = 0m,
+                        moneda = "USD"
+                    },
+                    condicionesPermanencia = new
+                    {
+                        promedioMinimoRenovacion = 13m,
+                        materiasMinimasAprobadas = 4,
+                        maximoMateriasReprobadas = 1,
+                        horasServicioPorPeriodo = 40,
+                        consecuenciaIncumplimiento = "LLAMADO_ATENCION"
+                    },
+                    costoMatricula = new
+                    {
+                        costoMatriculaReferenciaId = Guid.CreateVersion7(),
+                        carreraId = escenario.CarreraId,
+                        periodoAcademicoId = escenario.PeriodoId,
+                        montoReferenciaMatricula = 1500m,
+                        moneda = "USD",
+                        numeroVersion = 1,
+                        fechaVigenciaDesde = DateOnly.FromDateTime(DateTime.UtcNow)
+                            .AddMonths(-1),
+                        fechaVigenciaHasta = (DateOnly?)null,
+                        estado = "VIGENTE"
+                    },
+                    convenio = new
+                    {
+                        universidadAliadaId = escenario.UniversidadId,
+                        convenioId = Guid.CreateVersion7(),
+                        estado = "VIGENTE",
+                        fechaFin = DateOnly.FromDateTime(DateTime.UtcNow).AddYears(1)
+                    }
+                })));
+
+        _fixture.WireMock
+            .Given(Request.Create()
+                .WithPath(
                     $"/internal/v1/programas/{escenario.ProgramaId}/reservas")
                 .UsingPost())
             .RespondWith(Response.Create()
@@ -426,6 +511,27 @@ public sealed class OtorgamientoExtremoAExtremoTests
                     cupos = 1,
                     expiraEn = DateTimeOffset.UtcNow.AddMinutes(30)
                 })));
+
+        _fixture.WireMock
+            .Given(Request.Create()
+                .WithPath(
+                    $"/internal/v1/programas/{escenario.ProgramaId}/reservas/*/confirmar")
+                .UsingPost())
+            .RespondWith(Response.Create().WithStatusCode(204));
+
+        _fixture.WireMock
+            .Given(Request.Create()
+                .WithPath(
+                    $"/internal/v1/programas/{escenario.ProgramaId}/reservas/*/activar")
+                .UsingPost())
+            .RespondWith(Response.Create().WithStatusCode(204));
+
+        _fixture.WireMock
+            .Given(Request.Create()
+                .WithPath(
+                    $"/internal/v1/programas/{escenario.ProgramaId}/reservas/*/liberar")
+                .UsingPost())
+            .RespondWith(Response.Create().WithStatusCode(204));
     }
 
     private static HttpClient CrearCoordinador(
