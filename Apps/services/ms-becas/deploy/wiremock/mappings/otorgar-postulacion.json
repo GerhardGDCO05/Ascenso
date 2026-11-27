@@ -1,0 +1,14 @@
+{
+  "request": {
+    "method": "POST",
+    "urlPath": "/internal/v1/postulaciones/77777777-7777-4777-8777-777777777777/otorgar",
+    "headers": {
+      "Idempotency-Key": {
+        "matches": "otorgar-[0-9a-fA-F-]{36}"
+      }
+    }
+  },
+  "response": {
+    "status": 204
+  }
+}

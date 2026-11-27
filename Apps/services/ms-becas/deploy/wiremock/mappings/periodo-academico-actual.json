@@ -1,0 +1,22 @@
+{
+  "request": {
+    "method": "GET",
+    "urlPath": "/internal/v1/periodos-academicos/actual"
+  },
+  "response": {
+    "status": 200,
+    "headers": {
+      "Content-Type": "application/json"
+    },
+    "jsonBody": {
+      "periodoAcademicoId": "44444444-4444-4444-8444-444444444444",
+      "codigo": "2026-1",
+      "nombre": "Periodo local 2026-1",
+      "ordenSecuencia": 1,
+      "fechaInicio": "2026-01-01",
+      "fechaFin": "2026-12-31",
+      "estado": "ACTIVO",
+      "esActual": true
+    }
+  }
+}

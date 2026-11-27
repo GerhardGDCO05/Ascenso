@@ -89,7 +89,9 @@ Eliminar los volúmenes con `docker compose down -v` borra los datos locales.
 
 `make dev-up` carga proyecciones de programa, matrícula y convenio para el
 programa de demostración, y levanta WireMock con respuestas simuladas de
-MS-POS y MS-PRG. La postulación adjudicable disponible es
+MS-POS, MS-PRG y MS-PLT. Los mappings cubren adjudicabilidad, periodo actual,
+condiciones del programa, reserva, confirmación y otorgamiento para la emisión
+local de una oferta. La postulación adjudicable disponible es
 `77777777-7777-4777-8777-777777777777`; las respuestas y sus identificadores
 están en `deploy/wiremock/mappings/`. Esta configuración es solo para
 desarrollo y no cambia ni requiere los otros microservicios.

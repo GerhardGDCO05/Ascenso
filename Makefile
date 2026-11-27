@@ -58,6 +58,8 @@ run: dev-up
 	Clientes__Postulaciones__UsaServiceToken=false \
 	Clientes__Programas__BaseUrl="http://localhost:$$dev_stubs_port" \
 	Clientes__Programas__UsaServiceToken=false \
+	Clientes__Plataforma__BaseUrl="http://localhost:$$dev_stubs_port" \
+	Clientes__Plataforma__UsaServiceToken=false \
 	Storage__Provider="$$storage_provider" \
 	Storage__Firebase__Bucket="$$firebase_bucket" \
 		ASPNETCORE_ENVIRONMENT=Development $(DOTNET) run --project "$(API_PROJECT)"

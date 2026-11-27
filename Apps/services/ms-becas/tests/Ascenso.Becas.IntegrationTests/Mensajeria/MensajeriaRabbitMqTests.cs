@@ -129,6 +129,8 @@ public sealed class MensajeriaRabbitMqTests
         constructor.Services.AddLogging();
         constructor.Services.AgregarPersistencia(_fixture.CadenaConexion);
         constructor.Services.AgregarMensajeria(configuracion);
+        constructor.Services.AddOptions<MassTransitHostOptions>()
+            .Configure(opciones => opciones.WaitUntilStarted = true);
 
         var host = constructor.Build();
         await host.StartAsync();
