@@ -39,6 +39,9 @@ public static class RegistroTrabajosHangfire
 
         servicios.AddScoped<IProgramadorExpiracionOfertas, ProgramadorExpiracionHangfire>();
         servicios.AddScoped<ExpirarOfertaBecaJob>();
+        servicios.AddScoped<ReconciliarEmisionesOfertaJob>();
+        servicios.AddScoped<ReconciliarAceptacionesOfertaJob>();
+        servicios.AddScoped<ReconciliarCalendariosInicialesJob>();
         servicios.AddScoped<ReconciliarOfertasPendientesJob>();
         servicios.AddScoped<LimpiarIdempotenciaJob>();
         servicios.AddScoped<LimpiarOutboxJob>();

@@ -2,6 +2,7 @@ using System.Security.Cryptography;
 using System.Text;
 using Ascenso.Becas.Application.Excepciones;
 using Ascenso.Becas.Application.Otorgamiento.Comandos.EmitirOfertaBeca;
+using Ascenso.Becas.Application.Otorgamiento.Servicios;
 using Ascenso.Becas.Domain.Enums;
 using Ascenso.Becas.Domain.Excepciones;
 using Ascenso.Becas.Domain.Otorgamiento.Eventos;
@@ -75,9 +76,43 @@ public sealed class EmitirOfertaBecaHandlerTests
         escenario.Postulaciones.PostulacionSolicitada.Should().Be(escenario.PostulacionId);
         escenario.Periodos.Llamadas.Should().Be(1);
         escenario.Postulaciones.Otorgamientos.Should().Be(1);
+        escenario.Programas.Confirmaciones.Should().ContainSingle()
+            .Which.Should().Be((escenario.ProgramaBecaId,
+                beca.Oferta.ReservaPresupuestoId, resultado.OfertaId));
         escenario.Postulaciones.OtorgamientoSolicitado.Should()
             .Be((escenario.PostulacionId, resultado.OfertaId));
         escenario.Programas.ConsultasCondiciones.Should().Be(1);
+        escenario.Intenciones.Pendientes.Should().BeEmpty();
+    }
+
+    [Fact]
+    public async Task Debe_MantenerIntencion_Cuando_MS_PRGNoConfirmaLaReserva()
+    {
+        var escenario = new EscenarioOtorgamiento();
+        escenario.Programas.ErrorConfirmar = new HttpRequestException(
+            "MS-PRG no confirmó la reserva.");
+
+        var accion = () => escenario.CrearEmitir().HandleAsync(
+            new EmitirOfertaBecaCommand(escenario.PostulacionId));
+
+        var excepcion = await accion.Should()
+            .ThrowAsync<DependenciaNoDisponibleException>();
+        excepcion.Which.Dependencia.Should().Be("MS-PRG");
+        var intencion = escenario.Intenciones.Pendientes.Should().ContainSingle().Subject;
+        escenario.Postulaciones.Otorgamientos.Should().Be(0);
+        escenario.Repositorio.Becas.Should().BeEmpty();
+        escenario.Almacenamiento.UrlsEliminadas.Should().BeEmpty();
+
+        escenario.Programas.ErrorConfirmar = null;
+        var resultado = await new FinalizadorEmisionOferta(
+            escenario.Postulaciones, escenario.Programas,
+            escenario.Intenciones, escenario.Repositorio, escenario.Unidad,
+            escenario.Outbox).ConfirmarAsync(intencion);
+
+        resultado.OfertaId.Should().Be(intencion.OfertaId);
+        escenario.Programas.Confirmaciones.Should().ContainSingle();
+        escenario.Postulaciones.Otorgamientos.Should().Be(1);
+        escenario.Intenciones.Pendientes.Should().BeEmpty();
     }
 
     [Fact]
@@ -267,7 +302,7 @@ public sealed class EmitirOfertaBecaHandlerTests
     }
 
     [Fact]
-    public async Task Debe_NoPersistirOfertaYCompensarRecursos_Cuando_FallaElOtorgamientoEnMS_POS()
+    public async Task Debe_ConservarIntencionYRecursos_Cuando_FallaElOtorgamientoEnMS_POS()
     {
         var escenario = new EscenarioOtorgamiento();
         escenario.Postulaciones.ErrorOtorgar = new HttpRequestException("sin conexión");
@@ -279,13 +314,24 @@ public sealed class EmitirOfertaBecaHandlerTests
 
         excepcion.Which.Dependencia.Should().Be("MS-POS");
         escenario.Programas.Llamadas.Should().Be(1);
-        escenario.Programador.Canceladas.Should().ContainSingle()
-            .Which.Should().Be(escenario.Programador.Referencia);
-        escenario.Almacenamiento.UrlsEliminadas.Should().ContainSingle()
-            .Which.Should().Be(escenario.Almacenamiento.Resultado.Url);
+        escenario.Programador.Canceladas.Should().BeEmpty();
+        escenario.Almacenamiento.UrlsEliminadas.Should().BeEmpty();
+        escenario.Intenciones.Pendientes.Should().ContainSingle()
+            .Which.PostulacionId.Should().Be(escenario.PostulacionId);
         escenario.Repositorio.Becas.Should().BeEmpty();
         escenario.Unidad.Confirmaciones.Should().Be(0);
         escenario.Outbox.Confirmados.Should().BeEmpty();
+
+        var intencion = escenario.Intenciones.Pendientes.Single();
+        escenario.Postulaciones.ErrorOtorgar = null;
+        var resultado = await new FinalizadorEmisionOferta(
+            escenario.Postulaciones, escenario.Programas,
+            escenario.Intenciones, escenario.Repositorio,
+            escenario.Unidad, escenario.Outbox).ConfirmarAsync(intencion);
+        resultado.OfertaId.Should().Be(intencion.OfertaId);
+        escenario.Postulaciones.Otorgamientos.Should().Be(2);
+        escenario.Intenciones.Pendientes.Should().BeEmpty();
+        escenario.Repositorio.Becas.Should().ContainSingle();
     }
 
     [Fact]
@@ -320,7 +366,7 @@ public sealed class EmitirOfertaBecaHandlerTests
     }
 
     [Fact]
-    public async Task Debe_CompensarArchivoYJob_Cuando_FallaLaPersistencia()
+    public async Task Debe_ReintentarLaMismaOferta_Cuando_FallaLaPersistenciaLocal()
     {
         var escenario = new EscenarioOtorgamiento();
         escenario.Unidad.ErrorGuardado = new InvalidOperationException("fallo de persistencia");
@@ -330,14 +376,61 @@ public sealed class EmitirOfertaBecaHandlerTests
 
         await accion.Should().ThrowAsync<InvalidOperationException>();
 
-        escenario.Programador.Canceladas.Should().ContainSingle()
-            .Which.Should().Be(escenario.Programador.Referencia);
-        escenario.Almacenamiento.UrlsEliminadas.Should().ContainSingle()
-            .Which.Should().Be(escenario.Almacenamiento.Resultado.Url);
+        escenario.Programador.Canceladas.Should().BeEmpty();
+        escenario.Almacenamiento.UrlsEliminadas.Should().BeEmpty();
+        var intencion = escenario.Intenciones.Pendientes.Should().ContainSingle().Subject;
+        escenario.Postulaciones.OtorgamientoSolicitado.Should()
+            .Be((escenario.PostulacionId, intencion.OfertaId));
         escenario.Unidad.Confirmaciones.Should().Be(0);
         escenario.Unidad.Reversiones.Should().Be(1);
         escenario.Outbox.Descartado.Should().BeTrue();
         escenario.Outbox.Confirmados.Should().BeEmpty();
+
+        escenario.Unidad.ErrorGuardado = null;
+        var resultado = await new FinalizadorEmisionOferta(
+            escenario.Postulaciones, escenario.Programas,
+            escenario.Intenciones, escenario.Repositorio,
+            escenario.Unidad, escenario.Outbox).ConfirmarAsync(intencion);
+
+        resultado.OfertaId.Should().Be(intencion.OfertaId);
+        escenario.Postulaciones.Otorgamientos.Should().Be(2);
+        escenario.Intenciones.Pendientes.Should().BeEmpty();
+        escenario.Outbox.Confirmados.Should()
+            .ContainSingle(evento => evento is OfertaBecaEmitidaEvento);
+    }
+
+    [Fact]
+    public async Task Debe_ConservarRecursos_Cuando_PersisteIntencionPeroSePierdeRespuesta()
+    {
+        var escenario = new EscenarioOtorgamiento();
+        escenario.Intenciones.ErrorGuardarDespues = new IOException(
+            "Se perdió la respuesta tras el commit de la intención.");
+
+        var accion = () => escenario.CrearEmitir().HandleAsync(
+            new EmitirOfertaBecaCommand(escenario.PostulacionId));
+
+        await accion.Should().ThrowAsync<IOException>();
+        escenario.Intenciones.Pendientes.Should().ContainSingle();
+        escenario.Almacenamiento.UrlsEliminadas.Should().BeEmpty();
+        escenario.Programador.Canceladas.Should().BeEmpty();
+        escenario.Postulaciones.Otorgamientos.Should().Be(0);
+    }
+
+    [Fact]
+    public async Task Debe_CompensarRecursos_Cuando_IntencionNoSeGuardo()
+    {
+        var escenario = new EscenarioOtorgamiento();
+        escenario.Intenciones.ErrorGuardarAntes = new IOException(
+            "No se pudo guardar la intención.");
+
+        var accion = () => escenario.CrearEmitir().HandleAsync(
+            new EmitirOfertaBecaCommand(escenario.PostulacionId));
+
+        await accion.Should().ThrowAsync<IOException>();
+        escenario.Intenciones.Pendientes.Should().BeEmpty();
+        escenario.Almacenamiento.UrlsEliminadas.Should().ContainSingle();
+        escenario.Programador.Canceladas.Should().ContainSingle();
+        escenario.Postulaciones.Otorgamientos.Should().Be(0);
     }
 
     [Fact]
@@ -476,7 +569,7 @@ public sealed class EmitirOfertaBecaHandlerTests
     }
 
     [Fact]
-    public async Task Debe_CompensarLaCartaYLaPlantilla_Cuando_FallaLaPersistencia()
+    public async Task Debe_ConservarCartaYPlantilla_Cuando_FallaLaPersistencia()
     {
         var escenario = new EscenarioOtorgamiento();
         ExigirCompromiso(escenario);
@@ -488,14 +581,8 @@ public sealed class EmitirOfertaBecaHandlerTests
 
         await accion.Should().ThrowAsync<InvalidOperationException>();
 
-        escenario.Almacenamiento.UrlsEliminadas.Should().HaveCount(2);
-        escenario.Almacenamiento.UrlsEliminadas.Should().Contain(
-            url => url.Contains("/ofertas/", StringComparison.Ordinal)
-                && url.EndsWith("/carta-otorgamiento.pdf", StringComparison.Ordinal));
-        escenario.Almacenamiento.UrlsEliminadas.Should().Contain(
-            url => url.EndsWith(
-                "/compromisos/plantilla-compromiso.pdf",
-                StringComparison.Ordinal));
+        escenario.Almacenamiento.UrlsEliminadas.Should().BeEmpty();
+        escenario.Intenciones.Pendientes.Should().ContainSingle();
         escenario.Unidad.Confirmaciones.Should().Be(0);
         escenario.Unidad.Reversiones.Should().Be(1);
     }

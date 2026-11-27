@@ -31,6 +31,8 @@ public sealed class CasosUsoCicloVidaBeca :
     private readonly IOutboxBeca _outbox;
     private readonly IProgramadorExpiracionOfertas _programador;
     private readonly ILogger<CasosUsoCicloVidaBeca> _logger;
+    private readonly IMovimientoPresupuestoPrograma _movimientos;
+    private readonly IIntencionAceptacionOfertaStore _aceptaciones;
 
     public CasosUsoCicloVidaBeca(
         IBecaRepository becas,
@@ -41,7 +43,9 @@ public sealed class CasosUsoCicloVidaBeca :
         IOtpClient otp,
         IOutboxBeca outbox,
         IProgramadorExpiracionOfertas programador,
-        ILogger<CasosUsoCicloVidaBeca> logger)
+        ILogger<CasosUsoCicloVidaBeca> logger,
+        IMovimientoPresupuestoPrograma movimientos,
+        IIntencionAceptacionOfertaStore aceptaciones)
     {
         _becas = becas ?? throw new ArgumentNullException(nameof(becas));
         _calendarios = calendarios ?? throw new ArgumentNullException(nameof(calendarios));
@@ -52,6 +56,8 @@ public sealed class CasosUsoCicloVidaBeca :
         _outbox = outbox ?? throw new ArgumentNullException(nameof(outbox));
         _programador = programador ?? throw new ArgumentNullException(nameof(programador));
         _logger = logger ?? throw new ArgumentNullException(nameof(logger));
+        _movimientos = movimientos ?? throw new ArgumentNullException(nameof(movimientos));
+        _aceptaciones = aceptaciones ?? throw new ArgumentNullException(nameof(aceptaciones));
     }
 
     public async Task<Guid> HandleAsync(
@@ -66,6 +72,11 @@ public sealed class CasosUsoCicloVidaBeca :
         await _unidadDeTrabajo.EjecutarEnTransaccionAsync(async token =>
         {
             var beca = await ObtenerBecaBloqueadaAsync(command.BecaId, token);
+            if (beca.Estado != EstadoBeca.Activa)
+                throw new ConflictoOperacionException("La beca debe estar activa para suspenderse.");
+            await _movimientos.AsegurarDisponibleAsync(token);
+            var version = beca.Version;
+            var monto = beca.MontoComprometidoPeriodoActual;
             var calendario = await ObtenerCalendarioActualAsync(beca, token);
             var contexto = ContextoAplicacion.Crear(_contextoActual, _reloj, command.Justificacion);
             var suspension = beca.Suspender(command.Tipo, command.Motivo,
@@ -73,6 +84,9 @@ public sealed class CasosUsoCicloVidaBeca :
                 command.FechaRevision, command.EsIndefinida, contexto);
             calendario?.SuspenderCuotasProgramadas(beca.Id, beca.Estado,
                 suspension.Id, null, contexto);
+
+            await _movimientos.RegistrarAsync(CrearMovimiento(beca,
+                TipoMovimientoPresupuestoPrograma.Suspension, monto, version), token);
 
             await EncolarEventosAsync(beca, calendario, token);
             await _unidadDeTrabajo.GuardarCambiosAsync(token);
@@ -89,11 +103,19 @@ public sealed class CasosUsoCicloVidaBeca :
         await _unidadDeTrabajo.EjecutarEnTransaccionAsync(async token =>
         {
             var beca = await ObtenerBecaBloqueadaAsync(command.BecaId, token);
+            if (beca.Estado != EstadoBeca.Suspendida)
+                throw new ConflictoOperacionException("La beca debe estar suspendida para reanudarse.");
+            await _movimientos.AsegurarDisponibleAsync(token);
+            var version = beca.Version;
+            var monto = beca.MontoComprometidoPeriodoActual;
             var calendario = await ObtenerCalendarioActualAsync(beca, token);
             var contexto = ContextoAplicacion.Crear(_contextoActual, _reloj, command.Justificacion);
             var suspension = beca.Reactivar(contexto);
             calendario?.ReanudarCuotasSuspendidas(beca.Id, beca.Estado,
                 suspension.Id, contexto);
+
+            await _movimientos.RegistrarAsync(CrearMovimiento(beca,
+                TipoMovimientoPresupuestoPrograma.Reanudacion, monto, version), token);
 
             await EncolarEventosAsync(beca, calendario, token);
             await _unidadDeTrabajo.GuardarCambiosAsync(token);
@@ -120,9 +142,17 @@ public sealed class CasosUsoCicloVidaBeca :
             var beca = await ObtenerBecaBloqueadaAsync(command.BecaId, token);
             if (beca.Estado is not (EstadoBeca.Otorgada or EstadoBeca.Activa or EstadoBeca.Suspendida))
                 throw new ConflictoOperacionException("La beca no admite revocación definitiva en su estado actual.");
+            if (beca.Oferta?.Estado == EstadoOferta.PendienteRespuesta
+                && await _aceptaciones.ObtenerAsync(beca.Oferta.Id, token) is not null)
+                throw new ConflictoOperacionException(
+                    "La oferta tiene una aceptación pendiente de coordinación.");
             if (string.IsNullOrWhiteSpace(command.Justificacion)
                 || command.Justificacion.Trim().Length < 10)
                 throw new SolicitudInvalidaException("La revocación requiere una justificación suficiente.");
+
+            await _movimientos.AsegurarDisponibleAsync(token);
+            var version = beca.Version;
+            var montoPendiente = beca.MontoComprometidoPeriodoActual;
 
             var calendario = await ObtenerCalendarioActualAsync(beca, token);
             var contexto = ContextoAplicacion.Crear(_contextoActual, _reloj,
@@ -143,6 +173,10 @@ public sealed class CasosUsoCicloVidaBeca :
             beca.Revocar(contexto);
             calendario?.CancelarCuotasFuturasPorRevocacion(beca.Id, beca.Estado, contexto);
 
+            await _movimientos.RegistrarAsync(CrearMovimiento(beca,
+                TipoMovimientoPresupuestoPrograma.Revocacion,
+                montoPendiente, version), token);
+
             await EncolarEventosAsync(beca, calendario, token);
             await _unidadDeTrabajo.GuardarCambiosAsync(token);
         }, cancellationToken);
@@ -155,6 +189,12 @@ public sealed class CasosUsoCicloVidaBeca :
     private async Task<Beca> ObtenerBecaBloqueadaAsync(Guid becaId, CancellationToken token)
         => await _becas.ObtenerBecaParaActualizarAsync(becaId, token)
             ?? throw new RecursoNoEncontradoException("beca", becaId);
+
+    private static MovimientoPresupuestoPrograma CrearMovimiento(Beca beca,
+        TipoMovimientoPresupuestoPrograma tipo, decimal monto, int version)
+        => new(beca.ProgramaBecaId, beca.Id, beca.PeriodoVigenteActualId,
+            beca.Id, tipo, monto,
+            $"{tipo.ToString().ToLowerInvariant()}-{beca.Id:N}-{version}");
 
     private Task<CalendarioDesembolso?> ObtenerCalendarioActualAsync(Beca beca, CancellationToken token)
         => _calendarios.ObtenerPorBecaYPeriodoAsync(beca.Id, beca.PeriodoVigenteActualId, token);

@@ -1,6 +1,8 @@
 using Ascenso.Becas.Application.Idempotencia;
 using Ascenso.Becas.Application.Otorgamiento.Puertos;
+using Ascenso.Becas.Application.Otorgamiento.Servicios;
 using Ascenso.Becas.Domain.Ports;
+using Ascenso.Becas.Infrastructure.Clientes;
 using Ascenso.Becas.Infrastructure.Persistence;
 using Ascenso.Becas.Infrastructure.Persistence.Consultas;
 using Ascenso.Becas.Infrastructure.Persistence.Proyecciones;
@@ -34,6 +36,13 @@ public static class RegistroPersistencia
 
         servicios.AddScoped<IAlmacenIdempotencia, AlmacenIdempotencia>();
         servicios.AddScoped<IBecaRepository, BecaRepository>();
+        servicios.AddScoped<IIntencionEmisionOfertaStore, IntencionEmisionOfertaStore>();
+        servicios.AddScoped<FinalizadorEmisionOferta>();
+        servicios.AddScoped<IIntencionAceptacionOfertaStore, IntencionAceptacionOfertaStore>();
+        servicios.AddScoped<FinalizadorAceptacionOferta>();
+        servicios.AddScoped<IPlanDesembolsoPrograma, PlanDesembolsoProgramaNoDisponible>();
+        servicios.AddScoped<IMovimientoPresupuestoPrograma, MovimientoPresupuestoProgramaNoDisponible>();
+        servicios.AddScoped<ICuentaInstitucionalPrograma, CuentaInstitucionalProgramaNoDisponible>();
         servicios.AddScoped<ICalendarioDesembolsoRepository, CalendarioDesembolsoRepository>();
         servicios.AddScoped<IDatosPagoBecarioRepository, DatosPagoBecarioRepository>();
         servicios.AddScoped<IOfertaBecaRepository, OfertaBecaRepository>();

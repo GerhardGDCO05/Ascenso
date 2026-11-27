@@ -3,8 +3,8 @@ using Ascenso.Becas.Application.Despacho;
 using Ascenso.Becas.Application.Excepciones;
 using Ascenso.Becas.Application.Otorgamiento.Dtos;
 using Ascenso.Becas.Application.Otorgamiento.Puertos;
+using Ascenso.Becas.Application.Otorgamiento.Servicios;
 using Ascenso.Becas.Domain.Comun;
-using Ascenso.Becas.Domain.Enums;
 using Ascenso.Becas.Domain.Excepciones;
 using Ascenso.Becas.Domain.Otorgamiento.Agregados;
 using Ascenso.Becas.Domain.Otorgamiento.Datos;
@@ -17,7 +17,8 @@ namespace Ascenso.Becas.Application.Otorgamiento.Comandos.EmitirOfertaBeca;
 /// <summary>
 /// Orquesta la emisión: configuración local, adjudicabilidad, reserva,
 /// generación y subida de la carta, creación del agregado, persistencia y
-/// Outbox. Si falla la persistencia se compensan el archivo y el job.
+/// Outbox. Persiste una intención antes de llamar a MS-POS para recuperar
+/// la oferta si la transacción local falla después de la confirmación remota.
 /// </summary>
 public sealed class EmitirOfertaBecaHandler
     : ICommandHandler<EmitirOfertaBecaCommand, OfertaEmitidaDto>
@@ -37,9 +38,8 @@ public sealed class EmitirOfertaBecaHandler
     private readonly IPlantillaCompromisoPdfGenerator _generadorPlantilla;
     private readonly IAlmacenamientoArchivos _almacenamiento;
     private readonly IProgramadorExpiracionOfertas _programador;
-    private readonly IBecaRepository _repositorio;
-    private readonly IUnitOfWork _unidadDeTrabajo;
-    private readonly IOutboxBeca _outbox;
+    private readonly IIntencionEmisionOfertaStore _intenciones;
+    private readonly FinalizadorEmisionOferta _finalizador;
 
     public EmitirOfertaBecaHandler(
         IContextoOperacionActual contextoActual,
@@ -54,9 +54,8 @@ public sealed class EmitirOfertaBecaHandler
         IPlantillaCompromisoPdfGenerator generadorPlantilla,
         IAlmacenamientoArchivos almacenamiento,
         IProgramadorExpiracionOfertas programador,
-        IBecaRepository repositorio,
-        IUnitOfWork unidadDeTrabajo,
-        IOutboxBeca outbox)
+        IIntencionEmisionOfertaStore intenciones,
+        FinalizadorEmisionOferta finalizador)
     {
         _contextoActual = contextoActual ?? throw new ArgumentNullException(nameof(contextoActual));
         _reloj = reloj ?? throw new ArgumentNullException(nameof(reloj));
@@ -72,9 +71,8 @@ public sealed class EmitirOfertaBecaHandler
             ?? throw new ArgumentNullException(nameof(generadorPlantilla));
         _almacenamiento = almacenamiento ?? throw new ArgumentNullException(nameof(almacenamiento));
         _programador = programador ?? throw new ArgumentNullException(nameof(programador));
-        _repositorio = repositorio ?? throw new ArgumentNullException(nameof(repositorio));
-        _unidadDeTrabajo = unidadDeTrabajo ?? throw new ArgumentNullException(nameof(unidadDeTrabajo));
-        _outbox = outbox ?? throw new ArgumentNullException(nameof(outbox));
+        _intenciones = intenciones ?? throw new ArgumentNullException(nameof(intenciones));
+        _finalizador = finalizador ?? throw new ArgumentNullException(nameof(finalizador));
     }
 
     public async Task<OfertaEmitidaDto> HandleAsync(
@@ -82,6 +80,9 @@ public sealed class EmitirOfertaBecaHandler
         CancellationToken cancellationToken = default)
     {
         ArgumentNullException.ThrowIfNull(command);
+        if (await _intenciones.ObtenerPorPostulacionAsync(command.PostulacionId,
+            cancellationToken) is not null)
+            throw new DependenciaNoDisponibleException("coordinacion-emision");
 
         var ahora = _reloj.UtcNow;
         var fechaOperacion = DateOnly.FromDateTime(ahora.UtcDateTime);
@@ -162,6 +163,8 @@ public sealed class EmitirOfertaBecaHandler
         Stream? plantilla = null;
         ArchivoAlmacenado? archivoPlantilla = null;
         string? referenciaJob = null;
+        var registroIntentado = false;
+        var intencionPersistida = false;
 
         try
         {
@@ -202,7 +205,7 @@ public sealed class EmitirOfertaBecaHandler
                 cancellationToken);
 
             var contexto = ContextoAplicacion.Crear(_contextoActual, _reloj);
-            var beca = CrearAgregado(
+            var intencion = CrearIntencion(
                 becaId,
                 ofertaId,
                 codigoBeca,
@@ -216,31 +219,35 @@ public sealed class EmitirOfertaBecaHandler
                 referenciaJob,
                 contexto);
 
-            await OtorgarPostulacionAsync(
-                command.PostulacionId,
-                ofertaId,
-                cancellationToken);
-
-            await _unidadDeTrabajo.EjecutarEnTransaccionAsync(
-                async token =>
-                {
-                    await _repositorio.AgregarAsync(beca, token);
-                    await EncolarEventosAsync(beca, token);
-                    await _unidadDeTrabajo.GuardarCambiosAsync(token);
-                },
+            registroIntentado = true;
+            await _intenciones.GuardarAsync(intencion, cancellationToken);
+            intencionPersistida = true;
+            var resultado = await _finalizador.ConfirmarAsync(intencion,
                 cancellationToken);
 
             _metricas.OfertaEmitida();
 
-            return new OfertaEmitidaDto(
-                ofertaId,
-                becaId,
-                EstadoOferta.PendienteRespuesta.ACodigo(),
-                fechaVencimiento);
+            return resultado;
         }
         catch
         {
-            await CompensarAsync(referenciaJob, archivo?.Url, archivoPlantilla?.Url);
+            var compensar = !registroIntentado;
+            if (registroIntentado && !intencionPersistida)
+            {
+                try
+                {
+                    compensar = await _intenciones.ObtenerAsync(
+                        ofertaId, CancellationToken.None) is null;
+                }
+                catch
+                {
+                    // Si no se puede confirmar el resultado de la escritura,
+                    // conservar los recursos evita romper una intención durable.
+                    compensar = false;
+                }
+            }
+            if (compensar)
+                await CompensarAsync(referenciaJob, archivo?.Url, archivoPlantilla?.Url);
             throw;
         }
         finally
@@ -254,26 +261,6 @@ public sealed class EmitirOfertaBecaHandler
             {
                 await plantilla.DisposeAsync();
             }
-        }
-    }
-
-    private async Task OtorgarPostulacionAsync(
-        Guid postulacionId,
-        Guid ofertaId,
-        CancellationToken cancellationToken)
-    {
-        try
-        {
-            await _postulaciones.OtorgarAsync(
-                postulacionId,
-                ofertaId,
-                cancellationToken);
-        }
-        catch (Exception excepcion) when (
-            !cancellationToken.IsCancellationRequested
-            && excepcion is HttpRequestException or TimeoutException or TaskCanceledException)
-        {
-            throw new DependenciaNoDisponibleException("MS-POS", excepcion);
         }
     }
 
@@ -569,7 +556,7 @@ public sealed class EmitirOfertaBecaHandler
         }
     }
 
-    private static Beca CrearAgregado(
+    private static IntencionEmisionOferta CrearIntencion(
         Guid becaId,
         Guid ofertaId,
         string codigoBeca,
@@ -585,8 +572,7 @@ public sealed class EmitirOfertaBecaHandler
     {
         try
         {
-            var beca = Beca.CrearOtorgada(
-                new DatosCreacionBeca(
+            var datosBeca = new DatosCreacionBeca(
                     adjudicacion.PostulanteEstudianteId,
                     adjudicacion.NumeroDocumentoEstudiante,
                     adjudicacion.PostulacionId,
@@ -600,12 +586,8 @@ public sealed class EmitirOfertaBecaHandler
                     proyeccion.Programa.PermiteAcumulacion,
                     proyeccion.Programa.RequiereCompromisoFirmado,
                     codigoBeca,
-                    urlPlantillaCompromiso),
-                contexto,
-                becaId);
-
-            beca.EmitirOferta(
-                new DatosOfertaBeca(
+                    urlPlantillaCompromiso);
+            var datosOferta = new DatosOfertaBeca(
                     adjudicacion.PostulacionId,
                     reserva.ReservaId,
                     montoPorPeriodo,
@@ -617,11 +599,11 @@ public sealed class EmitirOfertaBecaHandler
                     TipoMimePdf,
                     archivo.TamanioBytes,
                     referenciaJob,
-                    contexto.AutorizacionOtpId),
-                contexto,
-                ofertaId);
-
-            return beca;
+                    contexto.AutorizacionOtpId);
+            var intencion = new IntencionEmisionOferta(becaId, ofertaId,
+                adjudicacion.PostulacionId, datosBeca, datosOferta, contexto);
+            _ = intencion.Reconstruir();
+            return intencion;
         }
         catch (InvalidOperationException excepcion)
         {
@@ -630,14 +612,6 @@ public sealed class EmitirOfertaBecaHandler
         catch (ArgumentException excepcion)
         {
             throw new SolicitudInvalidaException(excepcion.Message);
-        }
-    }
-
-    private async Task EncolarEventosAsync(Beca beca, CancellationToken cancellationToken)
-    {
-        foreach (var evento in beca.EventosDominio)
-        {
-            await _outbox.EncolarAsync(evento, beca.Version, cancellationToken);
         }
     }
 
