@@ -656,6 +656,107 @@ namespace Ascenso.Postulaciones.Infrastructure.Persistence.Migrations
                         });
                 });
 
+            modelBuilder.Entity("Ascenso.Postulaciones.Domain.ListaEspera.Agregados.EntradaListaEspera", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .HasColumnType("uuid")
+                        .HasColumnName("id");
+
+                    b.Property<Guid>("ConvocatoriaId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("convocatoria_id");
+
+                    b.Property<string>("Estado")
+                        .IsRequired()
+                        .HasMaxLength(30)
+                        .HasColumnType("varchar")
+                        .HasColumnName("estado");
+
+                    b.Property<DateTimeOffset>("FechaCreacion")
+                        .HasColumnType("timestamptz")
+                        .HasColumnName("fecha_creacion");
+
+                    b.Property<DateTimeOffset?>("FechaElegibilidad")
+                        .HasColumnType("timestamptz")
+                        .HasColumnName("fecha_elegibilidad");
+
+                    b.Property<DateTimeOffset>("FechaIngreso")
+                        .HasColumnType("timestamptz")
+                        .HasColumnName("fecha_ingreso");
+
+                    b.Property<DateTimeOffset?>("FechaPromocion")
+                        .HasColumnType("timestamptz")
+                        .HasColumnName("fecha_promocion");
+
+                    b.Property<DateTimeOffset>("FechaUltimaModificacion")
+                        .HasColumnType("timestamptz")
+                        .HasColumnName("fecha_ultima_modificacion");
+
+                    b.Property<decimal>("MontoEstimadoBecaSnapshot")
+                        .HasPrecision(12, 2)
+                        .HasColumnType("numeric(12,2)")
+                        .HasColumnName("monto_estimado_beca_snapshot");
+
+                    b.Property<string>("MotivoPromocion")
+                        .HasMaxLength(500)
+                        .HasColumnType("character varying(500)")
+                        .HasColumnName("motivo_promocion");
+
+                    b.Property<int>("PosicionOrden")
+                        .HasColumnType("integer")
+                        .HasColumnName("posicion_orden");
+
+                    b.Property<Guid>("PostulacionId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("postulacion_id");
+
+                    b.Property<Guid>("ProgramaBecaId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("programa_beca_id");
+
+                    b.Property<Guid?>("PromovidoPorUsuarioId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("promovido_por_usuario_id");
+
+                    b.Property<Guid>("UsuarioCreacionId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("usuario_creacion_id");
+
+                    b.Property<Guid>("UsuarioModificacionId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("usuario_modificacion_id");
+
+                    b.Property<int>("Version")
+                        .IsConcurrencyToken()
+                        .HasColumnType("integer")
+                        .HasColumnName("version");
+
+                    b.HasKey("Id")
+                        .HasName("pk_entradas_lista_espera");
+
+                    b.HasIndex("PostulacionId")
+                        .IsUnique()
+                        .HasDatabaseName("ux_entradas_lista_espera_postulacion");
+
+                    b.HasIndex("ConvocatoriaId", "PosicionOrden")
+                        .IsUnique()
+                        .HasDatabaseName("ux_entradas_lista_espera_convocatoria_posicion");
+
+                    b.HasIndex("ConvocatoriaId", "Estado", "PosicionOrden")
+                        .HasDatabaseName("ix_entradas_lista_espera_convocatoria_estado_posicion");
+
+                    b.ToTable("entradas_lista_espera", "postulaciones", t =>
+                        {
+                            t.HasCheckConstraint("ck_entradas_lista_espera_estado_coherente", "(estado = 'EN_ESPERA' AND fecha_elegibilidad IS NULL AND fecha_promocion IS NULL AND promovido_por_usuario_id IS NULL AND motivo_promocion IS NULL) OR (estado = 'ELEGIBLE_POR_VACANTE' AND fecha_elegibilidad IS NOT NULL AND fecha_promocion IS NULL AND promovido_por_usuario_id IS NULL AND motivo_promocion IS NULL) OR (estado = 'PROMOVIDA' AND fecha_promocion IS NOT NULL AND promovido_por_usuario_id IS NOT NULL AND (motivo_promocion IS NULL OR length(btrim(motivo_promocion)) > 0)) OR estado NOT IN ('EN_ESPERA', 'ELEGIBLE_POR_VACANTE', 'PROMOVIDA')");
+
+                            t.HasCheckConstraint("ck_entradas_lista_espera_estado_valido", "estado IN ('EN_ESPERA', 'ELEGIBLE_POR_VACANTE', 'PROMOVIDA')");
+
+                            t.HasCheckConstraint("ck_entradas_lista_espera_monto_positivo", "monto_estimado_beca_snapshot > 0");
+
+                            t.HasCheckConstraint("ck_entradas_lista_espera_posicion_positiva", "posicion_orden >= 1");
+                        });
+                });
+
             modelBuilder.Entity("Ascenso.Postulaciones.Domain.Postulantes.Agregados.Postulante", b =>
                 {
                     b.Property<Guid>("Id")

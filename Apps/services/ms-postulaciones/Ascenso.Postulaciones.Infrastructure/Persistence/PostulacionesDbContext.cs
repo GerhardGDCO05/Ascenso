@@ -7,6 +7,7 @@ using Ascenso.Postulaciones.Domain.Evaluaciones.Agregados;
 using Ascenso.Postulaciones.Domain.Evaluaciones.Entidades;
 using Ascenso.Postulaciones.Domain.Excepciones;
 using Ascenso.Postulaciones.Domain.Interfaces;
+using Ascenso.Postulaciones.Domain.ListaEspera.Agregados;
 using Ascenso.Postulaciones.Domain.Postulantes.Agregados;
 using Ascenso.Postulaciones.Domain.Postulantes.Entidades;
 using Ascenso.Postulaciones.Domain.Rubricas.Agregados;
@@ -48,6 +49,8 @@ public sealed class PostulacionesDbContext : DbContext, IUnitOfWork
     public DbSet<CalificacionCriterio> CalificacionesCriterio => Set<CalificacionCriterio>();
 
     public DbSet<ResultadoConsolidadoRanking> ResultadosConsolidadosRanking => Set<ResultadoConsolidadoRanking>();
+
+    public DbSet<EntradaListaEspera> EntradasListaEspera => Set<EntradaListaEspera>();
 
     public async Task<int> GuardarCambiosAsync(CancellationToken cancellationToken = default)
     {

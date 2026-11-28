@@ -136,6 +136,30 @@ builder.Services.AddAuthorization(options =>
             || context.User.Claims.Any(claim =>
                 string.Equals(claim.Type, "permissions", StringComparison.OrdinalIgnoreCase)
                 && string.Equals(claim.Value, PoliticasAutorizacionConsolidacion.PermisoLecturaInterna, StringComparison.Ordinal))));
+
+    options.AddPolicy(
+        PoliticasAutorizacionListaEspera.ConsultaListaEspera,
+        policy => policy.RequireRole(
+            PoliticasAutorizacionListaEspera.RolCoordinadorPrograma,
+            PoliticasAutorizacionListaEspera.RolDireccion));
+
+    options.AddPolicy(
+        PoliticasAutorizacionListaEspera.GestionListaEspera,
+        policy => policy.RequireRole(PoliticasAutorizacionListaEspera.RolCoordinadorPrograma));
+
+    options.AddPolicy(
+        PoliticasAutorizacionListaEspera.RegistroVacanteListaEsperaInterna,
+        policy => policy.RequireAssertion(context =>
+            context.User.IsInRole(PoliticasAutorizacionListaEspera.RolCoordinadorPrograma)
+            || context.User.Claims.Any(claim =>
+                (string.Equals(claim.Type, "scope", StringComparison.OrdinalIgnoreCase)
+                    || string.Equals(claim.Type, "scp", StringComparison.OrdinalIgnoreCase))
+                && claim.Value
+                    .Split(' ', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries)
+                    .Contains(PoliticasAutorizacionListaEspera.ScopeEscrituraInterna, StringComparer.Ordinal))
+            || context.User.Claims.Any(claim =>
+                string.Equals(claim.Type, "permissions", StringComparison.OrdinalIgnoreCase)
+                && string.Equals(claim.Value, PoliticasAutorizacionListaEspera.PermisoEscrituraInterna, StringComparison.Ordinal))));
 });
 builder.Services.AddSingleton<IAuthorizationMiddlewareResultHandler, ManejadorResultadoAutorizacionRubricas>();
 

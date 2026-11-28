@@ -348,6 +348,8 @@ public sealed class AutorizacionAsignacionesTests : IClassFixture<WebApplication
                 servicios.RemoveAll<IConsultaEstadoEvaluacionesConvocatoriaRepository>();
                 servicios.RemoveAll<IConsultaJefaturaComiteRepository>();
                 servicios.RemoveAll<IVerificadorConflictoInteresDecisor>();
+                servicios.RemoveAll<IEntradaListaEsperaRepository>();
+                servicios.RemoveAll<IGestorConcurrenciaListaEspera>();
                 servicios.RemoveAll<IDisponibilidadRankingClient>();
                 servicios.RemoveAll<IProveedorMontoEstimadoBeca>();
                 servicios.RemoveAll<IPeriodoAcademicoClient>();
@@ -371,6 +373,8 @@ public sealed class AutorizacionAsignacionesTests : IClassFixture<WebApplication
                 servicios.AddSingleton(Substitute.For<IConsultaEstadoEvaluacionesConvocatoriaRepository>());
                 servicios.AddSingleton(Substitute.For<IConsultaJefaturaComiteRepository>());
                 servicios.AddSingleton(Substitute.For<IVerificadorConflictoInteresDecisor>());
+                servicios.AddSingleton(Substitute.For<IEntradaListaEsperaRepository>());
+                servicios.AddSingleton(Substitute.For<IGestorConcurrenciaListaEspera>());
                 servicios.AddSingleton(Substitute.For<IDisponibilidadRankingClient>());
                 servicios.AddSingleton(Substitute.For<IProveedorMontoEstimadoBeca>());
                 servicios.AddSingleton(Substitute.For<IPeriodoAcademicoClient>());

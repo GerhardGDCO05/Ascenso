@@ -417,6 +417,8 @@ public sealed class ResolucionCasosLimiteControllerTests : IClassFixture<WebAppl
                 servicios.RemoveAll<IConsultaEstadoEvaluacionesConvocatoriaRepository>();
                 servicios.RemoveAll<IConsultaJefaturaComiteRepository>();
                 servicios.RemoveAll<IVerificadorConflictoInteresDecisor>();
+                servicios.RemoveAll<IEntradaListaEsperaRepository>();
+                servicios.RemoveAll<IGestorConcurrenciaListaEspera>();
                 servicios.RemoveAll<IDisponibilidadRankingClient>();
                 servicios.RemoveAll<IProveedorMontoEstimadoBeca>();
                 servicios.RemoveAll<IPeriodoAcademicoClient>();
@@ -440,6 +442,8 @@ public sealed class ResolucionCasosLimiteControllerTests : IClassFixture<WebAppl
                 servicios.AddSingleton(repoEstadoEvaluaciones ?? Substitute.For<IConsultaEstadoEvaluacionesConvocatoriaRepository>());
                 servicios.AddSingleton(repoJefatura ?? Substitute.For<IConsultaJefaturaComiteRepository>());
                 servicios.AddSingleton(verificadorConflicto ?? Substitute.For<IVerificadorConflictoInteresDecisor>());
+                servicios.AddSingleton(Substitute.For<IEntradaListaEsperaRepository>());
+                servicios.AddSingleton(Substitute.For<IGestorConcurrenciaListaEspera>());
                 servicios.AddSingleton(disponibilidadClient ?? Substitute.For<IDisponibilidadRankingClient>());
                 servicios.AddSingleton(proveedorMonto ?? Substitute.For<IProveedorMontoEstimadoBeca>());
                 servicios.AddSingleton(Substitute.For<IPeriodoAcademicoClient>());
