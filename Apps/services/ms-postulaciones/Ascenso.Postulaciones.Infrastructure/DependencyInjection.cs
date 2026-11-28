@@ -51,6 +51,8 @@ public static class DependencyInjection
         services.AddScoped<IConsultaEstadoEvaluacionesConvocatoriaRepository, ConsultaEstadoEvaluacionesConvocatoriaRepository>();
         services.AddScoped<IConsultaJefaturaComiteRepository, ConsultaJefaturaComiteRepository>();
         services.AddScoped<IVerificadorConflictoInteresDecisor, VerificadorConflictoInteresDecisorSinOperacion>();
+        services.AddScoped<IEntradaListaEsperaRepository, EntradaListaEsperaRepository>();
+        services.AddScoped<IGestorConcurrenciaListaEspera, GestorConcurrenciaListaEsperaPostgreSql>();
 
         if (configuration is not null)
         {

@@ -20,6 +20,8 @@ internal static class TraductorExcepcionesPersistencia
     public const string IndiceEvaluacionAsignacionUnico = "ux_evaluaciones_asignacion_evaluacion";
     public const string IndiceResultadoConsolidadoPostulacionUnico = "ux_resultados_consolidados_ranking_postulacion";
     public const string IndiceResultadoConsolidadoConvocatoriaPosicionUnico = "ux_resultados_consolidados_ranking_convocatoria_posicion";
+    public const string IndiceEntradaListaEsperaPostulacionUnico = "ux_entradas_lista_espera_postulacion";
+    public const string IndiceEntradaListaEsperaConvocatoriaPosicionUnico = "ux_entradas_lista_espera_convocatoria_posicion";
 
     public static Exception? TraducirSiAplica(DbUpdateException excepcion)
     {
@@ -80,6 +82,18 @@ internal static class TraductorExcepcionesPersistencia
         {
             return new ExcepcionConflictoConcurrencia(
                 "Ya existe un resultado confirmado con la misma posición de ranking en la convocatoria.",
+                ExcepcionConflictoConcurrencia.CodigoRestriccionUnicidad);
+        }
+
+        if (string.Equals(pg.ConstraintName, IndiceEntradaListaEsperaPostulacionUnico, StringComparison.OrdinalIgnoreCase))
+        {
+            return new EntradaListaEsperaDuplicadaException();
+        }
+
+        if (string.Equals(pg.ConstraintName, IndiceEntradaListaEsperaConvocatoriaPosicionUnico, StringComparison.OrdinalIgnoreCase))
+        {
+            return new ExcepcionConflictoConcurrencia(
+                "Ya existe una entrada en lista de espera con la misma posición de orden en la convocatoria.",
                 ExcepcionConflictoConcurrencia.CodigoRestriccionUnicidad);
         }
 

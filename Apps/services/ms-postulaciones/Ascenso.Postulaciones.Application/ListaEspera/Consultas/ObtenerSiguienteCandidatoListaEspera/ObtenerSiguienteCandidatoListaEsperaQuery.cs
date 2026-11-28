@@ -1,0 +1,3 @@
+namespace Ascenso.Postulaciones.Application.ListaEspera.Consultas.ObtenerSiguienteCandidatoListaEspera;
+
+public sealed record class ObtenerSiguienteCandidatoListaEsperaQuery(Guid ConvocatoriaId);

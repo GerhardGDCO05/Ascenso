@@ -1,5 +1,6 @@
 using Ascenso.Postulaciones.Application.Consolidacion.Comandos.ConfirmarRankingConvocatoria;
 using Ascenso.Postulaciones.Application.Interfaces;
+using Ascenso.Postulaciones.Application.ListaEspera.Interfaces;
 using Ascenso.Postulaciones.Domain.Comun;
 using Ascenso.Postulaciones.Domain.Consolidacion.Agregados;
 using Ascenso.Postulaciones.Domain.Consolidacion.ObjetosValor;
@@ -32,6 +33,7 @@ public sealed class ConfirmarRankingConCasoLimiteTests
     private readonly IConvocatoriaEvaluacionClient _convocatoriaClient = Substitute.For<IConvocatoriaEvaluacionClient>();
     private readonly IDisponibilidadRankingClient _disponibilidadClient = Substitute.For<IDisponibilidadRankingClient>();
     private readonly IProveedorMontoEstimadoBeca _proveedorMonto = Substitute.For<IProveedorMontoEstimadoBeca>();
+    private readonly IGeneradorListaEsperaRanking _generadorListaEspera = Substitute.For<IGeneradorListaEsperaRanking>();
     private readonly IUnitOfWork _unitOfWork = Substitute.For<IUnitOfWork>();
     private readonly ConfirmarRankingConvocatoriaCommandValidator _validator = new();
     private readonly TimeProvider _timeProvider;
@@ -51,6 +53,7 @@ public sealed class ConfirmarRankingConCasoLimiteTests
             _convocatoriaClient,
             _disponibilidadClient,
             _proveedorMonto,
+            _generadorListaEspera,
             _unitOfWork,
             _validator,
             _timeProvider);

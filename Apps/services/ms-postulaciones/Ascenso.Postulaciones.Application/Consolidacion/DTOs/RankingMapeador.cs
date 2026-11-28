@@ -2,6 +2,7 @@ using Ascenso.Postulaciones.Application.Asignaciones.DTOs;
 using Ascenso.Postulaciones.Domain.Consolidacion.Agregados;
 using Ascenso.Postulaciones.Domain.Consolidacion.ObjetosValor;
 using Ascenso.Postulaciones.Domain.Enums;
+using Ascenso.Postulaciones.Domain.ListaEspera.Agregados;
 
 namespace Ascenso.Postulaciones.Application.Consolidacion.DTOs;
 
@@ -223,11 +224,16 @@ public static class RankingMapeador
             TieneDecisionCasoLimiteInvalidaPorDisponibilidad: false);
     }
 
-    public static AdjudicabilidadPostulacionDto AAdjudicabilidadDto(this ResultadoConsolidadoRanking resultado)
+    public static AdjudicabilidadPostulacionDto AAdjudicabilidadDto(
+        this ResultadoConsolidadoRanking resultado,
+        EntradaListaEspera? entradaListaEspera = null)
     {
         ArgumentNullException.ThrowIfNull(resultado);
 
-        var adjudicable = resultado.EsAdjudicable;
+        var enListaEsperaConfirmada = resultado.EstadoConfirmacionRanking == EstadoRanking.Confirmado
+            && resultado.Clasificacion == ClasificacionRanking.ListaDeEspera;
+        var promovidaDeListaEspera = enListaEsperaConfirmada && entradaListaEspera?.EstaPromovida == true;
+        var adjudicable = resultado.EsAdjudicable || promovidaDeListaEspera;
         string? motivoNoAdjudicable = null;
 
         if (!adjudicable)
@@ -235,6 +241,19 @@ public static class RankingMapeador
             motivoNoAdjudicable = resultado.EstadoConfirmacionRanking == EstadoRanking.Provisional
                 ? MotivoRankingNoConfirmado
                 : MotivoFueraDeCupoEnListaDeEspera;
+        }
+
+        string? estadoListaEspera = null;
+        int? posicionListaEspera = null;
+        DateTimeOffset? fechaPromocionListaEspera = null;
+        Guid? programaBecaId = null;
+
+        if (enListaEsperaConfirmada && entradaListaEspera is not null)
+        {
+            estadoListaEspera = entradaListaEspera.Estado.ACodigo();
+            posicionListaEspera = entradaListaEspera.PosicionOrden;
+            fechaPromocionListaEspera = promovidaDeListaEspera ? entradaListaEspera.FechaPromocion : null;
+            programaBecaId = entradaListaEspera.ProgramaBecaId;
         }
 
         return new AdjudicabilidadPostulacionDto(
@@ -246,6 +265,11 @@ public static class RankingMapeador
             resultado.Clasificacion?.ACodigo(),
             resultado.PosicionRanking,
             resultado.MontoEstimadoBeca,
-            resultado.FechaConfirmacionRanking);
+            resultado.FechaConfirmacionRanking,
+            PromovidaDeListaEspera: promovidaDeListaEspera,
+            EstadoListaEspera: estadoListaEspera,
+            PosicionListaEspera: posicionListaEspera,
+            FechaPromocionListaEspera: fechaPromocionListaEspera,
+            ProgramaBecaId: programaBecaId);
     }
 }

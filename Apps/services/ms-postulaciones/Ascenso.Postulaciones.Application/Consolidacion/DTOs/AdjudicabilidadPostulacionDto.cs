@@ -9,4 +9,9 @@ public sealed record class AdjudicabilidadPostulacionDto(
     string? Clasificacion,
     int? PosicionRanking,
     decimal? MontoEstimadoBeca,
-    DateTimeOffset? FechaConfirmacionRanking);
+    DateTimeOffset? FechaConfirmacionRanking,
+    bool PromovidaDeListaEspera = false,
+    string? EstadoListaEspera = null,
+    int? PosicionListaEspera = null,
+    DateTimeOffset? FechaPromocionListaEspera = null,
+    Guid? ProgramaBecaId = null);

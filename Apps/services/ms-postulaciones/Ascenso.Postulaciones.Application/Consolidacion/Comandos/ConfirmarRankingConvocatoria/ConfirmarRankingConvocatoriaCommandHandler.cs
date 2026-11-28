@@ -1,6 +1,7 @@
 using Ascenso.Postulaciones.Application.Common;
 using Ascenso.Postulaciones.Application.Consolidacion.DTOs;
 using Ascenso.Postulaciones.Application.Interfaces;
+using Ascenso.Postulaciones.Application.ListaEspera.Interfaces;
 using Ascenso.Postulaciones.Domain.Consolidacion.Servicios;
 using Ascenso.Postulaciones.Domain.Enums;
 using Ascenso.Postulaciones.Domain.Excepciones;
@@ -17,6 +18,7 @@ public sealed class ConfirmarRankingConvocatoriaCommandHandler
     private readonly IConvocatoriaEvaluacionClient _convocatoriaClient;
     private readonly IDisponibilidadRankingClient _disponibilidadClient;
     private readonly IProveedorMontoEstimadoBeca _proveedorMonto;
+    private readonly IGeneradorListaEsperaRanking _generadorListaEspera;
     private readonly IUnitOfWork _unitOfWork;
     private readonly IValidator<ConfirmarRankingConvocatoriaCommand> _validator;
     private readonly TimeProvider _timeProvider;
@@ -28,6 +30,7 @@ public sealed class ConfirmarRankingConvocatoriaCommandHandler
         IConvocatoriaEvaluacionClient convocatoriaClient,
         IDisponibilidadRankingClient disponibilidadClient,
         IProveedorMontoEstimadoBeca proveedorMonto,
+        IGeneradorListaEsperaRanking generadorListaEspera,
         IUnitOfWork unitOfWork,
         IValidator<ConfirmarRankingConvocatoriaCommand> validator,
         TimeProvider timeProvider)
@@ -39,6 +42,7 @@ public sealed class ConfirmarRankingConvocatoriaCommandHandler
         _convocatoriaClient = convocatoriaClient ?? throw new ArgumentNullException(nameof(convocatoriaClient));
         _disponibilidadClient = disponibilidadClient ?? throw new ArgumentNullException(nameof(disponibilidadClient));
         _proveedorMonto = proveedorMonto ?? throw new ArgumentNullException(nameof(proveedorMonto));
+        _generadorListaEspera = generadorListaEspera ?? throw new ArgumentNullException(nameof(generadorListaEspera));
         _unitOfWork = unitOfWork ?? throw new ArgumentNullException(nameof(unitOfWork));
         _validator = validator ?? throw new ArgumentNullException(nameof(validator));
         _timeProvider = timeProvider ?? throw new ArgumentNullException(nameof(timeProvider));
@@ -139,6 +143,14 @@ public sealed class ConfirmarRankingConvocatoriaCommandHandler
                 ahora,
                 usuarioConfirmadorId);
         }
+
+        await _generadorListaEspera.GenerarDesdeRankingConfirmadoAsync(
+            command.ConvocatoriaId,
+            disponibilidad.ProgramaBecaId,
+            resultados,
+            ahora,
+            usuarioConfirmadorId,
+            cancellationToken);
 
         await _unitOfWork.GuardarCambiosAsync(cancellationToken);
 

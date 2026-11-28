@@ -27,6 +27,12 @@ using Ascenso.Postulaciones.Application.Evaluaciones.Consultas.ObtenerMiEvaluaci
 using Ascenso.Postulaciones.Application.Evaluaciones.Consultas.ObtenerMisEvaluaciones;
 using Ascenso.Postulaciones.Application.Evaluaciones.Interfaces;
 using Ascenso.Postulaciones.Application.Evaluaciones.Servicios;
+using Ascenso.Postulaciones.Application.ListaEspera.Comandos.PromoverCandidatoListaEspera;
+using Ascenso.Postulaciones.Application.ListaEspera.Comandos.RegistrarVacanteLiberada;
+using Ascenso.Postulaciones.Application.ListaEspera.Consultas.ObtenerListaEsperaConvocatoria;
+using Ascenso.Postulaciones.Application.ListaEspera.Consultas.ObtenerSiguienteCandidatoListaEspera;
+using Ascenso.Postulaciones.Application.ListaEspera.Interfaces;
+using Ascenso.Postulaciones.Application.ListaEspera.Servicios;
 using Ascenso.Postulaciones.Application.Postulantes.Comandos.ActualizarPerfilSocioeconomico;
 using Ascenso.Postulaciones.Application.Postulantes.Comandos.RegistrarPostulante;
 using Ascenso.Postulaciones.Application.Postulantes.Consultas.ObtenerMiPerfil;
@@ -87,6 +93,11 @@ public static class DependencyInjection
         services.AddScoped<ConfirmarRankingConvocatoriaCommandHandler>();
         services.AddScoped<ResolverCasoLimiteRankingCommandHandler>();
         services.AddScoped<ConsultarAdjudicabilidadPostulacionQueryHandler>();
+        services.AddScoped<IGeneradorListaEsperaRanking, GeneradorListaEsperaRankingAdapter>();
+        services.AddScoped<ObtenerListaEsperaConvocatoriaQueryHandler>();
+        services.AddScoped<ObtenerSiguienteCandidatoListaEsperaQueryHandler>();
+        services.AddScoped<RegistrarVacanteLiberadaCommandHandler>();
+        services.AddScoped<PromoverCandidatoListaEsperaCommandHandler>();
 
         return services;
     }

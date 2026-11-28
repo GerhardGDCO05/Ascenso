@@ -27,19 +27,22 @@ public sealed class ManejadorResultadoAutorizacionRubricas : IAuthorizationMiddl
             var esPoliticaAsignaciones = EndpointTienePoliticaDeAsignaciones(context);
             var esPoliticaEvaluaciones = EndpointTienePoliticaDeEvaluaciones(context);
             var esPoliticaConsolidacion = EndpointTienePoliticaDeConsolidacion(context);
+            var esPoliticaListaEspera = EndpointTienePoliticaDeListaEspera(context);
             var problema = new ProblemDetails
             {
                 Status = StatusCodes.Status403Forbidden,
                 Title = "Acceso denegado",
-                Detail = esPoliticaConsolidacion
-                    ? "El usuario autenticado no tiene permisos para ejecutar esta operación sobre los resultados consolidados y alertas de discrepancia."
-                    : esPoliticaEvaluaciones
-                        ? "El usuario autenticado no tiene permisos para ejecutar esta operación sobre las evaluaciones de postulaciones."
-                        : esPoliticaAsignaciones
-                            ? "El usuario autenticado no tiene permisos para ejecutar esta operación sobre las asignaciones de evaluación."
-                            : esPoliticaComites
-                                ? "El usuario autenticado no tiene permisos para ejecutar esta operación sobre los comités evaluadores."
-                                : "El usuario autenticado no tiene permisos para ejecutar esta operación sobre las rúbricas de evaluación.",
+                Detail = esPoliticaListaEspera
+                    ? "El usuario autenticado no tiene permisos para ejecutar esta operación sobre la lista de espera de postulaciones."
+                    : esPoliticaConsolidacion
+                        ? "El usuario autenticado no tiene permisos para ejecutar esta operación sobre los resultados consolidados y alertas de discrepancia."
+                        : esPoliticaEvaluaciones
+                            ? "El usuario autenticado no tiene permisos para ejecutar esta operación sobre las evaluaciones de postulaciones."
+                            : esPoliticaAsignaciones
+                                ? "El usuario autenticado no tiene permisos para ejecutar esta operación sobre las asignaciones de evaluación."
+                                : esPoliticaComites
+                                    ? "El usuario autenticado no tiene permisos para ejecutar esta operación sobre los comités evaluadores."
+                                    : "El usuario autenticado no tiene permisos para ejecutar esta operación sobre las rúbricas de evaluación.",
                 Instance = context.Request.Path
             };
             problema.Extensions["codigo"] = CodigoPermisoDenegado;
@@ -71,7 +74,10 @@ public sealed class ManejadorResultadoAutorizacionRubricas : IAuthorizationMiddl
             || string.Equals(dato.Policy, PoliticasAutorizacionConsolidacion.ConsultaConsolidacion, StringComparison.Ordinal)
             || string.Equals(dato.Policy, PoliticasAutorizacionConsolidacion.GestionConsolidacion, StringComparison.Ordinal)
             || string.Equals(dato.Policy, PoliticasAutorizacionConsolidacion.ResolucionCasosLimiteRanking, StringComparison.Ordinal)
-            || string.Equals(dato.Policy, PoliticasAutorizacionConsolidacion.ConsultaAdjudicabilidadInterna, StringComparison.Ordinal));
+            || string.Equals(dato.Policy, PoliticasAutorizacionConsolidacion.ConsultaAdjudicabilidadInterna, StringComparison.Ordinal)
+            || string.Equals(dato.Policy, PoliticasAutorizacionListaEspera.ConsultaListaEspera, StringComparison.Ordinal)
+            || string.Equals(dato.Policy, PoliticasAutorizacionListaEspera.GestionListaEspera, StringComparison.Ordinal)
+            || string.Equals(dato.Policy, PoliticasAutorizacionListaEspera.RegistroVacanteListaEsperaInterna, StringComparison.Ordinal));
     }
 
     private static bool EndpointTienePoliticaDeComites(HttpContext context)
@@ -125,5 +131,19 @@ public sealed class ManejadorResultadoAutorizacionRubricas : IAuthorizationMiddl
             || string.Equals(dato.Policy, PoliticasAutorizacionConsolidacion.GestionConsolidacion, StringComparison.Ordinal)
             || string.Equals(dato.Policy, PoliticasAutorizacionConsolidacion.ResolucionCasosLimiteRanking, StringComparison.Ordinal)
             || string.Equals(dato.Policy, PoliticasAutorizacionConsolidacion.ConsultaAdjudicabilidadInterna, StringComparison.Ordinal));
+    }
+
+    private static bool EndpointTienePoliticaDeListaEspera(HttpContext context)
+    {
+        var metadatosAutorizacion = context.GetEndpoint()?.Metadata.GetOrderedMetadata<IAuthorizeData>();
+        if (metadatosAutorizacion is null || metadatosAutorizacion.Count == 0)
+        {
+            return false;
+        }
+
+        return metadatosAutorizacion.Any(dato =>
+            string.Equals(dato.Policy, PoliticasAutorizacionListaEspera.ConsultaListaEspera, StringComparison.Ordinal)
+            || string.Equals(dato.Policy, PoliticasAutorizacionListaEspera.GestionListaEspera, StringComparison.Ordinal)
+            || string.Equals(dato.Policy, PoliticasAutorizacionListaEspera.RegistroVacanteListaEsperaInterna, StringComparison.Ordinal));
     }
 }

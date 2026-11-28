@@ -28,6 +28,12 @@ using Ascenso.Postulaciones.Application.Evaluaciones.Consultas.ObtenerMisEvaluac
 using Ascenso.Postulaciones.Application.Evaluaciones.Interfaces;
 using Ascenso.Postulaciones.Application.Evaluaciones.Servicios;
 using Ascenso.Postulaciones.Application.Interfaces;
+using Ascenso.Postulaciones.Application.ListaEspera.Comandos.PromoverCandidatoListaEspera;
+using Ascenso.Postulaciones.Application.ListaEspera.Comandos.RegistrarVacanteLiberada;
+using Ascenso.Postulaciones.Application.ListaEspera.Consultas.ObtenerListaEsperaConvocatoria;
+using Ascenso.Postulaciones.Application.ListaEspera.Consultas.ObtenerSiguienteCandidatoListaEspera;
+using Ascenso.Postulaciones.Application.ListaEspera.Interfaces;
+using Ascenso.Postulaciones.Application.ListaEspera.Servicios;
 using Ascenso.Postulaciones.Application.Postulantes.Comandos.ActualizarPerfilSocioeconomico;
 using Ascenso.Postulaciones.Application.Postulantes.Comandos.RegistrarPostulante;
 using Ascenso.Postulaciones.Application.Postulantes.Consultas.ObtenerMiPerfil;
@@ -77,6 +83,8 @@ public sealed class InyeccionDependenciasTests
         servicios.AddSingleton(Substitute.For<ICatalogoAcademicoClient>());
         servicios.AddSingleton(Substitute.For<IConvocatoriaEvaluacionClient>());
         servicios.AddSingleton(Substitute.For<IUnitOfWork>());
+        servicios.AddSingleton(Substitute.For<IEntradaListaEsperaRepository>());
+        servicios.AddSingleton(Substitute.For<IGestorConcurrenciaListaEspera>());
         servicios.AddSingleton(TimeProvider.System);
 
         servicios.AgregarAplicacionPostulaciones();
@@ -157,6 +165,16 @@ public sealed class InyeccionDependenciasTests
         alcance.ServiceProvider.GetRequiredService<ResolverCasoLimiteRankingCommandHandler>()
             .Should().NotBeNull();
         alcance.ServiceProvider.GetRequiredService<ConsultarAdjudicabilidadPostulacionQueryHandler>()
+            .Should().NotBeNull();
+        alcance.ServiceProvider.GetRequiredService<IGeneradorListaEsperaRanking>()
+            .Should().BeOfType<GeneradorListaEsperaRankingAdapter>();
+        alcance.ServiceProvider.GetRequiredService<ObtenerListaEsperaConvocatoriaQueryHandler>()
+            .Should().NotBeNull();
+        alcance.ServiceProvider.GetRequiredService<ObtenerSiguienteCandidatoListaEsperaQueryHandler>()
+            .Should().NotBeNull();
+        alcance.ServiceProvider.GetRequiredService<RegistrarVacanteLiberadaCommandHandler>()
+            .Should().NotBeNull();
+        alcance.ServiceProvider.GetRequiredService<PromoverCandidatoListaEsperaCommandHandler>()
             .Should().NotBeNull();
 
         var validadoresRegistro = alcance.ServiceProvider
@@ -332,5 +350,29 @@ public sealed class InyeccionDependenciasTests
 
         validadoresConsultarAdjudicabilidad.Should().ContainSingle(
             validador => validador is ConsultarAdjudicabilidadPostulacionQueryValidator);
+
+        var validadoresObtenerListaEspera = alcance.ServiceProvider
+            .GetServices<IValidator<ObtenerListaEsperaConvocatoriaQuery>>();
+
+        validadoresObtenerListaEspera.Should().ContainSingle(
+            validador => validador is ObtenerListaEsperaConvocatoriaQueryValidator);
+
+        var validadoresObtenerSiguienteCandidato = alcance.ServiceProvider
+            .GetServices<IValidator<ObtenerSiguienteCandidatoListaEsperaQuery>>();
+
+        validadoresObtenerSiguienteCandidato.Should().ContainSingle(
+            validador => validador is ObtenerSiguienteCandidatoListaEsperaQueryValidator);
+
+        var validadoresRegistrarVacante = alcance.ServiceProvider
+            .GetServices<IValidator<RegistrarVacanteLiberadaCommand>>();
+
+        validadoresRegistrarVacante.Should().ContainSingle(
+            validador => validador is RegistrarVacanteLiberadaCommandValidator);
+
+        var validadoresPromoverCandidato = alcance.ServiceProvider
+            .GetServices<IValidator<PromoverCandidatoListaEsperaCommand>>();
+
+        validadoresPromoverCandidato.Should().ContainSingle(
+            validador => validador is PromoverCandidatoListaEsperaCommandValidator);
     }
 }
